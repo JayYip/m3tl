@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+import os
 
 import tensorflow as tf
 
@@ -32,6 +33,9 @@ PROBLEMS_LIST = [
 
 
 def main(_):
+
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
 
     params = Params()
     params.assign_problem(FLAGS.problem)
