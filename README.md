@@ -7,7 +7,7 @@ Using BERT to do multi-task learning
 The following command will run NER and word segmentation problem on Weibo dataset.
 
 ```bash
-python main.py --problem "WeiboNER&WeiboSegment" --mode train
+python main.py --problem "WeiboNER&WeiboSegment" --schedule train
 ```
 
 ## TODO
