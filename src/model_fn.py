@@ -1,16 +1,12 @@
 import tensorflow as tf
 from tensorflow.contrib import autograph
 
-from tensor2tensor.utils import metrics
-
-from bert.modeling import BertModel
 from bert import modeling
-from bert.optimization import AdamWeightDecayOptimizer
-
+from bert.modeling import BertModel
 
 from .params import Params
-from .t2t_utils import get_t2t_metric_op
-from .top import seq_tag, cls
+from .optimizer import AdamWeightDecayOptimizer
+from .top import cls, seq_tag
 
 
 @autograph.convert()
@@ -141,19 +137,13 @@ class BertWrapper():
         # It is recommended that you use this optimizer for fine tuning, since this
         # is how the model was trained (note that the Adam m/v variables are NOT
         # loaded from init_checkpoint.)
-        # optimizer = AdamWeightDecayOptimizer(
-        #     learning_rate=learning_rate,
-        #     weight_decay_rate=0.01,
-        #     beta_1=0.9,
-        #     beta_2=0.999,
-        #     epsilon=1e-6,
-        #     exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
-        optimizer = tf.train.AdamOptimizer(
+        optimizer = AdamWeightDecayOptimizer(
             learning_rate=learning_rate,
-            beta1=0.9,
-            beta2=0.999,
-            epsilon=1e-6
-        )
+            weight_decay_rate=0.01,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-6,
+            exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"])
 
         return optimizer
 

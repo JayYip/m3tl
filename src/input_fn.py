@@ -40,9 +40,13 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
     if mode == 'train':
-        dataset = dataset.shuffle(100)
+        dataset = dataset.shuffle(1000)
+
     dataset = dataset.prefetch(1000)
-    dataset = dataset.batch(config.batch_size)
+    if mode == 'train':
+        dataset = dataset.batch(config.batch_size)
+    else:
+        dataset = dataset.batch(config.batch_size*2)
     return dataset
 
 
