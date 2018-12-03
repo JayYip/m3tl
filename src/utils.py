@@ -579,9 +579,13 @@ def create_instances_from_document(
                         tokens_b.extend(current_chunk[j])
                 truncate_seq_pair(tokens_a, tokens_b, None,
                                   max_num_tokens, rng)
-
-                assert len(tokens_a) >= 1
-                assert len(tokens_b) >= 1
+                if len(tokens_a) < 1 or len(tokens_b) < 1:
+                    current_chunk = []
+                    current_length = 0
+                    i += 1
+                    continue
+                assert len(tokens_a) >= 1, tokens_a
+                assert len(tokens_b) >= 1, tokens_b
 
                 tokens = []
                 segment_ids = []

@@ -225,6 +225,7 @@ def WeiboPretrain(params, mode):
         for sentence in splited_doc:
             if sentence:
                 segmented_list[-1].append(list(sentence))
+    segmented_list = [doc for doc in segmented_list if doc]
 
     return create_pretraining_generator('WeiboPretrain',
                                         segmented_list,

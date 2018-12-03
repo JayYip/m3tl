@@ -246,7 +246,7 @@ def mask_lm_top(model, features, hidden_feature, mode, problem_name):
                     per_example_loss, log_probs, label_ids,
                     label_weights), loss)
 
-            return eval_metrics
+                return eval_metrics
 
 
 def pretrain(model, features, hidden_feature, mode, problem_name):
@@ -260,7 +260,8 @@ def pretrain(model, features, hidden_feature, mode, problem_name):
     elif mode == tf.estimator.ModeKeys.EVAL:
         mask_lm_eval_dict, mask_lm_loss = mask_lm_top_result
         next_sentence_eval_dict, next_sentence_loss = next_sentence_top_result
-        return mask_lm_eval_dict.update(next_sentence_eval_dict),\
+        mask_lm_eval_dict.update(next_sentence_eval_dict)
+        return mask_lm_eval_dict,\
             mask_lm_loss+next_sentence_loss
     else:
         return mask_lm_top_result
