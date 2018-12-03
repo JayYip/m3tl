@@ -1,9 +1,11 @@
 from glob import glob
+import re
 
 from bert.tokenization import FullTokenizer
 
 from ..utils import (get_or_make_label_encoder,
-                     create_single_problem_generator)
+                     create_single_problem_generator,
+                     create_pretraining_generator)
 
 
 def gold_horse_ent_type_process_fn(d):
@@ -138,7 +140,7 @@ def WeiboNER(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer, 0)
+                                           tokenizer)
 
 
 def WeiboFakeCLS(params, mode):
@@ -168,7 +170,7 @@ def WeiboFakeCLS(params, mode):
                                            new_target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer, 1)
+                                           tokenizer)
 
 
 def gold_horse_segment_process_fn(d):
@@ -199,4 +201,34 @@ def WeiboSegment(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer, 0)
+                                           tokenizer)
+
+
+def WeiboPretrain(params, mode):
+
+    sentence_split = r'[.!?。？！]'
+
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    data = read_ner_data(file_pattern='data/weiboNER*',
+                         proc_fn=gold_horse_segment_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs']
+
+    segmented_list = []
+    for document in inputs_list:
+        segmented_list.append([])
+        doc_string = ''.join(document)
+        splited_doc = re.split(sentence_split, doc_string)
+        for sentence in splited_doc:
+            if sentence:
+                segmented_list[-1].append(list(sentence))
+
+    return create_pretraining_generator('WeiboPretrain',
+                                        segmented_list,
+                                        None,
+                                        None,
+                                        params,
+                                        tokenizer)

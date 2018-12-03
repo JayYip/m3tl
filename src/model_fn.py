@@ -6,7 +6,7 @@ from bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
-from .top import cls, seq_tag
+from .top import cls, seq_tag, pretrain
 
 
 @autograph.convert()
@@ -60,7 +60,7 @@ class BertWrapper():
             use_one_hot_embeddings=config.use_one_hot_embeddings)
 
         feature_dict = {}
-        for logit_type in ['seq', 'pooled', 'all', 'embed']:
+        for logit_type in ['seq', 'pooled', 'all', 'embed', 'embed_table']:
             if logit_type == 'seq':
                 # tensor, [batch_size, seq_length, hidden_size]
                 feature_dict[logit_type] = model.get_sequence_output()
@@ -73,6 +73,8 @@ class BertWrapper():
             elif logit_type == 'embed':
                 # for res connection
                 feature_dict[logit_type] = model.get_embedding_output()
+            elif logit_type == 'embed_table':
+                feature_dict[logit_type] = model.get_embedding_table()
 
         return feature_dict
 
@@ -90,6 +92,10 @@ class BertWrapper():
         """
         return_dict = {}
         for problem in self.config.problem_type:
+            if self.config.problem_type[problem] == 'pretrain':
+                return_dict[problem] = pretrain(
+                    self, features, hidden_feature, mode, problem)
+
             with tf.variable_scope('%s_top' % problem):
                 if self.config.problem_type[problem] == 'seq_tag':
                     return_dict[problem] = \
@@ -134,6 +140,8 @@ class BertWrapper():
             learning_rate = (
                 (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
+        self.learning_rate = learning_rate
+
         # It is recommended that you use this optimizer for fine tuning, since this
         # is how the model was trained (note that the Adam m/v variables are NOT
         # loaded from init_checkpoint.)
@@ -163,7 +171,12 @@ class BertWrapper():
             hook_dict['%s_loss' % k] = l
             total_loss += l
 
-        logging_hook = tf.train.LoggingTensorHook(hook_dict, every_n_iter=10)
+        hook_dict['learning_rate'] = self.learning_rate
+        hook_dict['total_training_steps'] = tf.constant(
+            self.config.train_steps)
+
+        logging_hook = tf.train.LoggingTensorHook(
+            hook_dict, every_n_iter=self.config.log_every_n_steps)
 
         grads = tf.gradients(
             total_loss, tvars,

@@ -55,7 +55,7 @@ def main(_):
 
     run_config = tf.estimator.RunConfig(
         train_distribute=dist_trategy,
-        log_step_count_steps=10)
+        log_step_count_steps=params.log_every_n_steps)
 
     # ws = make_warm_start_setting(params)
 
