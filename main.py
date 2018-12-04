@@ -38,7 +38,7 @@ def main(_):
         os.mkdir('tmp')
 
     params = Params()
-    params.assign_problem(FLAGS.problem)
+    params.assign_problem(FLAGS.problem, gpu=int(FLAGS.gpu))
 
     create_path(params.ckpt_dir)
 
@@ -88,15 +88,15 @@ def main(_):
 
         def input_fn(): return train_eval_input_fn(params, mode='eval')
         estimator.evaluate(input_fn=input_fn)
-        pred = estimator.predict(input_fn=input_fn)
+        # pred = estimator.predict(input_fn=input_fn)
 
-        pred_list = defaultdict(list)
-        for p in pred:
-            for problem in p:
-                pred_list[problem].append(p[problem])
-        for problem in pred_list:
-            if 'NER' in problem:
-                ner_evaluate(problem, pred_list[problem], params)
+        # pred_list = defaultdict(list)
+        # for p in pred:
+        #     for problem in p:
+        #         pred_list[problem].append(p[problem])
+        # for problem in pred_list:
+        #     if 'NER' in problem:
+        #         ner_evaluate(problem, pred_list[problem], params)
 
     elif FLAGS.schedule == 'predict':
         def input_fn(): return predict_input_fn(

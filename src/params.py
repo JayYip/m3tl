@@ -11,7 +11,8 @@ class Params():
         self.problem_type = {'WeiboNER': 'seq_tag',
                              'WeiboFakeCLS': 'cls',
                              'WeiboSegment': 'seq_tag',
-                             'WeiboPretrain': 'pretrain'}
+                             'WeiboPretrain': 'pretrain',
+                             'CWS': 'seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -21,7 +22,12 @@ class Params():
             'WeiboNER': 18,
             'WeiboFakeCLS': 2,
             'WeiboSegment': 4,
-            'next_sentence': 2
+            'next_sentence': 2,
+            'CWS': 5
+        }
+
+        self.data_num_dict = {
+            'CWS': 867952
         }
 
         # logging control
@@ -55,7 +61,7 @@ class Params():
 
         # hparm
         self.dropout_keep_prob = 0.9
-        self.max_seq_len = 128
+        self.max_seq_len = 90
         self.use_one_hot_embeddings = True
 
         # bert config
@@ -73,7 +79,7 @@ class Params():
         with open(os.path.join(self.pretrain_ckpt, 'vocab.txt'), 'r') as vf:
             self.vocab_size = len(vf.readlines())
 
-    def assign_problem(self, flag_string):
+    def assign_problem(self, flag_string, gpu=2):
         if '&' not in flag_string:
             problem_type = {}
             problem_type[flag_string] = self.problem_type[flag_string]
@@ -89,13 +95,16 @@ class Params():
 
         # update data_num and train_steps
         problem = list(self.problem_type.keys())[0]
-        self.data_num = len(
-            list(self.read_data_fn[problem](self, 'train')))
+        if problem not in self.data_num_dict:
+            self.data_num = len(
+                list(self.read_data_fn[problem](self, 'train')))
+        else:
+            self.data_num = self.data_num_dict[problem]
 
         if self.problem_type[problem] == 'pretrain':
             dup_fac = self.dupe_factor
         else:
             dup_fac = 1
         self.train_steps = int((
-            self.data_num * self.train_epoch * dup_fac) / self.batch_size)
+            self.data_num * self.train_epoch * dup_fac) / (self.batch_size*gpu))
         self.num_warmup_steps = int(0.1 * self.train_steps)

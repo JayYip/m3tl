@@ -62,7 +62,7 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
         gen, output_types=output_type, output_shapes=output_shapes)
 
     if mode == 'train':
-        dataset = dataset.shuffle(1000)
+        dataset = dataset.shuffle(100000)
 
     dataset = dataset.prefetch(1000)
     if mode == 'train':

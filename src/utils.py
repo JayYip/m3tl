@@ -122,8 +122,9 @@ def get_or_make_label_encoder(problem, mode, label_list=None, zero_class='O'):
 
         label_encoder.fit(label_list, zero_class=zero_class)
         pad_ind = len(label_encoder.encode_dict)
-        label_encoder.encode_dict['[PAD]'] = pad_ind
-        label_encoder.decode_dict[pad_ind] = '[PAD]'
+        if zero_class != '[PAD]':
+            label_encoder.encode_dict['[PAD]'] = pad_ind
+            label_encoder.decode_dict[pad_ind] = '[PAD]'
         pickle.dump(label_encoder, open(le_path, 'wb'))
 
     else:
@@ -152,6 +153,8 @@ def get_dirty_text_ind(text):
 def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
     if isinstance(inputs_a, list):
         inputs_a_str = '\t'.join(inputs_a)
+    else:
+        inputs_a_str = inputs_a
 
     tokenized_inputs = tokenizer.tokenize(inputs_a_str)
     dirty_ind = get_dirty_text_ind(inputs_a)
