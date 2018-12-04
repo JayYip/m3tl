@@ -20,7 +20,7 @@ def make_grad(global_step, loss_eval_pred, hidden_features, tvars, freeze_step):
     return grads
 
 
-class BertWrapper():
+class BertMultiTask():
     def __init__(self, params: Params):
         self.config = params
 
