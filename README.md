@@ -2,11 +2,11 @@
 
 ## What is it
 
-This a project that uses [BERT](https://github.com/google-research/bert) to do multi-task learning with multiple GPU support. 
+This a project that uses [BERT](https://github.com/google-research/bert) to do multi-task learning with multiple GPU support.
 
 ## Why do I need this
 
-In the original BERT code, neither multi-task learning or multiple GPU training is possible. Plus, the original purpose of this project is NER which dose not have a working script in the original BERT code. 
+In the original BERT code, neither multi-task learning or multiple GPU training is possible. Plus, the original purpose of this project is NER which dose not have a working script in the original BERT code.
 
 To sum up, you can use this project if you:
 
@@ -59,7 +59,7 @@ def WeiboFakeCLS(params, mode):
                                            new_target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer, 1)
+                                           tokenizer)
 ```
 
 ## TODO
