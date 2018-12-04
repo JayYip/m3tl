@@ -95,9 +95,9 @@ def CWS(params, mode):
     if mode == 'train':
         file_list = glob.glob('data/cws/training/*.utf8')
     else:
-        # file_list = ['as_testing_gold.utf8',
-        #              'cityu_test_gold.utf8', 'msr_test_gold.utf8', 'pku_test_gold.utf8']
-        file_list = ['msr_test_gold.utf8']
+        file_list = ['as_testing_gold.utf8',
+                     'cityu_test_gold.utf8', 'msr_test_gold.utf8', 'pku_test_gold.utf8']
+        # file_list = ['msr_test_gold.utf8']
         file_list = [os.path.join('data/cws/gold', f) for f in file_list]
 
     inputs, target = _process_text_files(file_list)
