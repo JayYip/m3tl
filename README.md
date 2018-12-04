@@ -21,6 +21,8 @@ This project is still in very early stage, and the available problems are quite 
 1. WeiboNER (Chinese Named Entity Recognition)
 2. WeiboSegment (Chinese Word Segmentation)
 3. WeiboFakeCLS (Just a testing classification problem)
+4. WeiboPretrain
+5. CWS (Chinese Word Segmentation with icwb2 data, download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
 
 The following command will run NER and word segmentation problem on Weibo dataset.
 
