@@ -86,10 +86,6 @@ def _process_text_files(path_list):
 
 
 def CWS(params, mode):
-    """Data used here is from:
-    http://sighan.cs.uchicago.edu/bakeoff2005/data/icwb2-data.zip
-    Please download it and modify the path below.
-    """
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
