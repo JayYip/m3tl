@@ -16,7 +16,7 @@ To sum up, you can use this project if you:
 
 ## How to run pre-defined problems
 
-This project is still in very early stage, and the available problems are quite limited. Currently provided pre-defined problems are:
+This project is still in very early stage, and the available problems are quite limited. Currently provided pre-defined problems are([results](src/data_preprocessing/README.md)):
 
 1. WeiboNER (Chinese Named Entity Recognition)
 2. WeiboSegment (Chinese Word Segmentation)
