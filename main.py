@@ -25,6 +25,9 @@ flags.DEFINE_string("schedule", "train",
 flags.DEFINE_integer("gpu", 2,
                      "number of gpu to use")
 
+flags.DEFINE_string("model_dir", "",
+                    "Model dir. If not specified, will use problem_name + _ckpt")
+
 PROBLEMS_LIST = [
     'WeiboNER',
     'WeiboSegment',
@@ -39,6 +42,9 @@ def main(_):
 
     params = Params()
     params.assign_problem(FLAGS.problem, gpu=int(FLAGS.gpu))
+
+    if FLAGS.model_dir:
+        params.ckpt_dir = FLAGS.model_dir
 
     create_path(params.ckpt_dir)
 
@@ -55,6 +61,7 @@ def main(_):
 
     run_config = tf.estimator.RunConfig(
         train_distribute=dist_trategy,
+        eval_distribute=dist_trategy,
         log_step_count_steps=params.log_every_n_steps)
 
     # ws = make_warm_start_setting(params)

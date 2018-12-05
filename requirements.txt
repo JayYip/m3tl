@@ -4,4 +4,3 @@ numpy==1.15.4
 tensor2tensor==1.11.0
 protobuf==3.6.1
 scikit_learn==0.20.1
-tensorflow==1.12.0
