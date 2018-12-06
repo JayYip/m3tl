@@ -2,7 +2,9 @@
 
 ## What is it
 
-This a project that uses [BERT](https://github.com/google-research/bert) to do multi-task learning with multiple GPU support.
+First of all, bad repo name, sorry about that.
+
+This a project that uses [BERT](https://github.com/google-research/bert) to do **multi-task learning** with multiple GPU support.
 
 ## Why do I need this
 
@@ -22,7 +24,8 @@ This project is still in very early stage, and the available problems are quite 
 2. WeiboSegment (Chinese Word Segmentation)
 3. WeiboFakeCLS (Just a testing classification problem)
 4. WeiboPretrain
-5. CWS (Chinese Word Segmentation with icwb2 data, download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
+5. CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
+6. NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
 
 The following command will run NER and word segmentation problem on Weibo dataset.
 
@@ -67,4 +70,4 @@ def WeiboFakeCLS(params, mode):
 - ~~Add multiple GPU support AdamWeightDecayOptimizer~~
 - ~~Add Pretraining~~
 - Add better evaluation
-- Add more ner problem
+- ~~Add more ner problem~~

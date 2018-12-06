@@ -391,17 +391,16 @@ def NER(params, mode):
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 
-    if mode == 'train':
-        inputs_list = weibo_data['train']['inputs'] + \
-            boson_data['train']['inputs'] + msra_data['train']['inputs']
-        target_list = weibo_data['train']['target'] + \
-            boson_data['train']['target'] + msra_data['train']['target']
+    inputs_list = []
+    target_list = []
+    for data in [weibo_data, boson_data, msra_data]:
+        if mode == 'train':
+            inputs_list += data['train']['inputs']
+            target_list += data['train']['target']
 
-    else:
-        inputs_list = weibo_data['eval']['inputs'] + \
-            boson_data['eval']['inputs'] + msra_data['eval']['inputs']
-        target_list = weibo_data['eval']['target'] + \
-            boson_data['eval']['target'] + msra_data['eval']['target']
+        else:
+            inputs_list += data['eval']['inputs']
+            target_list += data['eval']['target']
 
     flat_target_list = ['O',
                         'B-LOC',

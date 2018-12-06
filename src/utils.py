@@ -113,9 +113,9 @@ def get_or_make_label_encoder(problem, mode, label_list=None, zero_class='O'):
         LabelEncoder -- label encoder
     """
 
-    problem_path = os.path.join('tmp', problem)
+    problem_path = os.path.join('tmp', problem+'_ckpt')
     create_path(problem_path)
-    le_path = os.path.join(problem_path, 'lable_encoder.pkl')
+    le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
 
     if mode == 'train' and not os.path.exists(le_path):
         label_encoder = LabelEncoder()
