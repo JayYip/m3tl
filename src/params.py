@@ -29,7 +29,8 @@ class Params():
         }
 
         self.data_num_dict = {
-            'CWS': 867952
+            'CWS': 867952,
+            'NER': 60000
         }
 
         # logging control
