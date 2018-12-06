@@ -1,11 +1,19 @@
 from glob import glob
 import re
 
+from sklearn.model_selection import train_test_split
+
 from bert.tokenization import FullTokenizer
 
 from ..utils import (get_or_make_label_encoder,
                      create_single_problem_generator,
                      create_pretraining_generator)
+
+NER_TYPE = ['LOC',  # location
+            'PER',  # person
+            'ORG',  # organization
+            'PRD',  # Product
+            ]
 
 
 def gold_horse_ent_type_process_fn(d):
@@ -37,8 +45,9 @@ def gold_horse_ent_type_process_fn(d):
     """
     ent_type = d.split('\t')[1].replace('\n', '')
     # keep nam only
-    # ent_type = ent_type if 'NAM' in ent_type else 'O'
-    # ent_type = ent_type.replace('.NAM', '')
+    ent_type = ent_type if 'NAM' in ent_type else 'O'
+    ent_type = ent_type.replace('.NAM', '')
+    ent_type = ent_type.replace('GPE', 'LOC')
     return ent_type
 
 
@@ -56,7 +65,7 @@ def chinese_literature_ent_type_process_fn(d):
     return ent_type
 
 
-def read_ner_data(file_pattern='data/weiboNER*', proc_fn=None):
+def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     """Read data from golden horse data
 
 
@@ -121,7 +130,7 @@ def read_ner_data(file_pattern='data/weiboNER*', proc_fn=None):
 
 def WeiboNER(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -151,7 +160,7 @@ def WeiboFakeCLS(params, mode):
         mode {mode} -- mode
     """
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -182,7 +191,7 @@ def gold_horse_segment_process_fn(d):
 
 def WeiboSegment(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -209,7 +218,7 @@ def WeiboPretrain(params, mode):
     sentence_split = r'[.!?。？！]'
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -233,3 +242,181 @@ def WeiboPretrain(params, mode):
                                         None,
                                         params,
                                         tokenizer)
+
+
+def read_bosonnlp_data(file_pattern, eval_size=0.2):
+    file_list = glob(file_pattern)
+    sentence_split = r'[!?。？！]'
+
+    project_table = {
+        'person_name': 'PER',
+        'company_name': 'ORG',
+        'location': 'LOC',
+        'product_name': 'PRD'
+    }
+    input_list = []
+    target_list = []
+
+    if not file_list:
+        raise FileNotFoundError('Please make sure you have downloaded BosonNLP\
+        data and put it in the path you specified. \
+        Download: https://bosonnlp.com/resources/BosonNLP_NER_6C.zip')
+
+    for file_path in file_list:
+        with open(file_path, 'r', encoding='utf8') as f:
+            data_list = f.readlines()
+
+        for doc in data_list:
+            if '}}}}' in doc:
+                continue
+            splited_doc = re.split(sentence_split, doc)
+
+            for sentence in splited_doc:
+
+                # split doc into sentences
+
+                input_list.append([])
+                target_list.append([])
+
+                # split by {{
+                doc_chunk_list = sentence.split('{{')
+                for chunk in doc_chunk_list:
+                    if '}}' not in chunk or ':' not in chunk:
+                        target_list[-1] += ['O']*len(chunk)
+                        input_list[-1] += list(chunk)
+                    else:
+                        ent_chunk, text_chunk = chunk.split('}}')
+                        punc_ind = ent_chunk.index(':')
+                        ent_type = ent_chunk[:punc_ind]
+                        ent = ent_chunk[punc_ind+1:]
+                        if ent_type in project_table:
+                            for char_ind, ent_char in enumerate(ent):
+                                if char_ind == 0:
+                                    loc_char = 'B'
+                                else:
+                                    loc_char = 'I'
+                                target_list[-1].append(loc_char +
+                                                       '-'+project_table[ent_type])
+                                input_list[-1].append(ent_char)
+                        else:
+                            target_list[-1] += ['O']*len(ent)
+                            input_list[-1] += list(ent)
+
+                        target_list[-1] += ['O']*len(text_chunk)
+                        input_list[-1] += list(text_chunk)
+
+    return_input, return_target = [], []
+    for inp, tar in zip(input_list, target_list):
+        if inp and tar:
+            return_input.append(inp)
+            return_target.append(tar)
+        assert len(inp) == len(tar)
+
+    train_input, eval_input, train_target, eval_target = train_test_split(
+        return_input, return_target, test_size=eval_size, random_state=1024)
+    result_dict = {
+        'train': {},
+        'eval': {}
+    }
+    result_dict['train']['inputs'] = train_input
+    result_dict['train']['target'] = train_target
+    result_dict['eval']['inputs'] = eval_input
+    result_dict['eval']['target'] = eval_target
+    return result_dict
+
+
+def read_msra(file_pattern, eval_size):
+    file_list = glob(file_pattern)
+
+    project_table = {
+        'nr': 'PER',
+        'nt': 'ORG',
+        'ns': 'LOC'
+    }
+
+    input_list = []
+    target_list = []
+
+    for file_path in file_list:
+        with open(file_path, 'r', encoding='utf8') as f:
+            data_list = f.readlines()
+
+        for sentence in data_list:
+            sentence = sentence.replace('\n', '')
+            input_list.append([])
+            target_list.append([])
+            sentence_word_list = sentence.split(' ')
+            for word in sentence_word_list:
+                if word:
+                    ent, ent_type = word.split('/')
+                    if ent_type not in project_table:
+                        input_list[-1] += list(ent)
+                        target_list[-1] += ['O'] * len(ent)
+                    else:
+                        for char_ind, ent_char in enumerate(ent):
+                            if char_ind == 0:
+                                loc_char = 'B'
+                            else:
+                                loc_char = 'I'
+
+                            target_list[-1].append(loc_char +
+                                                   '-'+project_table[ent_type])
+                            input_list[-1].append(ent_char)
+
+    return_input, return_target = [], []
+    for inp, tar in zip(input_list, target_list):
+        if inp and tar:
+            return_input.append(inp)
+            return_target.append(tar)
+        assert len(inp) == len(tar)
+
+    train_input, eval_input, train_target, eval_target = train_test_split(
+        return_input, return_target, test_size=eval_size, random_state=1024)
+    result_dict = {
+        'train': {},
+        'eval': {}
+    }
+    result_dict['train']['inputs'] = train_input
+    result_dict['train']['target'] = train_target
+    result_dict['eval']['inputs'] = eval_input
+    result_dict['eval']['target'] = eval_target
+    return result_dict
+
+
+def NER(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                               proc_fn=gold_horse_ent_type_process_fn)
+    boson_data = read_bosonnlp_data(
+        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
+    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
+
+    if mode == 'train':
+        inputs_list = weibo_data['train']['inputs'] + \
+            boson_data['train']['inputs'] + msra_data['train']['inputs']
+        target_list = weibo_data['train']['target'] + \
+            boson_data['train']['target'] + msra_data['train']['target']
+
+    else:
+        inputs_list = weibo_data['eval']['inputs'] + \
+            boson_data['eval']['inputs'] + msra_data['eval']['inputs']
+        target_list = weibo_data['eval']['target'] + \
+            boson_data['eval']['target'] + msra_data['eval']['target']
+
+    flat_target_list = ['O',
+                        'B-LOC',
+                        'B-PER',
+                        'B-ORG',
+                        'B-PRD',
+                        'I-LOC',
+                        'I-PER',
+                        'I-ORG',
+                        'I-PRD', ]
+    label_encoder = get_or_make_label_encoder(
+        'NER', mode, flat_target_list, zero_class='O')
+    return create_single_problem_generator('NER',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)

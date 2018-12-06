@@ -12,18 +12,20 @@ class Params():
                              'WeiboFakeCLS': 'cls',
                              'WeiboSegment': 'seq_tag',
                              'WeiboPretrain': 'pretrain',
-                             'CWS': 'seq_tag'}
+                             'CWS': 'seq_tag',
+                             'NER': 'seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
             # num of classes of problems
             # including padding if padding is needed
-            # 'seq_tag': 10
-            'WeiboNER': 18,
+            'WeiboNER': 10,
+            # 'WeiboNER': 18,
             'WeiboFakeCLS': 2,
             'WeiboSegment': 4,
             'next_sentence': 2,
-            'CWS': 5
+            'CWS': 5,
+            'NER': 10
         }
 
         self.data_num_dict = {
