@@ -159,6 +159,9 @@ def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
     tokenized_inputs = tokenizer.tokenize(inputs_a_str)
     dirty_ind = get_dirty_text_ind(inputs_a)
 
+    # get white space ind
+    dirty_ind += [i for i, c in enumerate(inputs_a) if not c.strip()]
+
     if is_seq:
         target = [element for element_i, element in enumerate(
             target) if element_i not in dirty_ind]
