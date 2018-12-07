@@ -122,3 +122,6 @@ class Params():
         self.train_steps = int((
             self.data_num * self.train_epoch * dup_fac) / (self.batch_size*gpu))
         self.num_warmup_steps = int(0.1 * self.train_steps)
+
+        # linear scale learing rate
+        self.lr = self.lr * gpu

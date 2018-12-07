@@ -165,7 +165,7 @@ def ner_evaluate(problem, pred_list, params):
     lable_data_list = list(label_data)
 
     label_encoder = pickle.load(open(
-        os.path.join('tmp', problem, 'lable_encoder.pkl'), 'rb'))
+        os.path.join('tmp', problem+'_ckpt', '%s_lable_encoder.pkl' % problem), 'rb'))
 
     decode_pred_list = []
     decode_label_list = []
