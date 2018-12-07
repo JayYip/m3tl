@@ -521,20 +521,23 @@ def create_generator(params, mode, epoch):
     gen_dict = {problem: params.read_data_fn[problem](params, mode)
                 for problem in problem_list}
 
-    while True:
+    while gen_dict:
         # sample problem to train
-        data_num_list = [params.data_num_dict[chunk[0]]
-                         for chunk in problem_chunk]
-        if params.multitask_balance_type == 'data_balanced':
-            sample_prob = np.array(data_num_list) / np.sum(data_num_list)
-            current_problem_chunk = np.random.choice(
-                problem_chunk, p=sample_prob)
+        if len(problem_chunk) > 1:
+            data_num_list = [params.data_num_dict[chunk[0]]
+                             for chunk in problem_chunk]
+            if params.multitask_balance_type == 'data_balanced':
+                sample_prob = np.array(data_num_list) / np.sum(data_num_list)
+                current_problem_chunk = np.random.choice(
+                    problem_chunk, p=sample_prob)
 
-        elif params.multitask_balance_type == 'problem_balanced':
-            sample_prob = np.array(
-                [1]*len(data_num_list)) / np.sum([1]*len(data_num_list))
-            current_problem_chunk = np.random.choice(
-                problem_chunk, p=sample_prob)
+            elif params.multitask_balance_type == 'problem_balanced':
+                sample_prob = np.array(
+                    [1]*len(data_num_list)) / np.sum([1]*len(data_num_list))
+                current_problem_chunk = np.random.choice(
+                    problem_chunk, p=sample_prob)
+        else:
+            current_problem_chunk = problem_chunk[0]
 
         # create loss multiplier
         loss_multiplier = {}
@@ -550,8 +553,15 @@ def create_generator(params, mode, epoch):
             try:
                 instance = next(gen_dict[problem])
             except StopIteration:
-                gen_dict[problem] = params.read_data_fn[problem]
-                instance = next(gen_dict[problem])
+                if mode == 'train':
+                    gen_dict[problem] = params.read_data_fn[problem](
+                        params, mode)
+                    instance = next(gen_dict[problem])
+                else:
+                    del gen_dict[problem]
+                    continue
+            except KeyError:
+                continue
 
             base_dict.update(instance)
             if base_input is None:
@@ -559,6 +569,9 @@ def create_generator(params, mode, epoch):
             else:
                 assert base_input == instance[
                     'input_ids'], 'Inputs id of two chained problem not aligned. Please double check!'
+
+        if not base_dict:
+            continue
 
         # add dummpy labels
         for dummy_problem in dummy_label_dict:
