@@ -43,10 +43,27 @@ This project is still in very early stage, and the available problems are quite 
 5. CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
 6. NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
 
-The following command will run NER and word segmentation problem on Weibo dataset.
+#### Multitrask Training
+
+There are two types of chaining operations can be used to chain problems.
+
+- `&`. If two problems have the same inputs, they can be chained using `&`. Problems chained by `&` will be trained at the same time.
+- `|`. If two problems don't have the same inputs, they need to be chained using `|`. Problems chained by `|` will be sampled to train at every instance.
+
+For example, `CWS|NER|WeiboNER&WeiboSegment`, one problem will be sampled at each turn, say `WeiboNER&WeiboSegment`, then `WeiboNER` and `WeiboSegment` will trained for this turn together.
+
+You can train using the following command.
 
 ```bash
-python main.py --problem "WeiboNER&WeiboSegment" --schedule train
+python main.py --problem "CWS|NER|WeiboNER&WeiboSegment" --schedule train --model_dir "tmp/multitask"
+```
+
+For evaluation, you need to separate the problems.
+
+```bash
+python main.py --problem "CWS" --schedule eval --model_dir "tmp/multitask"
+python main.py --problem "NER" --schedule eval --model_dir "tmp/multitask"
+python main.py --problem "WeiboNER&WeiboSegment" --schedule eval --model_dir "tmp/multitask"
 ```
 
 ## How to add problems
