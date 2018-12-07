@@ -35,6 +35,13 @@ class Params():
             'NER': 60000
         }
 
+        # specify this will make key reuse values top
+        # that it, WeiboNER problem will use NER's top
+        self.share_top = {
+            'WeiboNER': 'NER',
+            # 'WeiboSegment': 'CWS'
+        }
+
         self.multitask_balance_type = 'data_balanced'
         # self.multitask_balance_type = 'problem_balanced'
 

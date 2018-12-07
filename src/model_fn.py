@@ -93,11 +93,18 @@ class BertMultiTask():
         return_dict = {}
         for problem_dict in self.config.run_problem_list:
             for problem in problem_dict:
+
+                # top share accross problem
+                if problem in self.config.share_top:
+                    top_scope_name = '%s_top' % self.config.share_top[problem]
+                else:
+                    top_scope_name = '%s_top' % problem
+
                 if self.config.problem_type[problem] == 'pretrain':
                     return_dict[problem] = pretrain(
                         self, features, hidden_feature, mode, problem)
 
-                with tf.variable_scope('%s_top' % problem):
+                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                     if self.config.problem_type[problem] == 'seq_tag':
                         return_dict[problem] = \
                             seq_tag(self, features,
