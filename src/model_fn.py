@@ -91,18 +91,20 @@ class BertMultiTask():
 
         """
         return_dict = {}
-        for problem in self.config.problem_type:
-            if self.config.problem_type[problem] == 'pretrain':
-                return_dict[problem] = pretrain(
-                    self, features, hidden_feature, mode, problem)
+        for problem_dict in self.config.run_problem_list:
+            for problem in problem_dict:
+                if self.config.problem_type[problem] == 'pretrain':
+                    return_dict[problem] = pretrain(
+                        self, features, hidden_feature, mode, problem)
 
-            with tf.variable_scope('%s_top' % problem):
-                if self.config.problem_type[problem] == 'seq_tag':
-                    return_dict[problem] = \
-                        seq_tag(self, features, hidden_feature, mode, problem)
-                elif self.config.problem_type[problem] == 'cls':
-                    return_dict[problem] = \
-                        cls(self, features, hidden_feature, mode, problem)
+                with tf.variable_scope('%s_top' % problem):
+                    if self.config.problem_type[problem] == 'seq_tag':
+                        return_dict[problem] = \
+                            seq_tag(self, features,
+                                    hidden_feature, mode, problem)
+                    elif self.config.problem_type[problem] == 'cls':
+                        return_dict[problem] = \
+                            cls(self, features, hidden_feature, mode, problem)
 
         return return_dict
 

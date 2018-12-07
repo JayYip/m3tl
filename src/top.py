@@ -23,13 +23,19 @@ def cls(model, features, hidden_feature, mode, problem_name):
     labels = features['%s_label_ids' % problem_name]
     if mode == tf.estimator.ModeKeys.TRAIN:
         batch_loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
-        loss = tf.reduce_mean(batch_loss)
+        loss_multiplier = tf.cast(
+            features['%s_loss_multiplier' % problem_name], tf.float32)
+        # multiply with loss multiplier to make some loss as zero
+        loss = tf.reduce_mean(batch_loss*loss_multiplier)
 
         tf.summary.scalar('%s_loss' % problem_name, loss)
         return loss
     elif mode == tf.estimator.ModeKeys.EVAL:
         batch_loss = tf.losses.sparse_softmax_cross_entropy(labels, logits)
-        loss = tf.reduce_mean(batch_loss)
+        loss_multiplier = tf.cast(
+            features['%s_loss_multiplier' % problem_name], tf.float32)
+        # multiply with loss multiplier to make some loss as zero
+        loss = tf.reduce_mean(batch_loss*loss_multiplier)
 
         def metric_fn(label_ids, logits):
             predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -82,9 +88,10 @@ def seq_tag(model, features, hidden_feature, mode, problem_name):
                 tf.contrib.crf.crf_log_likelihood(
                     logits, seq_labels, seq_length,
                     transition_params=crf_transition_param)
-        # seq_loss = tf.contrib.seq2seq.sequence_loss(
-        #     logits, seq_labels, weights=sequence_weight)
-        seq_loss = tf.reduce_mean(-log_likelihood)
+        loss_multiplier = tf.cast(
+            features['%s_loss_multiplier' % problem_name], tf.float32)
+        # multiply with loss multiplier to make some loss as zero
+        seq_loss = tf.reduce_mean(-log_likelihood * loss_multiplier)
         tf.summary.scalar('%s_loss' % problem_name, seq_loss)
         return seq_loss
 

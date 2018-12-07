@@ -1,4 +1,5 @@
 import os
+import re
 
 from bert.modeling import BertConfig
 
@@ -7,6 +8,8 @@ from . import data_preprocessing
 
 class Params():
     def __init__(self):
+
+        self.run_problem_list = []
 
         self.problem_type = {'WeiboNER': 'seq_tag',
                              'WeiboFakeCLS': 'cls',
@@ -20,7 +23,6 @@ class Params():
             # num of classes of problems
             # including padding if padding is needed
             'WeiboNER': 10,
-            # 'WeiboNER': 18,
             'WeiboFakeCLS': 2,
             'WeiboSegment': 4,
             'next_sentence': 2,
@@ -32,6 +34,9 @@ class Params():
             'CWS': 867952,
             'NER': 60000
         }
+
+        self.multitask_balance_type = 'data_balanced'
+        # self.multitask_balance_type = 'problem_balanced'
 
         # logging control
         self.log_every_n_steps = 10
@@ -83,26 +88,32 @@ class Params():
             self.vocab_size = len(vf.readlines())
 
     def assign_problem(self, flag_string, gpu=2):
-        if '&' not in flag_string:
-            problem_type = {}
-            problem_type[flag_string] = self.problem_type[flag_string]
-            self.problem_type = problem_type
-        else:
-            problem_type = {}
-            for problem in flag_string.split('&'):
-                problem_type[problem] = self.problem_type[problem]
-            self.problem_type = problem_type
+        for flag_chunk in flag_string.split('|'):
 
-        problem_list = sorted(self.problem_type.keys())
+            if '&' not in flag_chunk:
+                problem_type = {}
+                problem_type[flag_chunk] = self.problem_type[flag_chunk]
+                self.run_problem_list.append(problem_type)
+            else:
+                problem_type = {}
+                for problem in flag_chunk.split('&'):
+                    problem_type[problem] = self.problem_type[problem]
+                self.run_problem_list.append(problem_type)
+
+        problem_list = sorted(re.split(r'[&|]', flag_string))
+
         self.ckpt_dir = os.path.join('tmp', '_'.join(problem_list)+'_ckpt')
 
         # update data_num and train_steps
-        problem = list(self.problem_type.keys())[0]
-        if problem not in self.data_num_dict:
-            self.data_num = len(
-                list(self.read_data_fn[problem](self, 'train')))
-        else:
-            self.data_num = self.data_num_dict[problem]
+        self.data_num = 0
+        for problem in problem_list:
+            if problem not in self.data_num_dict:
+                self.data_num += len(
+                    list(self.read_data_fn[problem](self, 'train')))
+                self.data_num_dict[problem] = len(
+                    list(self.read_data_fn[problem](self, 'train')))
+            else:
+                self.data_num += self.data_num_dict[problem]
 
         if self.problem_type[problem] == 'pretrain':
             dup_fac = self.dupe_factor

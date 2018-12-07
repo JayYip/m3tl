@@ -478,30 +478,96 @@ def create_pretraining_generator(problem,
 def create_generator(params, mode, epoch):
     """Function to create iterator for multiple problem
 
+    This function dose the following things:
+    1. Create dummy labels for each problems.
+    2. Initialize all generators
+    3. Sample a problem to train at this batch. If eval, take turns
+    4. Create a loss multiplier
+    5. Tried to generate samples for target problem, if failed, init gen
+    6. Add dummy label to other problems
+
+    Example:
+        Problem: CWS|NER|WeiboNER&WeiboSegment
+        1. Dummy labels: CWS_label_ids: [0,0,0] ...
+        2. Blablabla
+        3. Sample, say (WeiboNER&WeiboSegment)
+        4. loss multipliers: {'CWS_loss_multiplier': 0, ..., 'WeiboNER_loss_multiplier': 1, ...}
+        ...
+
     Arguments:
         params {Params} -- params
         mode {mode} -- mode
         epoch {int} -- epochs to run
     """
+    # example
+    # problem_list: ['NER', 'CWS', 'WeiboNER', 'WeiboSegment']
+    # problem_chunk: [['NER'], ['CWS'], ['WeiboNER', 'WeiboSegment']]
+    problem_list = []
+    problem_chunk = []
+    for problem_dict in params.run_problem_list:
+        problem_list += list(problem_dict.keys())
+        problem_chunk.append(list(problem_dict.keys()))
 
-    for _ in range(epoch):
-        generator_list = []
-        for problem, problem_type in params.problem_type.items():
-            generator_list.append(
-                params.read_data_fn[problem](params, mode))
+    # get dummy labels
+    def _create_dummpy_label(problem_type):
+        if problem_type == 'cls':
+            return 0
+        else:
+            return [0]*params.max_seq_len
+    dummy_label_dict = {problem+'_label_ids': _create_dummpy_label(
+        params.problem_type[problem]) for problem in problem_list}
 
-        g = zip(*generator_list)
-        for instance in g:
-            base_dict = {}
-            base_input = {}
-            for problem_dict in instance:
-                base_dict.update(problem_dict)
-                if not base_input:
-                    base_input['input_ids'] = problem_dict['input_ids']
-                else:
-                    assert base_input['input_ids'] == problem_dict[
-                        'input_ids'], 'Inputs id of two chained problem not aligned. Please double check!'
-            yield base_dict
+    # init gen
+    gen_dict = {problem: params.read_data_fn[problem](params, mode)
+                for problem in problem_list}
+
+    while True:
+        # sample problem to train
+        data_num_list = [params.data_num_dict[chunk[0]]
+                         for chunk in problem_chunk]
+        if params.multitask_balance_type == 'data_balanced':
+            sample_prob = np.array(data_num_list) / np.sum(data_num_list)
+            current_problem_chunk = np.random.choice(
+                problem_chunk, p=sample_prob)
+
+        elif params.multitask_balance_type == 'problem_balanced':
+            sample_prob = np.array(
+                [1]*len(data_num_list)) / np.sum([1]*len(data_num_list))
+            current_problem_chunk = np.random.choice(
+                problem_chunk, p=sample_prob)
+
+        # create loss multiplier
+        loss_multiplier = {}
+        for problem in problem_list:
+            if problem in current_problem_chunk:
+                loss_multiplier[problem+'_loss_multiplier'] = 1
+            else:
+                loss_multiplier[problem+'_loss_multiplier'] = 0
+
+        base_dict = {}
+        base_input = None
+        for problem in current_problem_chunk:
+            try:
+                instance = next(gen_dict[problem])
+            except StopIteration:
+                gen_dict[problem] = params.read_data_fn[problem]
+                instance = next(gen_dict[problem])
+
+            base_dict.update(instance)
+            if base_input is None:
+                base_input = instance['input_ids']
+            else:
+                assert base_input == instance[
+                    'input_ids'], 'Inputs id of two chained problem not aligned. Please double check!'
+
+        # add dummpy labels
+        for dummy_problem in dummy_label_dict:
+            if dummy_problem not in base_dict:
+                base_dict[dummy_problem] = dummy_label_dict[dummy_problem]
+        # add loss multipliers
+        base_dict.update(loss_multiplier)
+        yield base_dict
+
 
 # some code block from run_pretraining.py
 
