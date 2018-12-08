@@ -16,7 +16,9 @@ class Params():
                              'WeiboSegment': 'seq_tag',
                              'WeiboPretrain': 'pretrain',
                              'CWS': 'seq_tag',
-                             'NER': 'seq_tag'}
+                             'NER': 'seq_tag',
+                             'CTBPOS': 'seq_tag',
+                             'CTBCWS': 'seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -27,19 +29,23 @@ class Params():
             'WeiboSegment': 4,
             'next_sentence': 2,
             'CWS': 5,
-            'NER': 10
+            'NER': 10,
+            'CTBPOS': 62,
+            'CTBCWS': 5
         }
 
         self.data_num_dict = {
             'CWS': 867952,
-            'NER': 60000
+            'NER': 60000,
+            'CTBPOS': 47400,
+            'CTBCWS': 47400
         }
 
         # specify this will make key reuse values top
         # that it, WeiboNER problem will use NER's top
         self.share_top = {
             'WeiboNER': 'NER',
-            # 'WeiboSegment': 'CWS'
+            'CTBCWS': 'CWS'
         }
 
         self.multitask_balance_type = 'data_balanced'
