@@ -528,14 +528,16 @@ def create_generator(params, mode, epoch):
                              for chunk in problem_chunk]
             if params.multitask_balance_type == 'data_balanced':
                 sample_prob = np.array(data_num_list) / np.sum(data_num_list)
-                current_problem_chunk = np.random.choice(
-                    problem_chunk, p=sample_prob)
+                current_problem_chunk_ind = np.random.choice(
+                    list(range(len(problem_chunk))), p=sample_prob)
+                current_problem_chunk = problem_chunk[current_problem_chunk_ind]
 
             elif params.multitask_balance_type == 'problem_balanced':
                 sample_prob = np.array(
                     [1]*len(data_num_list)) / np.sum([1]*len(data_num_list))
-                current_problem_chunk = np.random.choice(
-                    problem_chunk, p=sample_prob)
+                current_problem_chunk_ind = np.random.choice(
+                    list(range(len(problem_chunk))), p=sample_prob)
+                current_problem_chunk = problem_chunk[current_problem_chunk_ind]
         else:
             current_problem_chunk = problem_chunk[0]
 
