@@ -42,6 +42,8 @@ This project is still in very early stage, and the available problems are quite 
 4. WeiboPretrain
 5. CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
 6. NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
+7. CTBCWS
+8. CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
 
 #### Multitrask Training
 
