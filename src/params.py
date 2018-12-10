@@ -52,7 +52,7 @@ class Params():
         # self.multitask_balance_type = 'problem_balanced'
 
         # logging control
-        self.log_every_n_steps = 10
+        self.log_every_n_steps = 100
 
         # get generator function for each problem
         self.read_data_fn = {}
@@ -77,7 +77,7 @@ class Params():
         self.freeze_body = False
         self.lr = 2e-5
         self.batch_size = 32
-        self.train_epoch = 10
+        self.train_epoch = 15
         self.freeze_step = 50
 
         # hparm

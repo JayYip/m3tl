@@ -3,6 +3,8 @@ import os
 import glob
 from tqdm import tqdm
 
+from sklearn.model_selection import train_test_split
+
 from bert.tokenization import FullTokenizer
 
 from ..utils import (get_or_make_label_encoder,
@@ -40,6 +42,13 @@ def CTBPOS(params, mode):
                     target_list[-1].append(loc_char +
                                            '-'+tag)
                     input_list[-1].append(char)
+
+    if mode == 'train':
+        input_list, _, target_list, _ = train_test_split(
+            input_list, target_list, test_size=0.2, random_state=3721)
+    else:
+        _, input_list, _, target_list = train_test_split(
+            input_list, target_list, test_size=0.2, random_state=3721)
 
     flat_target_list = [item for sublist in target_list for item in sublist]
 
@@ -87,6 +96,13 @@ def CTBCWS(params, mode):
                     target_list[-1] += list(tag)
                 else:
                     continue
+
+    if mode == 'train':
+        input_list, _, target_list, _ = train_test_split(
+            input_list, target_list, test_size=0.2, random_state=3721)
+    else:
+        _, input_list, _, target_list = train_test_split(
+            input_list, target_list, test_size=0.2, random_state=3721)
 
     flat_target_list = [item for sublist in target_list for item in sublist]
 

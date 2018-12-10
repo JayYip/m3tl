@@ -67,7 +67,7 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
     if mode == 'train':
         dataset = dataset.shuffle(100000)
 
-    dataset = dataset.prefetch(1000)
+    dataset = dataset.prefetch(5000)
     if mode == 'train':
         dataset = dataset.batch(config.batch_size)
     else:
