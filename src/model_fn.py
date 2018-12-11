@@ -20,6 +20,17 @@ def make_grad(global_step, loss_eval_pred, hidden_features, tvars, freeze_step):
     return grads
 
 
+@autograph.convert()
+def filter_loss(loss, features, problem):
+
+    if tf.reduce_mean(features['%s_loss_multiplier' % problem]) == 0:
+        return_loss = 0.0
+    else:
+        return_loss = loss
+
+    return return_loss
+
+
 class BertMultiTask():
     def __init__(self, params: Params):
         self.config = params
@@ -62,7 +73,7 @@ class BertMultiTask():
         feature_dict = {}
         for logit_type in ['seq', 'pooled', 'all', 'embed', 'embed_table']:
             if logit_type == 'seq':
-                # tensor, [batch_size, seq_length, hidden_size]
+                                # tensor, [batch_size, seq_length, hidden_size]
                 feature_dict[logit_type] = model.get_sequence_output()
             elif logit_type == 'pooled':
                 # tensor, [batch_size, hidden_size]
@@ -104,14 +115,30 @@ class BertMultiTask():
                     return_dict[problem] = pretrain(
                         self, features, hidden_feature, mode, problem)
 
+                # get features with ind == 1
+                if mode == 'train':
+                    record_ind = tf.cast(
+                        features['%s_loss_multiplier' % problem], tf.bool)
+                    feature_this_round = {k: tf.boolean_mask(v, record_ind)
+                                          for k, v in features.items()}
+                    hidden_feature_this_round = {k: tf.boolean_mask(v, record_ind)
+                                                 for k, v in hidden_feature.items()}
+                else:
+                    feature_this_round = features
+                    hidden_feature_this_round = hidden_feature
+
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                     if self.config.problem_type[problem] == 'seq_tag':
                         return_dict[problem] = \
-                            seq_tag(self, features,
-                                    hidden_feature, mode, problem)
+                            seq_tag(self, feature_this_round,
+                                    hidden_feature_this_round, mode, problem)
                     elif self.config.problem_type[problem] == 'cls':
                         return_dict[problem] = \
-                            cls(self, features, hidden_feature, mode, problem)
+                            cls(self, feature_this_round,
+                                hidden_feature_this_round, mode, problem)
+                    if mode == 'train':
+                        return_dict[problem] = filter_loss(
+                            return_dict[problem], feature_this_round, problem)
 
         return return_dict
 
