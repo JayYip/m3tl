@@ -25,7 +25,7 @@ Pretrained models for CWS and NER are released. You can use simplified api defin
 ```python
     params = Params()
     m = ChineseNER(params, gpu=1)
-    print(m.ner(['''正如老K教练所说，勒布朗姆斯的领袖气质开始凸显。面对外界的质疑，勒布朗表
+    print(m.ner(['''正如老K教练所说，勒布朗詹姆斯的领袖气质开始凸显。面对外界的质疑，勒布朗表
 示，“梦十队”一定会在伦敦奥运会上成功卫冕，“我们的球队不只想变得更强，而
 且想拿到金牌，”詹姆斯说，“很多人都认为表示没法拿到金牌。他们认为我们在
 身高上存在缺陷，说我们没有全身心地投入到国家队当中。但是我们会全身心地投
@@ -45,7 +45,7 @@ This project is still in very early stage, and the available problems are quite 
 7. CTBCWS
 8. CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
 
-#### Multitrask Training
+#### Multitask Training
 
 There are two types of chaining operations can be used to chain problems.
 

@@ -71,7 +71,22 @@ class ChineseNER(PredictModel):
         self.problem = 'NER'
         self.init_estimator(self.problem)
 
-    def ner(self, input_file_or_list):
+    def merge_entity(self, tokens, labels):
+        merged_tokens = []
+        merged_labels = []
+        for token, label in zip(tokens, labels):
+            if label == 'O':
+                merged_tokens.append(token)
+                merged_labels.append(label)
+            elif label[0] == 'B':
+                merged_tokens.append(token)
+                merged_labels.append(label[2:])
+            else:
+                merged_tokens[-1] += token
+                # merged_labels[-1] += label
+        return merged_tokens, merged_labels
+
+    def ner(self, input_file_or_list, extract_ent=True):
         pred = self.predict(input_file_or_list)
 
         encoded_data = predict_input_fn_generator(
@@ -85,8 +100,13 @@ class ChineseNER(PredictModel):
             tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
             labels = self.label_encoder.inverse_transform(ner_pred)
             tokens, labels = self.remove_special_tokens(tokens, labels)
-            result_list.append(
-                list(zip(tokens, labels)))
+            tokens, labels = self.merge_entity(tokens, labels)
+            if extract_ent:
+                result_list = [(ent, ent_type) for ent, ent_type in zip(
+                    tokens, labels) if ent_type != 'O']
+            else:
+                result_list.append(
+                    list(zip(tokens, labels)))
         return result_list
 
 
