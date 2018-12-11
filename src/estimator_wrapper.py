@@ -2,9 +2,11 @@
 import tensorflow as tf
 
 from bert.tokenization import FullTokenizer
+from tqdm import tqdm
+import numpy as np
 
 from .model_fn import BertMultiTask
-from .input_fn import predict_input_fn, predict_input_fn_generator
+from .input_fn import predict_input_fn
 from .estimator import Estimator
 from .utils import get_or_make_label_encoder
 from .params import Params
@@ -60,7 +62,8 @@ class PredictModel():
         def input_fn(): return predict_input_fn(
             input_file_or_list, self.params, mode='predict')
 
-        pred = self.estimator.predict(input_fn=input_fn)
+        pred = self.estimator.predict(
+            input_fn=input_fn)
         return pred
 
 
@@ -71,22 +74,25 @@ class ChineseNER(PredictModel):
         self.problem = 'NER'
         self.init_estimator(self.problem)
 
-    def ner(self, input_file_or_list):
+    def ner(self, input_file_or_list, extract_ent=False):
         pred = self.predict(input_file_or_list)
-
-        encoded_data = predict_input_fn_generator(
-            input_file_or_list, self.params, mode='predict')
 
         result_list = []
 
-        for d, p in zip(encoded_data, pred):
-            input_ids = d['input_ids']
+        for d, p in enumerate(pred):
+            input_ids = p['input_ids']
             ner_pred = p[self.problem]
             tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
             labels = self.label_encoder.inverse_transform(ner_pred)
+
             tokens, labels = self.remove_special_tokens(tokens, labels)
-            result_list.append(
-                list(zip(tokens, labels)))
+            tokens, labels = self.merge_entity(tokens, labels)
+            if extract_ent:
+                result_list.append([(ent, ent_type) for ent, ent_type in zip(
+                    tokens, labels) if ent_type != 'O'])
+            else:
+                result_list.append(
+                    list(zip(tokens, labels)))
         return result_list
 
 
@@ -98,14 +104,10 @@ class ChineseWordSegment(PredictModel):
 
     def cws(self, input_file_or_list):
         pred = self.predict(input_file_or_list)
-
-        encoded_data = predict_input_fn_generator(
-            input_file_or_list, self.params, mode='predict')
-
         result_list = []
 
-        for d, p in zip(encoded_data, pred):
-            input_ids = d['input_ids']
+        for d, p in enumerate(pred):
+            input_ids = p['input_ids']
             ner_pred = p[self.problem]
             tokens = self.tokenizer.convert_ids_to_tokens(input_ids)
             labels = self.label_encoder.inverse_transform(ner_pred)

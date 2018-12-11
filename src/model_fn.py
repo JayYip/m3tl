@@ -294,6 +294,8 @@ class BertMultiTask():
                 eval_metric_ops=total_eval_metric)
             return output_spec
         else:
+            # include input ids
+            loss_eval_pred['input_ids'] = features['input_ids']
             output_spec = tf.estimator.EstimatorSpec(
                 mode=mode, predictions=loss_eval_pred)
             return output_spec
