@@ -20,7 +20,13 @@ class Params():
                              'CWS': 'seq_tag',
                              'NER': 'seq_tag',
                              'CTBPOS': 'seq_tag',
-                             'CTBCWS': 'seq_tag'}
+                             'CTBCWS': 'seq_tag',
+                             'ascws': 'seq_tag',
+                             'msrcws': 'seq_tag',
+                             'pkucws': 'seq_tag',
+                             'cityucws': 'seq_tag',
+                             'bosonner': 'seq_tag',
+                             'msraner': 'seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -33,21 +39,34 @@ class Params():
             'CWS': 5,
             'NER': 10,
             'CTBPOS': 62,
-            'CTBCWS': 5
+            'CTBCWS': 5,
+            'ascws': 5,
+            'msrcws': 5,
+            'pkucws': 5,
+            'cityucws': 5,
+            'bosonner': 10,
+            'msraner': 10,
         }
 
         self.data_num_dict = {
             'CWS': 867952,
             'NER': 60000,
             'CTBPOS': 47400,
-            'CTBCWS': 47400
+            'CTBCWS': 47400,
+            'ascws': 708953
         }
 
         # specify this will make key reuse values top
         # that it, WeiboNER problem will use NER's top
         self.share_top = {
             'WeiboNER': 'NER',
-            'CTBCWS': 'CWS'
+            'CTBCWS': 'CWS',
+            'ascws': 'CWS',
+            'msrcws': 'CWS',
+            'pkucws': 'CWS',
+            'cityucws': 'CWS',
+            'bosonner': 'NER',
+            'msraner': 'NER',
         }
 
         self.multitask_balance_type = 'data_balanced'
@@ -103,7 +122,7 @@ class Params():
         with open(os.path.join(self.pretrain_ckpt, 'vocab.txt'), 'r') as vf:
             self.vocab_size = len(vf.readlines())
 
-    def assign_problem(self, flag_string, gpu=2):
+    def assign_problem(self, flag_string, gpu=2, base_dir=None):
         self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
@@ -119,7 +138,8 @@ class Params():
 
         problem_list = sorted(re.split(r'[&|]', flag_string))
 
-        self.ckpt_dir = os.path.join('tmp', '_'.join(problem_list)+'_ckpt')
+        base = base_dir if base_dir is not None else 'tmp'
+        self.ckpt_dir = os.path.join(base, '_'.join(problem_list)+'_ckpt')
         self.params_path = os.path.join(self.ckpt_dir, 'params.json')
 
         # update data_num and train_steps

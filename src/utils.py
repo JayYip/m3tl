@@ -94,7 +94,7 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
 
 def create_path(path):
     if not os.path.exists(path):
-        os.mkdir(path)
+        os.makedirs(path, exist_ok=True)
 
 
 def get_or_make_label_encoder(problem, mode, label_list=None, zero_class='O'):

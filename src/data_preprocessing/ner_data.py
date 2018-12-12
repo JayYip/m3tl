@@ -419,3 +419,74 @@ def NER(params, mode):
                                            label_encoder,
                                            params,
                                            tokenizer)
+
+
+def msraner(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
+
+    inputs_list = []
+    target_list = []
+    for data in [msra_data]:
+        if mode == 'train':
+            inputs_list += data['train']['inputs']
+            target_list += data['train']['target']
+
+        else:
+            inputs_list += data['eval']['inputs']
+            target_list += data['eval']['target']
+
+    flat_target_list = ['O',
+                        'B-LOC',
+                        'B-PER',
+                        'B-ORG',
+                        'B-PRD',
+                        'I-LOC',
+                        'I-PER',
+                        'I-ORG',
+                        'I-PRD', ]
+    label_encoder = get_or_make_label_encoder(
+        'msraner', mode, flat_target_list, zero_class='O')
+    return create_single_problem_generator('msraner',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def bosonner(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    boson_data = read_bosonnlp_data(
+        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
+
+    inputs_list = []
+    target_list = []
+    for data in [boson_data]:
+        if mode == 'train':
+            inputs_list += data['train']['inputs']
+            target_list += data['train']['target']
+
+        else:
+            inputs_list += data['eval']['inputs']
+            target_list += data['eval']['target']
+
+    flat_target_list = ['O',
+                        'B-LOC',
+                        'B-PER',
+                        'B-ORG',
+                        'B-PRD',
+                        'I-LOC',
+                        'I-PER',
+                        'I-ORG',
+                        'I-PRD', ]
+    label_encoder = get_or_make_label_encoder(
+        'bosonner', mode, flat_target_list, zero_class='O')
+    return create_single_problem_generator('bosonner',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)

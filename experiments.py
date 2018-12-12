@@ -1,6 +1,7 @@
 import time
 from collections import defaultdict
 import os
+import pickle
 
 import tensorflow as tf
 
@@ -14,26 +15,39 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'baseline': {'problems': ['ascws', 'msrcws', 'pkucws',
+    {'problems': ['ascws', 'msrcws', 'pkucws',
                   'cityucws', 'WeiboNER', 'bosonner', 'msraner',
                   'CTBCWS', 'CTBPOS'],
-                  'additional_params': {}},
-     'mix_baseline': {
-         'problems': ['CWS', 'NER', 'POS'],
-         'additional_params': {}
-     },
-     'multitask_baseline': {
-         'problems': ['CWS|NER|POS'],
-         'additional_params': {}
+
+     'additional_params': {},
+     'name': 'baseline'},
+    {
+        'name': 'mix_data_baseline',
+        'problems': ['CWS', 'NER', 'POS'],
+
+        'additional_params': {}
+    },
+    {'name': 'multitask_baseline',
+        'problems': ['CWS|NER|POS'],
+        'additional_params': {}
      }
 ]
 
-def train_problem(problem, gpu=4):
+# EXPERIMENTS_LIST = [
+#     {'problems': ['WeiboNER', 'WeiboSegment'],
+
+#      'additional_params': {},
+#      'name': 'baseline'},
+
+# ]
+
+
+def train_problem(params, problem, gpu=4, base='baseline'):
     if not os.path.exists('tmp'):
         os.mkdir('tmp')
 
-    params = Params()
-    params.assign_problem(problem, gpu=int(gpu))
+    base = os.path.join('tmp', base)
+    params.assign_problem(problem, gpu=int(gpu), base_dir=base)
 
     create_path(params.ckpt_dir)
 
@@ -68,23 +82,73 @@ def train_problem(problem, gpu=4):
 
     return estimator
 
-def eval_problem(problem, estimator, gpu=4):
-    problem_list = problem.split('|')
+
+def eval_single_problem(params, problem, estimator, gpu=4):
+
+    params.assign_problem(problem, gpu=int(gpu))
     eval_dict = {}
-    for sub_problem in problem_list:
-        params = Params()
-        params.assign_problem(sub_problem, gpu=int(gpu))
-        def input_fn(): return train_eval_input_fn(params, mode='eval')
-        if 'ner' not in sub_problem and 'NER' not in sub_problem:
-            eval_dict[sub_problem] = estimator.evaluate(input_fn=input_fn)
-        else:
-            pred = estimator.predict(input_fn=input_fn)
-            pred_list = defaultdict(list)
-            for p in pred:
-                for pro in p:
-                    pred_list[pro].append(p[pro])
-            for pro in pred_list:
-                if 'NER' in pro:
-                    eval_dict[sub_problem] = ner_evaluate(
-                        pro, pred_list[pro], params)
+
+    def input_fn(): return train_eval_input_fn(params, mode='eval')
+    if 'ner' not in problem and 'NER' not in problem:
+        eval_dict.update(estimator.evaluate(input_fn=input_fn))
+    else:
+        pred = estimator.predict(input_fn=input_fn)
+        pred_list = defaultdict(list)
+        for p in pred:
+            for pro in p:
+                pred_list[pro].append(p[pro])
+        for pro in pred_list:
+            if 'NER' in pro:
+                raw_ner_eval = ner_evaluate(
+                    pro, pred_list[pro], params)
+                rename_dict = {}
+                rename_dict['%s_Accuracy' % pro] = raw_ner_eval['Acc']
+                rename_dict['%s_F1 Score' % pro] = raw_ner_eval['F1']
+                rename_dict['%s_Precision' % pro] = raw_ner_eval['Precision']
+                rename_dict['%s_Recall' % pro] = raw_ner_eval['Recall']
+                eval_dict.update(rename_dict)
     return eval_dict
+
+
+def eval_problem(params, raw_problem, estiamtor, gpu=4):
+    eval_problem_list = []
+    for sub_problem in raw_problem.split('|'):
+        if sub_problem == 'CWS':
+            eval_problem_list += ['ascws', 'msrcws', 'pkucws',
+                                  'cityucws', 'CTBCWS']
+        elif sub_problem == 'NER':
+            eval_problem_list += ['WeiboNER', 'bosonner', 'msraner']
+        elif sub_problem == 'POS':
+            eval_problem_list += ['CTBPOS']
+        else:
+            eval_problem_list.append(sub_problem)
+
+    final_eval_dict = {}
+    for p in eval_problem_list:
+        final_eval_dict.update(eval_single_problem(
+            params, p, estiamtor, gpu=gpu))
+    return final_eval_dict
+
+
+def main():
+    params = Params()
+
+    result_dict = defaultdict(dict)
+    for experiment_set in EXPERIMENTS_LIST:
+        print('Running Problem set %s' % experiment_set['name'])
+        if experiment_set['additional_params']:
+            for k, v in experiment_set['additional_params'].items():
+                setattr(params, k, v)
+        for problem in experiment_set['problems']:
+            estiamtor = train_problem(
+                params, problem, 3, experiment_set['name'])
+            eval_dict = eval_problem(params, problem, estiamtor, 3)
+            result_dict[experiment_set['name']].update(eval_dict)
+
+    print(result_dict)
+
+    pickle.dump(result_dict, open('tmp/results.pks', 'wb'))
+
+
+if __name__ == '__main__':
+    main()
