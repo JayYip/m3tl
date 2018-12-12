@@ -36,6 +36,6 @@ Chinese Treebank 8.0. Data source: <https://wakespace.lib.wfu.edu/handle/10339/3
 | Problem |  Acc |  Precision | Recall  | F Score  | Acc Per Sequence  |
 |---|---|---|---|---|---|
 | CWS  |  0.965 |  - | -  |  0.954 |  0.665 |
-| NER  |  0.992 |  0.943 | 0.950  |  0.946 |  - |
+| NER  |  0.992 |  0.936 | 0.946  |  0.942 |  - |
 | CTBPOS  |  0.962 |  - | -  |  0.962 |  0.531 |
 | CTBCWS  |  0.981 |  - | -  |  0.981 |  0.727 |
