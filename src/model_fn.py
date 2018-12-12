@@ -239,14 +239,12 @@ class BertMultiTask():
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
         # add grad summary
-        with tf.name_scope('gradient_summary'):
-            for g in grads:
+        with tf.name_scope('var_and_grads'):
+            for g, v in zip(grads, tvars):
                 if g is not None:
-                    variable_summaries(g[0],
-                                       g[1].name.replace(':0', ''))
-        with tf.name_scope('train_var_summary'):
-            for v in tvars:
-                variable_summaries(v, v.name.replace(':0', ''))
+                    variable_summaries(g, v.name.replace(':0', '-grad'))
+                    variable_summaries(v, v.name.replace(':0', ''))
+
         # grads = make_grad(global_step, loss_eval_pred,
         #                   hidden_features, tvars, self.config.freeze_step)
 
