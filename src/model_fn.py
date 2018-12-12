@@ -20,6 +20,19 @@ def make_grad(global_step, loss_eval_pred, hidden_features, tvars, freeze_step):
     return grads
 
 
+def variable_summaries(var, name):
+    """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+    with tf.name_scope(name):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        with tf.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+        tf.summary.scalar('stddev', stddev)
+        tf.summary.scalar('max', tf.reduce_max(var))
+        tf.summary.scalar('min', tf.reduce_min(var))
+        tf.summary.histogram('histogram', var)
+
+
 @autograph.convert()
 def filter_loss(loss, features, problem):
 
@@ -86,6 +99,12 @@ class BertMultiTask():
                 feature_dict[logit_type] = model.get_embedding_output()
             elif logit_type == 'embed_table':
                 feature_dict[logit_type] = model.get_embedding_table()
+
+        # add summary
+        with tf.name_scope('bert_feature_summary'):
+            for layer_ind, layer_output in enumerate(feature_dict['all']):
+                variable_summaries(
+                    layer_output, layer_output.name.replace(':0', ''))
 
         return feature_dict
 
@@ -176,6 +195,8 @@ class BertMultiTask():
             learning_rate = (
                 (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
+        tf.summary.scalar('lr', learning_rate)
+
         self.learning_rate = learning_rate
 
         # It is recommended that you use this optimizer for fine tuning, since this
@@ -217,6 +238,13 @@ class BertMultiTask():
         grads = tf.gradients(
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
+        # add grad summary
+        with tf.name_scope('gradient_summary'):
+            for g in grads:
+                if g is not None:
+                    if 'LayerNorm' not in g[1].name:
+                        variable_summaries(g[0], "%s-grad" %
+                                           g[1].name.replace(':0', ''))
         # grads = make_grad(global_step, loss_eval_pred,
         #                   hidden_features, tvars, self.config.freeze_step)
 

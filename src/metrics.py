@@ -186,8 +186,12 @@ def ner_evaluate(problem, pred_list, params):
         decode_pred_list.append(decode_pred)
         decode_label_list.append(decode_label)
 
+    result_dict = {}
+
     for metric_name, result in zip(['Acc', 'Precision', 'Recall', 'F1'],
                                    get_ner_fmeasure(decode_label_list,
                                                     decode_pred_list,
                                                     label_type='BIO')):
         print('%s Score: %f' % (metric_name,  result))
+        result_dict[metric_name] = result
+    return result_dict

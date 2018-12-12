@@ -5,6 +5,7 @@ import json
 from bert.modeling import BertConfig
 
 from . import data_preprocessing
+from .utils import create_path
 
 
 class Params():
@@ -78,12 +79,12 @@ class Params():
         self.freeze_body = False
         self.lr = 2e-5
         self.batch_size = 32
-        self.train_epoch = 15
+        self.train_epoch = 10
         self.freeze_step = 50
 
         # hparm
         self.dropout_keep_prob = 0.9
-        self.max_seq_len = 90
+        self.max_seq_len = 128
         self.use_one_hot_embeddings = True
 
         # bert config
@@ -142,6 +143,7 @@ class Params():
 
         # linear scale learing rate
         self.lr = self.lr * gpu
+        create_path(self.ckpt_dir)
         self.to_json()
 
     @property
