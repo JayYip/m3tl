@@ -101,6 +101,7 @@ class Params():
             self.vocab_size = len(vf.readlines())
 
     def assign_problem(self, flag_string, gpu=2):
+        self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
             if '&' not in flag_chunk:
