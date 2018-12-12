@@ -657,7 +657,7 @@ def main(args):
     # set up bert estimator
     params = Params()
     bert_ner = ChineseNER(
-        params, model_dir='tmp/CTBCWS_CTBPOS_CWS_NER_ckpt/', gpu=1)
+        params, model_dir='tmp/CTBCWS_CTBPOS_CWS_NER_ckpt/', gpu=2)
     hot_feed_text = [t if isinstance(
         t, str) else '' for t in hot_feed.feed.tolist()]
     # assert len(hot_feed_text) == len(ner_result_dict['Intersection'])
@@ -673,7 +673,7 @@ def main(args):
                 continue
             response = {}
             for model in ['Stanford', 'Intersection']:
-                input_ner = ner_result_dict[model][row_ind]
+                input_ner = order_dedup(ner_result_dict[model][row_ind])
 
                 response[model] = input_ner
 
