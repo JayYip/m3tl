@@ -1,5 +1,6 @@
 import os
 import re
+import json
 
 from bert.modeling import BertConfig
 
@@ -88,6 +89,7 @@ class Params():
         # bert config
         self.bert_config = BertConfig.from_json_file(
             os.path.join(self.pretrain_ckpt, 'bert_config.json'))
+        self.bert_config_dict = self.bert_config.__dict__
 
         # pretrain hparm
         self.dupe_factor = 10
@@ -101,6 +103,7 @@ class Params():
             self.vocab_size = len(vf.readlines())
 
     def assign_problem(self, flag_string, gpu=2):
+        self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
             if '&' not in flag_chunk:
@@ -116,6 +119,7 @@ class Params():
         problem_list = sorted(re.split(r'[&|]', flag_string))
 
         self.ckpt_dir = os.path.join('tmp', '_'.join(problem_list)+'_ckpt')
+        self.params_path = os.path.join(self.ckpt_dir, 'params.json')
 
         # update data_num and train_steps
         self.data_num = 0
@@ -138,3 +142,46 @@ class Params():
 
         # linear scale learing rate
         self.lr = self.lr * gpu
+        self.to_json()
+
+    @property
+    def features_to_dump(self):
+        # training
+        return ['freeze_body',
+                'lr',
+                'batch_size',
+                'train_epoch',
+                'freeze_step',
+
+                # hparm
+                'dropout_keep_prob',
+                'max_seq_len',
+                'use_one_hot_embeddings',
+
+                # pretrain hparm
+                'dupe_factor',
+                'short_seq_prob',
+                'masked_lm_prob',
+                'max_predictions_per_seq',
+                'mask_lm_hidden_size',
+                'mask_lm_hidden_act',
+                'mask_lm_initializer_range',
+                'multitask_balance_type',
+                'run_problem_list',
+                'bert_config_dict']
+
+    def to_json(self):
+        dump_dict = {}
+        for att in self.features_to_dump:
+            value = getattr(self, att)
+            dump_dict[att] = value
+
+        with open(self.params_path, 'w', encoding='utf8') as f:
+            json.dump(dump_dict, f)
+
+    def from_json(self, json_path=None):
+        params_path = json_path if json_path is not None else self.params_path
+        with open(params_path, 'r', encoding='utf8') as f:
+            dump_dict = json.load(f)
+        for att in dump_dict:
+            setattr(self, att, dump_dict[att])
