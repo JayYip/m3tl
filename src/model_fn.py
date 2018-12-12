@@ -242,9 +242,11 @@ class BertMultiTask():
         with tf.name_scope('gradient_summary'):
             for g in grads:
                 if g is not None:
-                    if 'LayerNorm' not in g[1].name:
-                        variable_summaries(g[0], "%s-grad" %
-                                           g[1].name.replace(':0', ''))
+                    variable_summaries(g[0],
+                                       g[1].name.replace(':0', ''))
+        with tf.name_scope('train_var_summary'):
+            for v in tvars:
+                variable_summaries(v, v.name.replace(':0', ''))
         # grads = make_grad(global_step, loss_eval_pred,
         #                   hidden_features, tvars, self.config.freeze_step)
 
