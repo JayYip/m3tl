@@ -53,7 +53,7 @@ def CTBPOS(params, mode):
     flat_target_list = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        'CTBPOS', mode, flat_target_list, zero_class='[PAD]')
+        params, 'CTBPOS', mode, flat_target_list, zero_class='[PAD]')
     return create_single_problem_generator('CTBPOS',
                                            input_list,
                                            target_list,
@@ -107,7 +107,7 @@ def CTBCWS(params, mode):
     flat_target_list = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        'CTBCWS', mode, flat_target_list, zero_class='[PAD]')
+        params, 'CTBCWS', mode, flat_target_list, zero_class='[PAD]')
     return create_single_problem_generator('CTBCWS',
                                            input_list,
                                            target_list,

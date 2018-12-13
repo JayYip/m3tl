@@ -15,9 +15,9 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['ascws', 'msrcws', 'pkucws',
-                  'cityucws', 'WeiboNER', 'bosonner', 'msraner',
-                  'CTBCWS', 'CTBPOS'],
+    {'problems': ['pkucws',
+                  'cityucws', 'msrcws', 'WeiboNER', 'bosonner', 'msraner',
+                  'CTBCWS', 'CTBPOS', 'ascws'],
 
      'additional_params': {},
      'name': 'baseline'},
@@ -83,9 +83,9 @@ def train_problem(params, problem, gpu=4, base='baseline'):
     return estimator
 
 
-def eval_single_problem(params, problem, estimator, gpu=4):
+def eval_single_problem(params, problem, estimator, gpu=4, base='baseline'):
 
-    params.assign_problem(problem, gpu=int(gpu))
+    params.assign_problem(problem, gpu=int(gpu), base_dir=base)
     eval_dict = {}
 
     def input_fn(): return train_eval_input_fn(params, mode='eval')
@@ -110,8 +110,9 @@ def eval_single_problem(params, problem, estimator, gpu=4):
     return eval_dict
 
 
-def eval_problem(params, raw_problem, estiamtor, gpu=4):
+def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
     eval_problem_list = []
+    base = os.path.join('tmp', base)
     for sub_problem in raw_problem.split('|'):
         if sub_problem == 'CWS':
             eval_problem_list += ['ascws', 'msrcws', 'pkucws',
@@ -126,28 +127,36 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4):
     final_eval_dict = {}
     for p in eval_problem_list:
         final_eval_dict.update(eval_single_problem(
-            params, p, estiamtor, gpu=gpu))
+            params, p, estiamtor, gpu=gpu, base=base))
     return final_eval_dict
 
 
 def main():
     params = Params()
 
-    result_dict = defaultdict(dict)
+    if os.path.exists('tmp/results.pkl'):
+        with open('tmp/results.pkl', 'rb') as f:
+            result_dict = pickle.load(f)
+    else:
+        result_dict = defaultdict(dict)
     for experiment_set in EXPERIMENTS_LIST:
         print('Running Problem set %s' % experiment_set['name'])
         if experiment_set['additional_params']:
             for k, v in experiment_set['additional_params'].items():
                 setattr(params, k, v)
         for problem in experiment_set['problems']:
-            estiamtor = train_problem(
-                params, problem, 3, experiment_set['name'])
-            eval_dict = eval_problem(params, problem, estiamtor, 3)
-            result_dict[experiment_set['name']].update(eval_dict)
+            if '%s_Accuracy' % problem not in result_dict[experiment_set['name']]:
+                estiamtor = train_problem(
+                    params, problem, 3, experiment_set['name'])
+                eval_dict = eval_problem(
+                    params, problem, estiamtor, 3, base=experiment_set['name'])
+                result_dict[experiment_set['name']].update(eval_dict)
+                print(result_dict)
+                pickle.dump(result_dict, open('tmp/results.pkl', 'wb'))
 
     print(result_dict)
 
-    pickle.dump(result_dict, open('tmp/results.pks', 'wb'))
+    pickle.dump(result_dict, open('tmp/results.pkl', 'wb'))
 
 
 if __name__ == '__main__':

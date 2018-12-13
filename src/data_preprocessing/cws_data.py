@@ -146,7 +146,7 @@ def CWS(params, mode):
     target_list += icwb_target
 
     label_encoder = get_or_make_label_encoder(
-        'CWS', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'CWS', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
     return create_single_problem_generator('CWS',
                                            input_list,
@@ -169,7 +169,7 @@ def ascws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        'ascws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'ascws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
     return create_single_problem_generator('ascws',
                                            inputs,
@@ -192,7 +192,7 @@ def msrcws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        'msrcws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'msrcws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
     return create_single_problem_generator('msrcws',
                                            inputs,
@@ -215,7 +215,7 @@ def pkucws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        'pkucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'pkucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
     return create_single_problem_generator('pkucws',
                                            inputs,
@@ -238,7 +238,7 @@ def cityucws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        'cityucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'cityucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
     return create_single_problem_generator('cityucws',
                                            inputs,

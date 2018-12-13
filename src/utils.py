@@ -97,7 +97,7 @@ def create_path(path):
         os.makedirs(path, exist_ok=True)
 
 
-def get_or_make_label_encoder(problem, mode, label_list=None, zero_class='O'):
+def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class='O'):
     """Simple function to create or load existing label encoder
     If mode is train, alway create new label_encder
 
@@ -112,8 +112,7 @@ def get_or_make_label_encoder(problem, mode, label_list=None, zero_class='O'):
     Returns:
         LabelEncoder -- label encoder
     """
-
-    problem_path = os.path.join('tmp', problem+'_ckpt')
+    problem_path = params.ckpt_dir
     create_path(problem_path)
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
 

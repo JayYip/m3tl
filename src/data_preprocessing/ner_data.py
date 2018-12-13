@@ -142,7 +142,7 @@ def WeiboNER(params, mode):
     flat_label = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        'WeiboNER', mode, flat_label)
+        params, 'WeiboNER', mode, flat_label)
 
     return create_single_problem_generator('WeiboNER',
                                            inputs_list,
@@ -172,7 +172,7 @@ def WeiboFakeCLS(params, mode):
     new_target_list = [1 if len(set(t)) > 1 else 0 for t in target_list]
 
     label_encoder = get_or_make_label_encoder(
-        'WeiboFakeCLS', mode, new_target_list, 'O')
+        params, 'WeiboFakeCLS', mode, new_target_list, 'O')
 
     return create_single_problem_generator('WeiboFakeCLS',
                                            inputs_list,
@@ -203,7 +203,7 @@ def WeiboSegment(params, mode):
     flat_label = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        'WeiboSegment', mode, flat_label, '0')
+        params, 'WeiboSegment', mode, flat_label, '0')
 
     return create_single_problem_generator('WeiboSegment',
                                            inputs_list,
@@ -412,7 +412,7 @@ def NER(params, mode):
                         'I-ORG',
                         'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
-        'NER', mode, flat_target_list, zero_class='O')
+        params, 'NER', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('NER',
                                            inputs_list,
                                            target_list,
@@ -447,7 +447,7 @@ def msraner(params, mode):
                         'I-ORG',
                         'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
-        'msraner', mode, flat_target_list, zero_class='O')
+        params, 'msraner', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('msraner',
                                            inputs_list,
                                            target_list,
@@ -483,7 +483,7 @@ def bosonner(params, mode):
                         'I-ORG',
                         'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
-        'bosonner', mode, flat_target_list, zero_class='O')
+        params, 'bosonner', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('bosonner',
                                            inputs_list,
                                            target_list,
