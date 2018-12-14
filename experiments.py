@@ -15,9 +15,9 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['pkucws',
+    {'problems': ['pkucws', 'CTBPOS',
                   'cityucws', 'msrcws', 'WeiboNER', 'bosonner', 'msraner',
-                  'CTBCWS', 'CTBPOS', 'ascws'],
+                  'CTBCWS',  'ascws'],
 
      'additional_params': {},
      'name': 'baseline'},
@@ -43,6 +43,8 @@ EXPERIMENTS_LIST = [
 
 
 def train_problem(params, problem, gpu=4, base='baseline'):
+    tf.keras.backend.clear_session()
+
     if not os.path.exists('tmp'):
         os.mkdir('tmp')
 
@@ -160,4 +162,5 @@ def main():
 
 
 if __name__ == '__main__':
+    tf.logging.set_verbosity(tf.logging.DEBUG)
     main()

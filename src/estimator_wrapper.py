@@ -22,13 +22,13 @@ class PredictModel():
 
     @property
     def label_encoder(self):
-        return get_or_make_label_encoder(self.problem, 'predict')
+        return get_or_make_label_encoder(self.params, self.problem, 'predict')
 
     def init_estimator(self, problem):
         self.params.assign_problem(problem, gpu=int(self.gpu))
 
         # change max length
-        self.params.max_seq_len = 250
+        self.params.max_seq_len = 350
 
         model = BertMultiTask(params=self.params)
         model_fn = model.get_model_fn(warm_start=False)

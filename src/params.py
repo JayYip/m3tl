@@ -96,9 +96,9 @@ class Params():
         # training
         self.init_checkpoint = self.pretrain_ckpt
         self.freeze_body = False
-        self.lr = 2e-5
+        self.init_lr = 2e-5
         self.batch_size = 32
-        self.train_epoch = 10
+        self.train_epoch = 15
         self.freeze_step = 50
 
         # hparm
@@ -162,7 +162,7 @@ class Params():
         self.num_warmup_steps = int(0.1 * self.train_steps)
 
         # linear scale learing rate
-        self.lr = self.lr * gpu
+        self.lr = self.init_lr * gpu
         create_path(self.ckpt_dir)
         self.to_json()
 
@@ -170,7 +170,7 @@ class Params():
     def features_to_dump(self):
         # training
         return ['freeze_body',
-                'lr',
+                'init_lr',
                 'batch_size',
                 'train_epoch',
                 'freeze_step',
