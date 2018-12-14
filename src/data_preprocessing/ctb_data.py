@@ -11,8 +11,7 @@ from ..utils import (get_or_make_label_encoder,
                      create_single_problem_generator)
 
 
-def CTBPOS(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+def read_ctbpos():
     file_list = glob.glob('data/ctb8.0/data/postagged/*')
 
     input_list = []
@@ -42,6 +41,13 @@ def CTBPOS(params, mode):
                     target_list[-1].append(loc_char +
                                            '-'+tag)
                     input_list[-1].append(char)
+    return input_list, target_list
+
+
+def CTBPOS(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    input_list, target_list = read_ctbpos()
 
     if mode == 'train':
         input_list, _, target_list, _ = train_test_split(

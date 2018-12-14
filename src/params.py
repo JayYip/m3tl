@@ -26,7 +26,8 @@ class Params():
                              'pkucws': 'seq_tag',
                              'cityucws': 'seq_tag',
                              'bosonner': 'seq_tag',
-                             'msraner': 'seq_tag'}
+                             'msraner': 'seq_tag',
+                             'POS': 'seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -46,6 +47,7 @@ class Params():
             'cityucws': 5,
             'bosonner': 10,
             'msraner': 10,
+            'POS': 62
         }
 
         self.data_num_dict = {
@@ -53,7 +55,8 @@ class Params():
             'NER': 60000,
             'CTBPOS': 47400,
             'CTBCWS': 47400,
-            'ascws': 708953
+            'ascws': 708953,
+            'POS': 47400
         }
 
         # specify this will make key reuse values top
@@ -67,6 +70,7 @@ class Params():
             'cityucws': 'CWS',
             'bosonner': 'NER',
             'msraner': 'NER',
+            'CTBPOS': 'POS'
         }
 
         self.multitask_balance_type = 'data_balanced'
@@ -75,26 +79,7 @@ class Params():
         # logging control
         self.log_every_n_steps = 100
 
-        # get generator function for each problem
-        self.read_data_fn = {}
-        for problem in self.problem_type:
-            try:
-                self.read_data_fn[problem] = getattr(
-                    data_preprocessing, problem)
-            except AttributeError:
-                raise AttributeError(
-                    '%s function not implemented in data_preprocessing.py' % problem)
-
-        problem_list = sorted(self.problem_type.keys())
-        self.ckpt_dir = os.path.join('tmp', '_'.join(problem_list)+'_ckpt')
-
-        # data setting
-        # self.file_pattern = 'data/weiboNER*'
-        self.pretrain_ckpt = 'chinese_L-12_H-768_A-12'
-        self.vocab_file = os.path.join(self.pretrain_ckpt, 'vocab.txt')
-
         # training
-        self.init_checkpoint = self.pretrain_ckpt
         self.freeze_body = False
         self.init_lr = 2e-5
         self.batch_size = 32
@@ -105,11 +90,15 @@ class Params():
         self.dropout_keep_prob = 0.9
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
+        self.label_embedding = False
 
         # bert config
+        self.pretrain_ckpt = 'chinese_L-12_H-768_A-12'
+        self.vocab_file = os.path.join(self.pretrain_ckpt, 'vocab.txt')
         self.bert_config = BertConfig.from_json_file(
             os.path.join(self.pretrain_ckpt, 'bert_config.json'))
         self.bert_config_dict = self.bert_config.__dict__
+        self.init_checkpoint = self.pretrain_ckpt
 
         # pretrain hparm
         self.dupe_factor = 10
@@ -121,6 +110,16 @@ class Params():
         self.mask_lm_initializer_range = 0.02
         with open(os.path.join(self.pretrain_ckpt, 'vocab.txt'), 'r') as vf:
             self.vocab_size = len(vf.readlines())
+
+        # get generator function for each problem
+        self.read_data_fn = {}
+        for problem in self.problem_type:
+            try:
+                self.read_data_fn[problem] = getattr(
+                    data_preprocessing, problem)
+            except AttributeError:
+                raise AttributeError(
+                    '%s function not implemented in data_preprocessing.py' % problem)
 
     def assign_problem(self, flag_string, gpu=2, base_dir=None):
         self.run_problem_list = []
@@ -190,7 +189,8 @@ class Params():
                 'mask_lm_initializer_range',
                 'multitask_balance_type',
                 'run_problem_list',
-                'bert_config_dict']
+                'bert_config_dict',
+                'label_embedding']
 
     def to_json(self):
         dump_dict = {}
