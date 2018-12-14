@@ -1,5 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib import autograph
+import pickle
+import os
 
 from bert import modeling
 from bert.modeling import BertModel
@@ -7,6 +9,7 @@ from bert.modeling import BertModel
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
 from .top import cls, seq_tag, pretrain
+from .utils import make_label_embed_mask_label
 
 
 @autograph.convert()
@@ -120,15 +123,33 @@ class BertMultiTask():
             mode {mode key} -- mode
 
         """
+        if self.config.label_embedding:
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                problem_mask, problem_label_shift = \
+                    make_label_embed_mask_label(self.config)
+                with open(os.path.join(
+                        self.config.ckpt_dir, 'problem_mask.pkl'), 'wb') as f:
+                    pickle.dump(problem_mask, f)
+                with open(os.path.join(
+                        self.config.ckpt_dir, 'problem_label_shift.pkl'), 'wb') as f:
+                    pickle.dump(problem_label_shift, f)
+            else:
+                with open(os.path.join(
+                        self.config.ckpt_dir, 'problem_mask.pkl'), 'rb') as f:
+                    problem_mask = pickle.load(f)
+                with open(os.path.join(
+                        self.config.ckpt_dir, 'problem_label_shift.pkl'), 'rb') as f:
+                    problem_label_shift = pickle.load(f)
+
         return_dict = {}
         for problem_dict in self.config.run_problem_list:
             for problem in problem_dict:
 
-                # top share accross problem
                 if problem in self.config.share_top:
-                    top_scope_name = '%s_top' % self.config.share_top[problem]
+                    top_name = self.config.share_top[problem]
+
                 else:
-                    top_scope_name = '%s_top' % problem
+                    top_name = problem
 
                 if self.config.problem_type[problem] == 'pretrain':
                     return_dict[problem] = pretrain(
@@ -146,11 +167,21 @@ class BertMultiTask():
                     feature_this_round = features
                     hidden_feature_this_round = hidden_feature
 
+                if self.config.label_embedding:
+                    top_scope_name = 'label_embed_top'
+                    mask = problem_mask[top_name]
+                    label_shift = problem_label_shift[top_name]
+                    features['%s_label_ids' %
+                             problem] = features['%s_label_ids' % problem] + label_shift
+                else:
+                    top_scope_name = '%s_top' % top_name
+                    mask = None
+
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                     if self.config.problem_type[problem] == 'seq_tag':
                         return_dict[problem] = \
                             seq_tag(self, feature_this_round,
-                                    hidden_feature_this_round, mode, problem)
+                                    hidden_feature_this_round, mode, problem, mask)
                     elif self.config.problem_type[problem] == 'cls':
                         return_dict[problem] = \
                             cls(self, feature_this_round,

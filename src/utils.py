@@ -34,6 +34,8 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
             self.decode_dict[0] = zero_class
             if zero_class in label_set:
                 label_set.remove(zero_class)
+
+        label_set = sorted(list(label_set))
         for l_ind, l in enumerate(label_set):
 
             if zero_class is not None:
@@ -768,3 +770,82 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
         masked_lm_labels.append(p.label)
 
     return (output_tokens, masked_lm_positions, masked_lm_labels)
+
+
+def make_label_embed_mask_label(params):
+    """Make label embedding layers label mask and shift.
+
+    For label embedding, we use a unified dense layers with kernel
+    size [total_number_of_label, hidden_size] to project labels from
+    multiple problems to one space. Two tensor is needed:
+
+    label mask: for problem a, we want want logits for problem b and c
+    to be zero.
+    label shift: All problems label starts from 0, we need to add some number
+
+    Example:
+        We specify problem flag: CWS|pkucws|NER|msraner|CTBPOS
+        And we will get three tops: CWS, NER, CTBPOS since we do top sharing
+        Then problem mask:
+            {'CTBPOS': <tf.Tensor: id=324, shape=(77,), dtype=float32, numpy=
+            array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+                    1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+                    1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+                    1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=float32)>,
+            'CWS': <tf.Tensor: id=335, shape=(77,), dtype=float32, numpy=
+            array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1., 1., 1., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0.], dtype=float32)>,
+            'NER': <tf.Tensor: id=346, shape=(77,), dtype=float32, numpy=
+            array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                    0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.,
+                    1., 1., 1., 1., 1., 1., 1., 1., 1.], dtype=float32)>}
+        problem label shift:
+            {'CTBPOS': 0, 'CWS': 62, 'NER': 67}
+
+    Arguments:
+        params {params} -- params
+
+    Returns:
+        (dict, dict) -- problem mask and problem label shift
+    """
+
+    problem_list = []
+    final_top_list = []
+    for problem_dict in params.run_problem_list:
+        problem_list += list(problem_dict.keys())
+        for problem in problem_dict.keys():
+            if problem in params.share_top:
+                final_top_list.append(params.share_top[problem])
+            else:
+                final_top_list.append(problem)
+
+    final_top_list = sorted(list(set(final_top_list)))
+
+    # calculate the total number of labels
+    num_class = 0
+
+    for problem in final_top_list:
+        num_class += params.num_classes[problem]
+
+    pro_ind = final_top_list.index(problem)
+    # create problem mask
+    end_position = 0
+    problem_mask = {}
+    problem_label_shift = {}
+    for pro_ind, problem in enumerate(final_top_list):
+        problem_label_shift[problem] = end_position
+        problem_num_class = params.num_classes[problem]
+        pre_array = tf.zeros([end_position])
+        mid_array = tf.ones([problem_num_class])
+        post_array = tf.zeros([num_class - problem_num_class - end_position])
+        problem_mask[problem] = tf.concat(
+            [pre_array, mid_array, post_array], axis=0)
+        end_position += problem_num_class
+
+    return problem_mask, problem_label_shift

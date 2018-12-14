@@ -23,21 +23,25 @@ EXPERIMENTS_LIST = [
      'name': 'baseline'},
     {
         'name': 'mix_data_baseline',
-        'problems': ['CWS', 'NER', 'POS'],
+        'problems': ['NER', 'POS', 'CWS'],
 
         'additional_params': {}
     },
     {'name': 'multitask_baseline',
         'problems': ['CWS|NER|POS'],
         'additional_params': {}
-     }
+     },
+    {'problems': ['CWS|NER|POS'],
+
+     'additional_params': {'label_embedding': True},
+     'name': 'multitask_label_embedding'}
 ]
 
 # EXPERIMENTS_LIST = [
-#     {'problems': ['WeiboNER', 'WeiboSegment'],
+#     {'problems': ['CWS|NER|POS'],
 
-#      'additional_params': {},
-#      'name': 'baseline'},
+#      'additional_params': {'label_embedding': True},
+#      'name': 'multitask_label_embedding'},
 
 # ]
 
@@ -100,7 +104,7 @@ def eval_single_problem(params, problem, estimator, gpu=4, base='baseline'):
             for pro in p:
                 pred_list[pro].append(p[pro])
         for pro in pred_list:
-            if 'NER' in pro:
+            if 'NER' in pro or 'ner' in pro:
                 raw_ner_eval = ner_evaluate(
                     pro, pred_list[pro], params)
                 rename_dict = {}
@@ -134,6 +138,7 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
 
 
 def main():
+    gpu = 3
     params = Params()
 
     if os.path.exists('tmp/results.pkl'):
@@ -146,12 +151,13 @@ def main():
         if experiment_set['additional_params']:
             for k, v in experiment_set['additional_params'].items():
                 setattr(params, k, v)
+
         for problem in experiment_set['problems']:
             if '%s_Accuracy' % problem not in result_dict[experiment_set['name']]:
                 estiamtor = train_problem(
-                    params, problem, 3, experiment_set['name'])
+                    params, problem, gpu, experiment_set['name'])
                 eval_dict = eval_problem(
-                    params, problem, estiamtor, 3, base=experiment_set['name'])
+                    params, problem, estiamtor, gpu, base=experiment_set['name'])
                 result_dict[experiment_set['name']].update(eval_dict)
                 print(result_dict)
                 pickle.dump(result_dict, open('tmp/results.pkl', 'wb'))
