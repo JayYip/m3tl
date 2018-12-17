@@ -32,6 +32,18 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
         'input_mask': [config.max_seq_len],
         'segment_ids': [config.max_seq_len]
     }
+    if config.augument_mask_lm:
+        output_type.update({
+            "masked_lm_positions": tf.int32,
+            "masked_lm_ids": tf.int32,
+            "masked_lm_weights": tf.float32
+        })
+
+        output_shapes.update({
+            "masked_lm_positions": [config.max_predictions_per_seq],
+            "masked_lm_ids": [config.max_predictions_per_seq],
+            "masked_lm_weights": [config.max_predictions_per_seq]
+        })
     for problem_dict in config.run_problem_list:
         for problem, problem_type in problem_dict.items():
             output_type.update({'%s_loss_multiplier' % problem: tf.int32})

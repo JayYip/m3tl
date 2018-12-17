@@ -35,7 +35,13 @@ EXPERIMENTS_LIST = [
     {'problems': ['CWS|NER|POS'],
 
      'additional_params': {'label_embedding': True},
-     'name': 'multitask_label_embedding'}
+     'name': 'multitask_label_embedding'},
+    {
+        'problems': ['CWS|NER|POS'],
+
+        'additional_params': {'augument_mask_lm': True},
+        'name': 'multitask_aug_mask_lm'
+    }
 ]
 
 # EXPERIMENTS_LIST = [

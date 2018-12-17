@@ -8,7 +8,7 @@ from bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
-from .top import cls, seq_tag, pretrain
+from .top import cls, seq_tag, pretrain, mask_lm_top
 from .utils import make_label_embed_mask_label
 
 
@@ -154,41 +154,50 @@ class BertMultiTask():
                 if self.config.problem_type[problem] == 'pretrain':
                     return_dict[problem] = pretrain(
                         self, features, hidden_feature, mode, problem)
-
-                # get features with ind == 1
-                if mode == 'train':
-                    record_ind = tf.cast(
-                        features['%s_loss_multiplier' % problem], tf.bool)
-                    feature_this_round = {k: tf.boolean_mask(v, record_ind)
-                                          for k, v in features.items()}
-                    hidden_feature_this_round = {k: tf.boolean_mask(v, record_ind)
-                                                 for k, v in hidden_feature.items()}
                 else:
-                    feature_this_round = features
-                    hidden_feature_this_round = hidden_feature
+                    # get features with ind == 1
+                    if mode == tf.estimator.ModeKeys.TRAIN:
+                        record_ind = tf.cast(
+                            features['%s_loss_multiplier' % problem], tf.bool)
+                        feature_this_round = {k: tf.boolean_mask(v, record_ind)
+                                              for k, v in features.items()}
+                        hidden_feature_this_round = {k: tf.boolean_mask(v, record_ind)
+                                                     for k, v in hidden_feature.items()}
+                    else:
+                        feature_this_round = features
+                        hidden_feature_this_round = hidden_feature
 
-                if self.config.label_embedding:
-                    top_scope_name = 'label_embed_top'
-                    mask = problem_mask[top_name]
-                    label_shift = problem_label_shift[top_name]
-                    features['%s_label_ids' %
-                             problem] = features['%s_label_ids' % problem] + label_shift
-                else:
-                    top_scope_name = '%s_top' % top_name
-                    mask = None
+                    if self.config.label_embedding:
+                        top_scope_name = 'label_embed_top'
+                        mask = problem_mask[top_name]
+                        label_shift = problem_label_shift[top_name]
+                        features['%s_label_ids' %
+                                 problem] = features['%s_label_ids' % problem] + label_shift
+                    else:
+                        top_scope_name = '%s_top' % top_name
+                        mask = None
 
-                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-                    if self.config.problem_type[problem] == 'seq_tag':
-                        return_dict[problem] = \
-                            seq_tag(self, feature_this_round,
-                                    hidden_feature_this_round, mode, problem, mask)
-                    elif self.config.problem_type[problem] == 'cls':
-                        return_dict[problem] = \
-                            cls(self, feature_this_round,
-                                hidden_feature_this_round, mode, problem)
-                    if mode == 'train':
-                        return_dict[problem] = filter_loss(
-                            return_dict[problem], feature_this_round, problem)
+                    with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                        if self.config.problem_type[problem] == 'seq_tag':
+                            return_dict[problem] = \
+                                seq_tag(self, feature_this_round,
+                                        hidden_feature_this_round, mode, problem, mask)
+                        elif self.config.problem_type[problem] == 'cls':
+                            return_dict[problem] = \
+                                cls(self, feature_this_round,
+                                    hidden_feature_this_round, mode, problem)
+
+                        if mode == tf.estimator.ModeKeys.TRAIN:
+                            return_dict[problem] = filter_loss(
+                                return_dict[problem], feature_this_round, problem)
+
+        if self.config.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
+            try:
+                return_dict['augument_mask_lm'] = \
+                    mask_lm_top(self, features,
+                                hidden_feature, mode, 'dummy')
+            except ValueError:
+                pass
 
         return return_dict
 

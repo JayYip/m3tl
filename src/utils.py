@@ -3,6 +3,7 @@ import os
 import unicodedata
 import random
 import collections
+from copy import copy
 
 
 import numpy as np
@@ -345,22 +346,26 @@ def create_single_problem_generator(problem,
         tokens, segment_ids, target = add_special_tokens_with_seqs(
             tokens_a, tokens_b, target, is_seq)
 
+        if params.augument_mask_lm:
+            rng = random.Random()
+            (mask_lm_tokens, masked_lm_positions,
+                masked_lm_labels) = create_masked_lm_predictions(
+                    tokens,
+                    params.masked_lm_prob,
+                    params.max_predictions_per_seq,
+                    list(tokenizer.vocab.keys()), rng)
+            _, mask_lm_tokens, _, _ = create_mask_and_padding(
+                mask_lm_tokens, copy(segment_ids), copy(target), params.max_seq_len, is_seq)
+            masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
+                masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
+            mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
+                mask_lm_tokens)
+            masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
+
         input_mask, tokens, segment_ids, target = create_mask_and_padding(
             tokens, segment_ids, target, params.max_seq_len, is_seq)
 
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-        # # The mask has 1 for real tokens and 0 for padding tokens. Only real
-        # # tokens are attended to.
-        # input_mask = [1] * len(input_ids)
-
-        # # Zero-pad up to the sequence length.
-        # while len(input_ids) < params.max_seq_len:
-        #     input_ids.append(0)
-        #     input_mask.append(0)
-        #     segment_ids.append(0)
-        #     if is_seq:
-        #         target.append('[PAD]')
 
         if isinstance(target, list):
             label_id = label_encoder.transform(target).tolist()
@@ -371,7 +376,7 @@ def create_single_problem_generator(problem,
 
         assert len(input_ids) == params.max_seq_len
         assert len(input_mask) == params.max_seq_len
-        assert len(segment_ids) == params.max_seq_len
+        assert len(segment_ids) == params.max_seq_len, segment_ids
         if is_seq:
             assert len(label_id) == params.max_seq_len
 
@@ -391,13 +396,44 @@ def create_single_problem_generator(problem,
             else:
                 tf.logging.debug("%s_label_ids: %s" %
                                  (problem, str(label_id)))
+            if params.augument_mask_lm:
+                tf.logging.debug("mask lm tokens: %s" % " ".join(
+                    [printable_text(x) for x in mask_lm_tokens]))
+                tf.logging.debug("mask lm input_ids: %s" %
+                                 " ".join([str(x) for x in mask_lm_input_ids]))
+                tf.logging.debug("mask lm label ids: %s" %
+                                 " ".join([str(x) for x in masked_lm_ids]))
+                tf.logging.debug("mask lm position: %s" %
+                                 " ".join([str(x) for x in masked_lm_positions]))
 
-        yield {
-            'input_ids': input_ids,
-            'input_mask': input_mask,
-            'segment_ids': segment_ids,
-            '%s_label_ids' % problem: label_id
-        }
+        if not params.augument_mask_lm:
+            yield {
+                'input_ids': input_ids,
+                'input_mask': input_mask,
+                'segment_ids': segment_ids,
+                '%s_label_ids' % problem: label_id
+            }
+        else:
+            if random.uniform(0, 1) <= params.augument_rate:
+                yield {
+                    'input_ids': mask_lm_input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids,
+                    '%s_label_ids' % problem: label_id,
+                    "masked_lm_positions": masked_lm_positions,
+                    "masked_lm_ids": masked_lm_ids,
+                    "masked_lm_weights": masked_lm_weights,
+                }
+            else:
+                yield {
+                    'input_ids': input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids,
+                    '%s_label_ids' % problem: label_id,
+                    "masked_lm_positions": np.zeros_like(masked_lm_positions),
+                    "masked_lm_ids": np.zeros_like(masked_lm_ids),
+                    "masked_lm_weights": np.zeros_like(masked_lm_weights),
+                }
 
 
 def create_pretraining_generator(problem,
@@ -516,7 +552,7 @@ def create_generator(params, mode, epoch):
         else:
             return [0]*params.max_seq_len
     dummy_label_dict = {problem+'_label_ids': _create_dummpy_label(
-        params.problem_type[problem]) for problem in problem_list}
+        params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] != 'pretrain'}
 
     # init gen
     gen_dict = {problem: params.read_data_fn[problem](params, mode)

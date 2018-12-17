@@ -85,6 +85,8 @@ class Params():
         self.batch_size = 32
         self.train_epoch = 15
         self.freeze_step = 50
+        self.augument_mask_lm = False
+        self.augument_rate = 0.5
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -173,6 +175,8 @@ class Params():
                 'batch_size',
                 'train_epoch',
                 'freeze_step',
+                'augument_mask_lm',
+                'augument_rate',
 
                 # hparm
                 'dropout_keep_prob',

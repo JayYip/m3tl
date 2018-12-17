@@ -102,22 +102,9 @@ def mask_lm_top(model, features, hidden_feature, mode, problem_name):
                     masked_lm_mean_loss = tf.metrics.mean(
                         values=masked_lm_example_loss, weights=masked_lm_weights)
 
-                    # next_sentence_log_probs = tf.reshape(
-                    #     next_sentence_log_probs, [-1, next_sentence_log_probs.shape[-1]])
-                    # next_sentence_predictions = tf.argmax(
-                    #     next_sentence_log_probs, axis=-1, output_type=tf.int32)
-                    # next_sentence_labels = tf.reshape(
-                    #     next_sentence_labels, [-1])
-                    # next_sentence_accuracy = tf.metrics.accuracy(
-                    #     labels=next_sentence_labels, predictions=next_sentence_predictions)
-                    # next_sentence_mean_loss = tf.metrics.mean(
-                    #     values=next_sentence_example_loss)
-
                     return {
                         "masked_lm_accuracy": masked_lm_accuracy,
                         "masked_lm_loss": masked_lm_mean_loss,
-                        # "next_sentence_accuracy": next_sentence_accuracy,
-                        # "next_sentence_loss": next_sentence_mean_loss,
                     }
                 eval_metrics = (metric_fn(
                     per_example_loss, log_probs, label_ids,
@@ -129,6 +116,7 @@ def mask_lm_top(model, features, hidden_feature, mode, problem_name):
 def pretrain(model, features, hidden_feature, mode, problem_name):
     mask_lm_top_result = mask_lm_top(
         model, features, hidden_feature, mode, problem_name)
+    features['next_sentence_loss_multiplier'] = 1
     next_sentence_top_result = cls(
         model, features, hidden_feature, mode, 'next_sentence')
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -194,9 +182,6 @@ def seq_tag(model, features, hidden_feature, mode, problem_name, mask=None):
                     logits, seq_labels, seq_length,
                     transition_params=crf_transition_param)
 
-        # calculate  eval loss
-        # seq_loss = tf.contrib.seq2seq.sequence_loss(
-        #     logits, seq_labels, weights=sequence_weight)
         seq_loss = tf.reduce_mean(-log_likelihood)
 
         def metric_fn(label_ids, logits):
@@ -223,7 +208,6 @@ def seq_tag(model, features, hidden_feature, mode, problem_name, mask=None):
     else:
         viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
             logits, crf_transition_param, seq_length)
-        # prob = tf.nn.softmax(logits)
         return viterbi_sequence
 
 
