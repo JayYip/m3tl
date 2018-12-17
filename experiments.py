@@ -2,6 +2,7 @@ import time
 from collections import defaultdict
 import os
 import pickle
+from shutil import copy2, SameFileError
 
 import tensorflow as tf
 
@@ -89,10 +90,17 @@ def train_problem(params, problem, gpu=4, base='baseline'):
     return estimator
 
 
-def eval_single_problem(params, problem, estimator, gpu=4, base='baseline'):
+def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, base='baseline'):
 
     params.assign_problem(problem, gpu=int(gpu), base_dir=base)
     eval_dict = {}
+
+    # copy label encoder
+    try:
+        copy2(label_encoder_path, os.path.join(
+            params.ckpt_dir, '%s_label_encoder.pkl' % problem))
+    except SameFileError:
+        pass
 
     def input_fn(): return train_eval_input_fn(params, mode='eval')
     if 'ner' not in problem and 'NER' not in problem:
@@ -119,21 +127,32 @@ def eval_single_problem(params, problem, estimator, gpu=4, base='baseline'):
 def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
     eval_problem_list = []
     base = os.path.join('tmp', base)
+    eval_label_encoder_list = []
     for sub_problem in raw_problem.split('|'):
+        eval_problem_list.append([sub_problem])
         if sub_problem == 'CWS':
-            eval_problem_list += ['ascws', 'msrcws', 'pkucws',
-                                  'cityucws', 'CTBCWS']
+            eval_problem_list.append(['ascws', 'msrcws', 'pkucws',
+                                      'cityucws', 'CTBCWS'])
+
         elif sub_problem == 'NER':
-            eval_problem_list += ['WeiboNER', 'bosonner', 'msraner']
+            eval_problem_list.append(['WeiboNER', 'bosonner', 'msraner'])
         elif sub_problem == 'POS':
-            eval_problem_list += ['CTBPOS']
-        else:
-            eval_problem_list.append(sub_problem)
+            eval_problem_list.append(['CTBPOS'])
+
+        eval_label_encoder_list.append(os.path.join(
+            params.ckpt_dir, '%s_label_encoder.pkl' % sub_problem))
 
     final_eval_dict = {}
-    for p in eval_problem_list:
-        final_eval_dict.update(eval_single_problem(
-            params, p, estiamtor, gpu=gpu, base=base))
+    for problem_list, label_encoder_path in zip(
+            eval_problem_list, eval_label_encoder_list):
+        for problem in problem_list:
+            final_eval_dict.update(eval_single_problem(
+                params,
+                problem=problem,
+                label_encoder_path=label_encoder_path,
+                estimator=estiamtor,
+                gpu=gpu,
+                base=base))
     return final_eval_dict
 
 

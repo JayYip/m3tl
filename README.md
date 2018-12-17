@@ -2,8 +2,6 @@
 
 ## What is it
 
-First of all, bad repo name, sorry about that.
-
 This a project that uses [BERT](https://github.com/google-research/bert) to do **multi-task learning** with multiple GPU support.
 
 ## Why do I need this
