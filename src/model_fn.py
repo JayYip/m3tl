@@ -8,7 +8,7 @@ from bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
-from .top import cls, seq_tag, pretrain, mask_lm_top
+from .top import PreTrain, SequenceLabel, Classification, MaskLM
 from .utils import make_label_embed_mask_label
 
 
@@ -111,6 +111,13 @@ class BertMultiTask():
 
         return feature_dict
 
+    def pre_top(self, features, hidden_feature, mode):
+        if self.config.label_transfer:
+            # use label embedding as intermedian layer
+            self.config.label_embedding = False
+
+        return hidden_feature
+
     def top(self, features, hidden_feature, mode):
         """Top model. This fn will return:
         1. loss, if mode is train
@@ -124,22 +131,8 @@ class BertMultiTask():
 
         """
         if self.config.label_embedding:
-            if mode == tf.estimator.ModeKeys.TRAIN:
-                problem_mask, problem_label_shift = \
-                    make_label_embed_mask_label(self.config)
-                with open(os.path.join(
-                        self.config.ckpt_dir, 'problem_mask.pkl'), 'wb') as f:
-                    pickle.dump(problem_mask, f)
-                with open(os.path.join(
-                        self.config.ckpt_dir, 'problem_label_shift.pkl'), 'wb') as f:
-                    pickle.dump(problem_label_shift, f)
-            else:
-                with open(os.path.join(
-                        self.config.ckpt_dir, 'problem_mask.pkl'), 'rb') as f:
-                    problem_mask = pickle.load(f)
-                with open(os.path.join(
-                        self.config.ckpt_dir, 'problem_label_shift.pkl'), 'rb') as f:
-                    problem_label_shift = pickle.load(f)
+            problem_mask, problem_label_shift = \
+                make_label_embed_mask_label(self.config)
 
         return_dict = {}
         for problem_dict in self.config.run_problem_list:
@@ -152,8 +145,9 @@ class BertMultiTask():
                     top_name = problem
 
                 if self.config.problem_type[problem] == 'pretrain':
+                    pretrain = PreTrain(self.config)
                     return_dict[problem] = pretrain(
-                        self, features, hidden_feature, mode, problem)
+                        features, hidden_feature, mode, problem)
                 else:
                     # get features with ind == 1
                     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -179,12 +173,14 @@ class BertMultiTask():
 
                     with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                         if self.config.problem_type[problem] == 'seq_tag':
+                            seq_tag = SequenceLabel(self.config)
                             return_dict[problem] = \
-                                seq_tag(self, feature_this_round,
+                                seq_tag(feature_this_round,
                                         hidden_feature_this_round, mode, problem, mask)
                         elif self.config.problem_type[problem] == 'cls':
+                            cls = Classification(self.config)
                             return_dict[problem] = \
-                                cls(self, feature_this_round,
+                                cls(feature_this_round,
                                     hidden_feature_this_round, mode, problem)
 
                         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -193,6 +189,7 @@ class BertMultiTask():
 
         if self.config.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             try:
+                mask_lm_top = MaskLM(self.config)
                 return_dict['augument_mask_lm'] = \
                     mask_lm_top(self, features,
                                 hidden_feature, mode, 'dummy')

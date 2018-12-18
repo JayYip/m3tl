@@ -56,7 +56,12 @@ class Params():
             'CTBPOS': 47400,
             'CTBCWS': 47400,
             'ascws': 708953,
-            'POS': 47400
+            'POS': 47400,
+            'msrcws': 86924,
+            'cityucws': 53019,
+            'pkucws': 19056,
+            'msraner': 46364,
+            'bosonner': 10000
         }
 
         # specify this will make key reuse values top
@@ -85,14 +90,18 @@ class Params():
         self.batch_size = 32
         self.train_epoch = 15
         self.freeze_step = 50
-        self.augument_mask_lm = False
-        self.augument_rate = 0.5
 
         # hparm
         self.dropout_keep_prob = 0.9
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
+
+        # multitask training
         self.label_embedding = False
+        self.label_transfer = False
+        self.augument_mask_lm = False
+        self.augument_rate = 0.5
+        self.distillation = False
 
         # bert config
         self.pretrain_ckpt = 'chinese_L-12_H-768_A-12'
@@ -177,6 +186,7 @@ class Params():
                 'freeze_step',
                 'augument_mask_lm',
                 'augument_rate',
+                'label_transfer',
 
                 # hparm
                 'dropout_keep_prob',
