@@ -34,8 +34,9 @@ EXPERIMENTS_LIST = [
      },
     {'problems': ['CWS|NER|POS'],
 
-     'additional_params': {'label_embedding': True},
-     'name': 'multitask_label_embedding'},
+     'additional_params': {'label_transfer': True,
+                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/'},
+     'name': 'multitask_label_transfer'},
     {
         'problems': ['CWS|NER|POS'],
 
@@ -43,14 +44,6 @@ EXPERIMENTS_LIST = [
         'name': 'multitask_aug_mask_lm'
     }
 ]
-
-# EXPERIMENTS_LIST = [
-#     {'problems': ['CWS|NER|POS'],
-
-#      'additional_params': {'label_embedding': True},
-#      'name': 'multitask_label_embedding'},
-
-# ]
 
 
 def train_problem(params, problem, gpu=4, base='baseline'):
@@ -173,6 +166,9 @@ def main():
         result_dict = defaultdict(dict)
     for experiment_set in EXPERIMENTS_LIST:
         print('Running Problem set %s' % experiment_set['name'])
+        if experiment_set['name'] in result_dict:
+            continue
+
         if experiment_set['additional_params']:
             for k, v in experiment_set['additional_params'].items():
                 setattr(params, k, v)

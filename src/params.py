@@ -104,12 +104,11 @@ class Params():
         self.distillation = False
 
         # bert config
-        self.pretrain_ckpt = 'chinese_L-12_H-768_A-12'
-        self.vocab_file = os.path.join(self.pretrain_ckpt, 'vocab.txt')
+        self.init_checkpoint = 'chinese_L-12_H-768_A-12'
+        self.vocab_file = os.path.join(self.init_checkpoint, 'vocab.txt')
         self.bert_config = BertConfig.from_json_file(
-            os.path.join(self.pretrain_ckpt, 'bert_config.json'))
+            os.path.join(self.init_checkpoint, 'bert_config.json'))
         self.bert_config_dict = self.bert_config.__dict__
-        self.init_checkpoint = self.pretrain_ckpt
 
         # pretrain hparm
         self.dupe_factor = 10
@@ -119,7 +118,7 @@ class Params():
         self.mask_lm_hidden_size = 768
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
-        with open(os.path.join(self.pretrain_ckpt, 'vocab.txt'), 'r') as vf:
+        with open(os.path.join(self.init_checkpoint, 'vocab.txt'), 'r') as vf:
             self.vocab_size = len(vf.readlines())
 
         # get generator function for each problem

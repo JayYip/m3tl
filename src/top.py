@@ -310,3 +310,43 @@ class PreTrain(TopLayer):
         elif mode == tf.estimator.ModeKeys.PREDICT:
             self.prob = mask_lm_top_result
             return self.prob
+
+
+class LabelTransferHidden(TopLayer):
+
+    def __call__(self, features, hidden_feature, mode):
+        new_hidden_feature = {}
+        seq_hidden_state = []
+        pooled_hidden_state = []
+        for problem_dict in self.params.run_problem_list:
+            for problem in problem_dict:
+                if problem in self.params.share_top:
+                    top_name = self.params.share_top[problem]
+
+                else:
+                    top_name = problem
+
+                top_scope_name = '%s_top' % top_name
+
+                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                    if self.params.problem_type[problem] == 'seq_tag':
+                        seq_tag = SequenceLabel(self.params)
+                        seq_tag(features,
+                                hidden_feature, mode, problem)
+
+                        seq_hidden_state.append(seq_tag.get_logit())
+                    elif self.params.problem_type[problem] == 'cls':
+                        cls = Classification(self.params)
+
+                        cls(features,
+                            hidden_feature, mode, problem)
+                        pooled_hidden_state.append(cls.get_logit())
+
+        if len(seq_hidden_state) >= 2:
+            new_hidden_feature['seq'] = tf.concat(seq_hidden_state, axis=-1)
+        if len(pooled_hidden_state) >= 2:
+            new_hidden_feature['pooled'] = tf.concat(
+                pooled_hidden_state, axis=-1)
+        hidden_feature.update(new_hidden_feature)
+
+        return hidden_feature

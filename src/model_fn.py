@@ -8,8 +8,7 @@ from bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
-from .top import PreTrain, SequenceLabel, Classification, MaskLM
-from .utils import make_label_embed_mask_label
+from .top import PreTrain, SequenceLabel, Classification, MaskLM, LabelTransferHidden
 
 
 @autograph.convert()
@@ -111,13 +110,6 @@ class BertMultiTask():
 
         return feature_dict
 
-    def pre_top(self, features, hidden_feature, mode):
-        if self.config.label_transfer:
-            # use label embedding as intermedian layer
-            self.config.label_embedding = False
-
-        return hidden_feature
-
     def top(self, features, hidden_feature, mode):
         """Top model. This fn will return:
         1. loss, if mode is train
@@ -130,9 +122,10 @@ class BertMultiTask():
             mode {mode key} -- mode
 
         """
-        if self.config.label_embedding:
-            problem_mask, problem_label_shift = \
-                make_label_embed_mask_label(self.config)
+        if self.config.label_transfer:
+            label_transfer_layer = LabelTransferHidden(self.config)
+            hidden_feature = label_transfer_layer(
+                features, hidden_feature, mode)
 
         return_dict = {}
         for problem_dict in self.config.run_problem_list:
@@ -161,15 +154,11 @@ class BertMultiTask():
                         feature_this_round = features
                         hidden_feature_this_round = hidden_feature
 
-                    if self.config.label_embedding:
-                        top_scope_name = 'label_embed_top'
-                        mask = problem_mask[top_name]
-                        label_shift = problem_label_shift[top_name]
-                        features['%s_label_ids' %
-                                 problem] = features['%s_label_ids' % problem] + label_shift
-                    else:
-                        top_scope_name = '%s_top' % top_name
-                        mask = None
+                    top_scope_name = '%s_top' % top_name
+                    mask = None
+
+                    if self.config.label_transfer:
+                        top_scope_name = top_scope_name + '_lt'
 
                     with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                         if self.config.problem_type[problem] == 'seq_tag':
@@ -191,11 +180,10 @@ class BertMultiTask():
             try:
                 mask_lm_top = MaskLM(self.config)
                 return_dict['augument_mask_lm'] = \
-                    mask_lm_top(self, features,
+                    mask_lm_top(features,
                                 hidden_feature, mode, 'dummy')
             except ValueError:
                 pass
-
         return return_dict
 
     def create_optimizer(self, init_lr, num_train_steps, num_warmup_steps):
