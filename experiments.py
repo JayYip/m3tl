@@ -137,13 +137,13 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
     for sub_problem in raw_problem.split('|'):
         eval_problem_list.append([sub_problem])
         if sub_problem == 'CWS':
-            eval_problem_list.append(['ascws', 'msrcws', 'pkucws',
-                                      'cityucws', 'CTBCWS'])
+            eval_problem_list[-1] += ['ascws', 'msrcws', 'pkucws',
+                                      'cityucws', 'CTBCWS']
 
         elif sub_problem == 'NER':
-            eval_problem_list.append(['WeiboNER', 'bosonner', 'msraner'])
+            eval_problem_list[-1] += ['WeiboNER', 'bosonner', 'msraner']
         elif sub_problem == 'POS':
-            eval_problem_list.append(['CTBPOS'])
+            eval_problem_list[-1] += ['CTBPOS']
 
         eval_label_encoder_list.append(os.path.join(
             params.ckpt_dir, '%s_label_encoder.pkl' % sub_problem))
