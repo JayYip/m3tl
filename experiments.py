@@ -35,7 +35,9 @@ EXPERIMENTS_LIST = [
     {'problems': ['CWS|NER|POS'],
 
      'additional_params': {'label_transfer': True,
-                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/'},
+                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/',
+                           'train_epoch': 1,
+                           'multitask_balance_type': 'problem_balanced'},
      'name': 'multitask_label_transfer'},
     {
         'problems': ['CWS|NER|POS'],
