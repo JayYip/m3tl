@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.contrib import autograph
 
 from tensor2tensor.utils import metrics
 
@@ -45,6 +46,29 @@ def gather_indexes(sequence_tensor, positions):
 
 class SequenceLabel(TopLayer):
 
+    def create_smooth_label(self, labels, num_classes):
+        # since crf dose not take the smoothed label, consider the
+        # 'hard' smoothing. That is, sample a tag based on smooth factor
+        if self.params.label_smoothing > 0:
+            label_set = tf.stack([tf.stack([tf.range(
+                num_classes)]*self.params.max_seq_len, axis=0)]*self.params.batch_size, axis=0)
+            true_labels = tf.stack(
+                [labels]*int(num_classes/self.params.label_smoothing), axis=-1)
+            sample_set = tf.concat([true_labels, label_set], axis=-1)
+
+            dims = sample_set.shape.as_list()
+            sample_set = tf.reshape(sample_set, shape=[-1, dims[-1]])
+
+            samples_index = tf.random_uniform(
+                shape=[sample_set.shape.as_list()[0], 1], minval=0, maxval=sample_set.shape.as_list()[1], dtype=tf.int32)
+            flat_offsets = tf.reshape(
+                tf.range(0, sample_set.shape.as_list()[0], dtype=tf.int32) * sample_set.shape.as_list()[1], [-1, 1])
+            flat_index = tf.reshape(samples_index+flat_offsets, [-1])
+            sampled_label = tf.gather(
+                tf.reshape(sample_set, [-1]), flat_index)
+            sampled_label = tf.reshape(sampled_label, dims[:-1])
+        return sampled_label
+
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['seq']
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -75,11 +99,11 @@ class SequenceLabel(TopLayer):
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             seq_labels = features['%s_label_ids' % problem_name]
+            seq_labels = self.create_smooth_label(seq_labels, num_classes)
             with tf.variable_scope('CRF'):
-                log_likelihood, _ =\
-                    tf.contrib.crf.crf_log_likelihood(
-                        logits, seq_labels, seq_length,
-                        transition_params=crf_transition_param)
+                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
+                    logits, seq_labels, seq_length,
+                    transition_params=crf_transition_param)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
             # multiply with loss multiplier to make some loss as zero
@@ -90,12 +114,12 @@ class SequenceLabel(TopLayer):
 
         elif mode == tf.estimator.ModeKeys.EVAL:
             seq_labels = features['%s_label_ids' % problem_name]
+
             with tf.variable_scope('CRF'):
 
-                log_likelihood, _ =\
-                    tf.contrib.crf.crf_log_likelihood(
-                        logits, seq_labels, seq_length,
-                        transition_params=crf_transition_param)
+                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
+                    logits, seq_labels, seq_length,
+                    transition_params=crf_transition_param)
 
             seq_loss = tf.reduce_mean(-log_likelihood)
 
@@ -129,6 +153,15 @@ class SequenceLabel(TopLayer):
 
 
 class Classification(TopLayer):
+    def create_loss(self, labels, logits,  num_classes):
+        if self.params.label_smoothing > 0:
+            one_hot_labels = tf.one_hot(labels, depth=num_classes)
+            return tf.losses.softmax_cross_entropy(
+                one_hot_labels, logits,
+                label_smoothing=self.params.label_smoothing)
+        else:
+            return tf.losses.sparse_softmax_cross_entropy(labels, logits)
+
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['pooled']
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -151,8 +184,7 @@ class Classification(TopLayer):
             logits = logits*mask
         labels = features['%s_label_ids' % problem_name]
         if mode == tf.estimator.ModeKeys.TRAIN:
-            batch_loss = tf.losses.sparse_softmax_cross_entropy(
-                labels, logits)
+            batch_loss = self.create_loss(labels, logits, num_classes)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
             # multiply with loss multiplier to make some loss as zero
@@ -162,8 +194,7 @@ class Classification(TopLayer):
             self.loss = loss
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
-            batch_loss = tf.losses.sparse_softmax_cross_entropy(
-                labels, logits)
+            batch_loss = self.create_loss(labels, logits, num_classes)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
             # multiply with loss multiplier to make some loss as zero

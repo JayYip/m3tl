@@ -95,6 +95,7 @@ class Params():
         self.dropout_keep_prob = 0.9
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
+        self.label_smoothing = 0.1
 
         # multitask training
         self.label_embedding = False
@@ -191,6 +192,7 @@ class Params():
                 'dropout_keep_prob',
                 'max_seq_len',
                 'use_one_hot_embeddings',
+                'label_smoothing',
 
                 # pretrain hparm
                 'dupe_factor',
