@@ -50,19 +50,26 @@ class SequenceLabel(TopLayer):
         # since crf dose not take the smoothed label, consider the
         # 'hard' smoothing. That is, sample a tag based on smooth factor
         if self.params.label_smoothing > 0:
-            label_set = tf.stack([tf.stack([tf.range(
-                num_classes)]*self.params.max_seq_len, axis=0)]*self.params.batch_size, axis=0)
+
             true_labels = tf.stack(
                 [labels]*int(num_classes/self.params.label_smoothing), axis=-1)
+            single_label_set = tf.stack([tf.range(
+                num_classes)]*self.params.max_seq_len, axis=0)
+            batch_size_this_turn = tf.shape(true_labels)[0]
+            label_set = tf.broadcast_to(
+                input=single_label_set, shape=[batch_size_this_turn,
+                                               single_label_set.shape.as_list()[
+                                                   0],
+                                               single_label_set.shape.as_list()[1]])
             sample_set = tf.concat([true_labels, label_set], axis=-1)
 
-            dims = sample_set.shape.as_list()
+            dims = tf.shape(sample_set)
             sample_set = tf.reshape(sample_set, shape=[-1, dims[-1]])
 
             samples_index = tf.random_uniform(
-                shape=[sample_set.shape.as_list()[0], 1], minval=0, maxval=sample_set.shape.as_list()[1], dtype=tf.int32)
+                shape=[tf.shape(sample_set)[0], 1], minval=0, maxval=tf.shape(sample_set)[1], dtype=tf.int32)
             flat_offsets = tf.reshape(
-                tf.range(0, sample_set.shape.as_list()[0], dtype=tf.int32) * sample_set.shape.as_list()[1], [-1, 1])
+                tf.range(0, tf.shape(sample_set)[0], dtype=tf.int32) * tf.shape(sample_set)[1], [-1, 1])
             flat_index = tf.reshape(samples_index+flat_offsets, [-1])
             sampled_label = tf.gather(
                 tf.reshape(sample_set, [-1]), flat_index)
