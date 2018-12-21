@@ -16,29 +16,35 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['pkucws', 'CTBPOS',
-                  'cityucws', 'msrcws', 'WeiboNER', 'bosonner', 'msraner',
-                  'CTBCWS',  'ascws'],
+    {'problems': ['pkucws', 'WeiboNER',
+                  'cityucws', 'msrcws',  'bosonner',
+                  'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
 
      'additional_params': {},
      'name': 'baseline'},
+    {'problems': ['WeiboNER', 'pkucws', 'CTBPOS',
+                  'cityucws', 'msrcws',  'bosonner', 'msraner',
+                  'CTBCWS',  'ascws'],
+
+     'additional_params': {'label_smoothing': 0.1},
+     'name': 'baseline_label_smooth'},
+
+    {'problems': ['CWS|NER|POS'],
+
+     'additional_params': {'label_transfer': True,
+                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/',
+                           'init_lr': 0.001},
+     'name': 'multitask_label_transfer'},
+    {'name': 'multitask_baseline',
+        'problems': ['CWS|NER|POS'],
+        'additional_params': {}
+     },
     {
         'name': 'mix_data_baseline',
         'problems': ['NER', 'POS', 'CWS'],
 
         'additional_params': {}
     },
-    {'name': 'multitask_baseline',
-        'problems': ['CWS|NER|POS'],
-        'additional_params': {}
-     },
-    {'problems': ['CWS|NER|POS'],
-
-     'additional_params': {'label_transfer': True,
-                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/',
-                           'train_epoch': 1,
-                           'multitask_balance_type': 'problem_balanced'},
-     'name': 'multitask_label_transfer'},
     {
         'problems': ['CWS|NER|POS'],
 
@@ -168,8 +174,6 @@ def main():
         result_dict = defaultdict(dict)
     for experiment_set in EXPERIMENTS_LIST:
         print('Running Problem set %s' % experiment_set['name'])
-        if experiment_set['name'] in result_dict:
-            continue
 
         if experiment_set['additional_params']:
             for k, v in experiment_set['additional_params'].items():

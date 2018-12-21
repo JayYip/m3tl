@@ -28,12 +28,6 @@ flags.DEFINE_integer("gpu", 2,
 flags.DEFINE_string("model_dir", "",
                     "Model dir. If not specified, will use problem_name + _ckpt")
 
-PROBLEMS_LIST = [
-    'WeiboNER',
-    'WeiboSegment',
-    'WeiboFakeCLS'
-]
-
 
 def main(_):
 

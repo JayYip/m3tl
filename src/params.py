@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 
 from bert.modeling import BertConfig
 
@@ -150,7 +151,11 @@ class Params():
 
         base = base_dir if base_dir is not None else 'tmp'
         self.ckpt_dir = os.path.join(base, '_'.join(problem_list)+'_ckpt')
+        create_path(self.ckpt_dir)
         self.params_path = os.path.join(self.ckpt_dir, 'params.json')
+        shutil.copy2(self.vocab_file, self.ckpt_dir)
+        shutil.copy2(os.path.join(self.init_checkpoint,
+                                  'bert_config.json'), self.ckpt_dir)
 
         # update data_num and train_steps
         self.data_num = 0
