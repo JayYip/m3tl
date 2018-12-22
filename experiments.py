@@ -174,6 +174,7 @@ def main():
         result_dict = defaultdict(dict)
     for experiment_set in EXPERIMENTS_LIST:
         print('Running Problem set %s' % experiment_set['name'])
+        params = Params()
 
         if experiment_set['additional_params']:
             for k, v in experiment_set['additional_params'].items():

@@ -90,7 +90,7 @@ class Params():
         self.init_lr = 2e-5
         self.batch_size = 32
         self.train_epoch = 15
-        self.freeze_step = 50
+        self.freeze_step = 0
 
         # hparm
         self.dropout_keep_prob = 0.9
