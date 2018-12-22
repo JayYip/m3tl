@@ -133,7 +133,28 @@ class Params():
                 raise AttributeError(
                     '%s function not implemented in data_preprocessing.py' % problem)
 
-    def assign_problem(self, flag_string, gpu=2, base_dir=None):
+    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None):
+        """Assign the actual run problem to param. This function will
+        do the following things:
+
+        1. parse the flag string to form the run_problem_list
+        2. create checkpoint saving path
+        3. calculate total number of training data and training steps
+        4. scale learning rate with the number of gpu linearly
+
+        Arguments:
+            flag_string {str} -- run problem string
+            example: CWS|POS|WeiboNER&WeiboSegment
+
+        Keyword Arguments:
+            gpu {int} -- number of gpu use for training, this
+                will affect the training steps and learning rate (default: {2})
+            base_dir {str} -- base dir for ckpt, if None,
+                then "tmp" is assigned (default: {None})
+            dir_name {str} -- dir name for ckpt, if None,
+                will be created automatically (default: {None})
+        """
+
         self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
@@ -150,7 +171,9 @@ class Params():
         problem_list = sorted(re.split(r'[&|]', flag_string))
 
         base = base_dir if base_dir is not None else 'tmp'
-        self.ckpt_dir = os.path.join(base, '_'.join(problem_list)+'_ckpt')
+        dir_name = dir_name if dir_name is not None else '_'.join(
+            problem_list)+'_ckpt'
+        self.ckpt_dir = os.path.join(base, dir_name)
         create_path(self.ckpt_dir)
         self.params_path = os.path.join(self.ckpt_dir, 'params.json')
         shutil.copy2(self.vocab_file, self.ckpt_dir)
@@ -178,7 +201,6 @@ class Params():
 
         # linear scale learing rate
         self.lr = self.init_lr * gpu
-        create_path(self.ckpt_dir)
         self.to_json()
 
     @property

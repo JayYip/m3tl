@@ -1,14 +1,11 @@
 import time
-from collections import defaultdict
 import os
 
 import tensorflow as tf
 
 from src.input_fn import train_eval_input_fn, predict_input_fn
-from src.metrics import ner_evaluate
 from src.model_fn import BertMultiTask
 from src.params import Params
-from src.utils import create_path
 from src.estimator import Estimator
 from src.ckpt_restore_hook import RestoreCheckpointHook
 
@@ -34,13 +31,14 @@ def main(_):
     if not os.path.exists('tmp'):
         os.mkdir('tmp')
 
-    params = Params()
-    params.assign_problem(FLAGS.problem, gpu=int(FLAGS.gpu))
-
     if FLAGS.model_dir:
-        params.ckpt_dir = FLAGS.model_dir
+        base_dir, dir_name = os.path.split(FLAGS.model)
+    else:
+        base_dir, dir_name = None, None
 
-    create_path(params.ckpt_dir)
+    params = Params()
+    params.assign_problem(FLAGS.problem, gpu=int(FLAGS.gpu),
+                          base_dir=base_dir, dir_name=dir_name)
 
     tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
@@ -75,29 +73,11 @@ def main(_):
 
         def input_fn(): return train_eval_input_fn(params, mode='eval')
         estimator.evaluate(input_fn=input_fn)
-        pred = estimator.predict(input_fn=input_fn)
-
-        pred_list = defaultdict(list)
-        for p in pred:
-            for problem in p:
-                pred_list[problem].append(p[problem])
-        for problem in pred_list:
-            if 'NER' in problem:
-                ner_evaluate(problem, pred_list[problem], params)
 
     elif FLAGS.schedule == 'eval':
 
         def input_fn(): return train_eval_input_fn(params, mode='eval')
         estimator.evaluate(input_fn=input_fn)
-        # pred = estimator.predict(input_fn=input_fn)
-
-        # pred_list = defaultdict(list)
-        # for p in pred:
-        #     for problem in p:
-        #         pred_list[problem].append(p[problem])
-        # for problem in pred_list:
-        #     if 'NER' in problem:
-        #         ner_evaluate(problem, pred_list[problem], params)
 
     elif FLAGS.schedule == 'predict':
         def input_fn(): return predict_input_fn(
