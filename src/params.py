@@ -86,7 +86,6 @@ class Params():
         self.log_every_n_steps = 100
 
         # training
-        self.freeze_body = False
         self.init_lr = 2e-5
         self.batch_size = 32
         self.train_epoch = 15
@@ -206,7 +205,7 @@ class Params():
     @property
     def features_to_dump(self):
         # training
-        return ['freeze_body',
+        return [
                 'init_lr',
                 'batch_size',
                 'train_epoch',

@@ -12,14 +12,13 @@ from .top import PreTrain, SequenceLabel, Classification, MaskLM, LabelTransferH
 
 
 @autograph.convert()
-def make_grad(global_step, loss_eval_pred, hidden_features, tvars, freeze_step):
-    if global_step <= freeze_step:
-        grads = tf.gradients(loss_eval_pred, tvars,
-                             stop_gradients=hidden_features)
-    else:
-        grads = tf.gradients(loss_eval_pred, tvars)
+def stop_grad(global_step, tensor, freeze_step):
 
-    return grads
+    if freeze_step > 0:
+        if global_step <= freeze_step:
+            tensor = tf.stop_gradient(tensor)
+
+    return tensor
 
 
 def variable_summaries(var, name):
@@ -126,6 +125,11 @@ class BertMultiTask():
             label_transfer_layer = LabelTransferHidden(self.config)
             hidden_feature = label_transfer_layer(
                 features, hidden_feature, mode)
+
+        global_step = tf.train.get_or_create_global_step()
+
+        hidden_feature['seq'] = stop_grad(
+            global_step, hidden_feature['seq'], self.config.freeze_step)
 
         return_dict = {}
         for problem_dict in self.config.run_problem_list:

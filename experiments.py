@@ -31,9 +31,14 @@ EXPERIMENTS_LIST = [
 
     {'problems': ['CWS|NER|POS'],
 
+     'additional_params': {'crf': False},
+     'name': 'multitask_label_transfer_first_train'},
+    {'problems': ['CWS|NER|POS'],
+
      'additional_params': {'label_transfer': True,
-                           'init_checkpoint': 'tmp/multitask_baseline/CWS_NER_POS_ckpt/',
-                           'init_lr': 0.001},
+                           'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_NER_POS_ckpt/',
+                           'init_lr': 0.001,
+                           'freeze_step': 99999},
      'name': 'multitask_label_transfer'},
     {'name': 'multitask_baseline',
         'problems': ['CWS|NER|POS'],
