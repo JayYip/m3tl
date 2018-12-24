@@ -40,7 +40,7 @@ EXPERIMENTS_LIST = [
      'additional_params': {'label_transfer': True,
                            'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_NER_POS_ckpt/',
                            'init_lr': 0.001,
-                           'freeze_step': 99999},
+                           'freeze_step': 999999},
      'name': 'multitask_label_transfer'},
     {'name': 'multitask_baseline',
         'problems': ['CWS|NER|POS'],
@@ -178,7 +178,8 @@ def create_result_table(group_by='problem'):
 
     if group_by == 'problem':
         problem_list = list(result_dict['mix_data_baseline'].keys())
-        problem_list = [p.split('_')[0] for p in problem_list]
+        problem_list = set([p.split('_')[0] for p in problem_list if p.split('_')[
+                           0] not in ['loss', 'global']])
         for problem in problem_list:
             writer = pytablewriter.MarkdownTableWriter()
             writer.table_name = problem
