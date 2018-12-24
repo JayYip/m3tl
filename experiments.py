@@ -3,6 +3,8 @@ from collections import defaultdict
 import os
 import pickle
 from shutil import copy2, SameFileError
+import pytablewriter
+import pandas as pd
 
 import tensorflow as tf
 
@@ -168,6 +170,51 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
     return final_eval_dict
 
 
+def create_result_table(group_by='problem'):
+    with open('tmp/results.pkl', 'rb') as f:
+        result_dict = pickle.load(f)
+
+    table_list = []
+
+    if group_by == 'problem':
+        problem_list = list(result_dict['mix_data_baseline'].keys())
+        problem_list = [p.split('_')[0] for p in problem_list]
+        for problem in problem_list:
+            writer = pytablewriter.MarkdownTableWriter()
+            writer.table_name = problem
+            problem_result_dict = {
+                '%s_Accuracy' % problem: [],
+                '%s_F1 Score' % problem: [],
+                '%s_Precision' % problem: [],
+                '%s_Recall' % problem: [],
+                '%s_Accuracy Per Sequence' % problem: []
+            }
+            name = []
+            for experiment_name, experiment_result in result_dict.items():
+                name.append(experiment_name)
+                for metric in problem_result_dict:
+                    if metric in experiment_result:
+                        problem_result_dict[metric].append(
+                            experiment_result[metric])
+                    else:
+                        problem_result_dict[metric].append('-')
+
+            problem_result_dict['experiment'] = name
+
+            # put name in the first col
+            df = pd.DataFrame(problem_result_dict)
+            cols = df.columns.tolist()
+            cols = cols[-1:] + cols[:-1]
+            df = df[cols]
+            writer.from_dataframe(df)
+
+            table_list.append(writer.dumps())
+
+    write_str = ''.join(table_list)
+    with open('baseline.md', 'w', encoding='utf8') as f:
+        f.writelines(write_str)
+
+
 def main():
     gpu = 3
     params = Params()
@@ -198,6 +245,7 @@ def main():
     print(result_dict)
 
     pickle.dump(result_dict, open('tmp/results.pkl', 'wb'))
+    create_result_table()
 
 
 if __name__ == '__main__':

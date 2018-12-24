@@ -98,7 +98,6 @@ class Params():
         self.label_smoothing = 0.1
 
         # multitask training
-        self.label_embedding = False
         self.label_transfer = False
         self.augument_mask_lm = False
         self.augument_rate = 0.5
@@ -230,8 +229,7 @@ class Params():
                 'mask_lm_initializer_range',
                 'multitask_balance_type',
                 'run_problem_list',
-                'bert_config_dict',
-                'label_embedding']
+                'bert_config_dict']
 
     def to_json(self):
         dump_dict = {}

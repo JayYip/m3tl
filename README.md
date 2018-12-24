@@ -32,16 +32,13 @@ Pretrained models for CWS and NER are released. You can use simplified api defin
 
 ### How to train
 
-This project is still in very early stage, and the available problems are quite limited. Currently provided pre-defined problems are([results](src/data_preprocessing/README.md)):
+This project is still in very early stage, and the available problems are quite limited. You can find available problems and baseline [here](baseline.md)
 
-1. WeiboNER (Chinese Named Entity Recognition)
-2. WeiboSegment (Chinese Word Segmentation)
-3. WeiboFakeCLS (Just a testing classification problem)
-4. WeiboPretrain
-5. CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
-6. NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
-7. CTBCWS
-8. CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
+#### Avalable trained checkpoint
+
+- CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
+- NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
+- CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
 
 #### Multitask Training
 
