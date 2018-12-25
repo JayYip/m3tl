@@ -1,25 +1,119 @@
-import copy
+import re
+
+from bert.tokenization import FullTokenizer
+
+from ..utils import get_or_make_label_encoder, create_single_problem_generator
 
 
-def get_all_word_labels(row: str):
-    tag_buffer = []
-    word_list = []
-    tag_list = []
-    for word in row.split():
+def parse_one(s):
+    s = re.sub('\)', ') ', s)
+    s = re.sub(' +', ' ', s).strip()
+    pos = s.split(' ')
+    buffer = []
+    innermost = True
+    full_pos = []
+    seg = []
+    ner = []
+    ner_types = []
+    text = []
+    for p in pos:
+        if '(' in p:
+            innermost = True
+            if 'NER' in p:
+                ner_types.append(re.sub('NER', '', p[1:]))
+                continue
+            else:
+                buffer.append(p)
+        elif ')' in p:
+            if buffer != []:
+                suffix = buffer.pop()[1:]
+                if innermost:
+                    assert len(p) > 1
+                    word = p[:-1]
+                    text.append(word)
+                    innermost = False
+                    p = p[-1]
+                    if len(word) == 1:
+                        seg_gt = ['O']
+                    else:
+                        seg_gt = ['B'] + ['M'] * (len(word) - 2) + ['E']
+                    if ner_types != []:
+                        ner_type = ner_types.pop()
+                        ner_gt = [_ + ner_type for _ in seg_gt]
+                    else:
+                        ner_gt = ['O' for _ in seg_gt]
+                    seg.extend(seg_gt)
+                    ner.extend(ner_gt)
+            p += suffix
+        full_pos.append(p)
+    text = list(''.join(text))
+    return seg, ner, full_pos, text
 
-        # add left bracket and tag
-        if '(' in word:
-            tag_buffer.append(word.replace('(', ''))
 
-        else:
-            print(tag_list)
-            # append all tags in buffer to tag list
-            assert ')' in word
-            word_list.append(word.replace(')', ''))
-            tag_list.append(copy.copy(tag_buffer))
-            # remove the last tag based on how many right bracket
-            for _ in range(word.count(')')):
-                tag_buffer.pop()
-    pos_target = [sublist[-1] for sublist in tag_list]
-    ner_target = [sublist[-2] if 'NER' in sublist[-2]
-                  else 'O' for sublist in tag_list]
+def ontonotes_ner(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    if mode == 'train':
+        with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+    else:
+        with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+
+    _, target, _, inputs_list = zip(*[parse_one(s) for s in raw_data])
+    flat_target_list = [t for sublist in target for t in sublist]
+    label_encoder = get_or_make_label_encoder(
+        params, 'ontonotes_ner', mode, flat_target_list)
+
+    return create_single_problem_generator('ontonotes_ner',
+                                           inputs_list,
+                                           target,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def ontonotes_cws(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    if mode == 'train':
+        with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+    else:
+        with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+
+    target, _, _, inputs_list = zip(*[parse_one(s) for s in raw_data])
+    flat_target_list = [t for sublist in target for t in sublist]
+    label_encoder = get_or_make_label_encoder(
+        params, 'ontonotes_cws', mode, flat_target_list)
+
+    return create_single_problem_generator('ontonotes_cws',
+                                           inputs_list,
+                                           target,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def ontonotes_chunk(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+
+    if mode == 'train':
+        with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+    else:
+        with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
+
+    _, _, target, inputs_list = zip(*[parse_one(s) for s in raw_data])
+    flat_target_list = [t for sublist in target for t in sublist]
+    label_encoder = get_or_make_label_encoder(
+        params, 'ontonotes_chunk', mode, flat_target_list)
+
+    return create_single_problem_generator('ontonotes_chunk',
+                                           inputs_list,
+                                           target,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)

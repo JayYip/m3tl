@@ -29,7 +29,10 @@ class Params():
                              'bosonner': 'seq_tag',
                              'msraner': 'seq_tag',
                              'POS': 'seq_tag',
-                             'weibo_fake_seq2seq_tag': 'seq2seq_tag'}
+                             'weibo_fake_seq2seq_tag': 'seq2seq_tag',
+                             'ontonotes_ner': 'seq_tag',
+                             'ontonotes_cws': 'seq_tag',
+                             'ontonotes_chunk': 'seq2seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -50,7 +53,10 @@ class Params():
             'bosonner': 10,
             'msraner': 10,
             'POS': 62,
-            'weibo_fake_seq2seq_tag': 4
+            'weibo_fake_seq2seq_tag': 4,
+            'ontonotes_ner': 18,
+            'ontonotes_cws': 5,
+            'ontonotes_chunk': 190
         }
 
         self.data_num_dict = {
@@ -64,7 +70,10 @@ class Params():
             'cityucws': 53019,
             'pkucws': 19056,
             'msraner': 46364,
-            'bosonner': 10000
+            'bosonner': 10000,
+            'ontonotes_ner': 39086,
+            'ontonotes_cws': 39086,
+            'ontonotes_chunk': 39086
         }
 
         # specify this will make key reuse values top

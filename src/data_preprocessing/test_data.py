@@ -59,3 +59,34 @@ def weibo_fake_seq2seq_tag(params, mode: str):
 
     return create_single_problem_generator('weibo_fake_seq2seq_tag',
                                            inputs_list, new_target_list, label_encoder, params, tokenizer)
+
+
+def WeiboPretrain(params, mode):
+
+    sentence_split = r'[.!?。？！]'
+
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                         proc_fn=gold_horse_segment_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs']
+
+    segmented_list = []
+    for document in inputs_list:
+        segmented_list.append([])
+        doc_string = ''.join(document)
+        splited_doc = re.split(sentence_split, doc_string)
+        for sentence in splited_doc:
+            if sentence:
+                segmented_list[-1].append(list(sentence))
+    segmented_list = [doc for doc in segmented_list if doc]
+
+    return create_pretraining_generator('WeiboPretrain',
+                                        segmented_list,
+                                        None,
+                                        None,
+                                        params,
+                                        tokenizer)
