@@ -28,7 +28,8 @@ class Params():
                              'cityucws': 'seq_tag',
                              'bosonner': 'seq_tag',
                              'msraner': 'seq_tag',
-                             'POS': 'seq_tag'}
+                             'POS': 'seq_tag',
+                             'weibo_fake_seq2seq_tag': 'seq2seq_tag'}
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -48,7 +49,8 @@ class Params():
             'cityucws': 5,
             'bosonner': 10,
             'msraner': 10,
-            'POS': 62
+            'POS': 62,
+            'weibo_fake_seq2seq_tag': 4
         }
 
         self.data_num_dict = {
@@ -90,12 +92,21 @@ class Params():
         self.batch_size = 32
         self.train_epoch = 15
         self.freeze_step = 0
+        # self.prefetch = 5000
+        # self.shuffle_buffer = 10000
+        self.prefetch = 100
+        self.shuffle_buffer = 100
 
         # hparm
         self.dropout_keep_prob = 0.9
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
         self.label_smoothing = 0.1
+        self.crf = True
+
+        # seq2seq
+        self.decoder_num_hidden_layers = 3
+        self.beam_size = 10
 
         # multitask training
         self.label_transfer = False

@@ -8,7 +8,7 @@ from bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
-from .top import PreTrain, SequenceLabel, Classification, MaskLM, LabelTransferHidden
+from .top import PreTrain, SequenceLabel, Classification, MaskLM, LabelTransferHidden, Seq2Seq
 
 
 @autograph.convert()
@@ -175,6 +175,12 @@ class BertMultiTask():
                             return_dict[problem] = \
                                 cls(feature_this_round,
                                     hidden_feature_this_round, mode, problem)
+                        elif self.config.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']:
+
+                            seq2seq = Seq2Seq(params=self.config)
+                            return_dict[problem] = \
+                                seq2seq(feature_this_round,
+                                        hidden_feature_this_round, mode, problem)
 
                         if mode == tf.estimator.ModeKeys.TRAIN:
                             return_dict[problem] = filter_loss(

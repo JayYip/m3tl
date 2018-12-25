@@ -1,9 +1,10 @@
 import tensorflow as tf
-from tensorflow.contrib import autograph
+
 
 from tensor2tensor.utils import metrics
 
 from .t2t_utils import get_t2t_metric_op
+from .transformer_decoder import TransformerDecoder
 
 from bert import modeling
 
@@ -388,3 +389,30 @@ class LabelTransferHidden(TopLayer):
         hidden_feature.update(new_hidden_feature)
 
         return hidden_feature
+
+
+class Seq2Seq(TopLayer):
+
+    def __call__(self, features, hidden_feature, mode, problem_name):
+        self.decoder = TransformerDecoder(self.params)
+
+        problem_type = self.params.problem_type[problem_name]
+
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            decode_output = self.decoder.train(
+                features, hidden_feature, mode, problem_name)
+
+        if problem_type == 'seq2seq_tag':
+            num_classes = self.params.num_classes[problem_name]
+
+        else:
+            num_classes = self.params.vocab_size
+            self.params.num_classes[problem_name] = num_classes
+
+        decode_output = {'seq': decode_output}
+
+        with tf.variable_scope('decoder_top'):
+            seq_tag = SequenceLabel(self.params)
+            loss_eval_prob = seq_tag(
+                features, decode_output, mode, problem_name)
+        return loss_eval_prob

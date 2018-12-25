@@ -1,0 +1,61 @@
+
+
+import re
+from glob import glob
+
+from bert.tokenization import FullTokenizer
+
+from ..utils import (create_pretraining_generator,
+                     create_single_problem_generator,
+                     get_or_make_label_encoder)
+
+from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
+
+
+def WeiboFakeCLS(params, mode):
+    """Just a test problem to test multiproblem support
+
+    Arguments:
+        params {Params} -- params
+        mode {mode} -- mode
+    """
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                         proc_fn=gold_horse_ent_type_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs'][:100]
+    target_list = data['target'][:100]
+
+    new_target_list = [1 if len(set(t)) > 1 else 0 for t in target_list]
+
+    label_encoder = get_or_make_label_encoder(
+        params, 'WeiboFakeCLS', mode, new_target_list, 'O')
+
+    return create_single_problem_generator('WeiboFakeCLS',
+                                           inputs_list,
+                                           new_target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def weibo_fake_seq2seq_tag(params, mode: str):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                         proc_fn=gold_horse_ent_type_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs'][:100]
+    target_list = data['target'][:100]
+    new_target_list = [[0, 1, 2] for t in target_list]
+
+    label_encoder = get_or_make_label_encoder(
+        params, 'weibo_fake_seq2seq_tag', mode, [0, 1, 2])
+
+    return create_single_problem_generator('weibo_fake_seq2seq_tag',
+                                           inputs_list, new_target_list, label_encoder, params, tokenizer)

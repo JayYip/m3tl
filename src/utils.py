@@ -365,6 +365,11 @@ def create_single_problem_generator(problem,
         input_mask, tokens, segment_ids, target = create_mask_and_padding(
             tokens, segment_ids, target, params.max_seq_len, is_seq)
 
+        # create mask and padding for labels of seq2seq problem
+        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+            label_mask, target, _, _ = create_mask_and_padding(
+                target, [0] * len(target), None, params.max_seq_len)
+
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
         if isinstance(target, list):
@@ -407,7 +412,7 @@ def create_single_problem_generator(problem,
                                  " ".join([str(x) for x in masked_lm_positions]))
 
         if not params.augument_mask_lm:
-            yield {
+            return_dict = {
                 'input_ids': input_ids,
                 'input_mask': input_mask,
                 'segment_ids': segment_ids,
@@ -415,7 +420,7 @@ def create_single_problem_generator(problem,
             }
         else:
             if random.uniform(0, 1) <= params.augument_rate:
-                yield {
+                return_dict = {
                     'input_ids': mask_lm_input_ids,
                     'input_mask': input_mask,
                     'segment_ids': segment_ids,
@@ -425,7 +430,7 @@ def create_single_problem_generator(problem,
                     "masked_lm_weights": masked_lm_weights,
                 }
             else:
-                yield {
+                return_dict = {
                     'input_ids': input_ids,
                     'input_mask': input_mask,
                     'segment_ids': segment_ids,
@@ -434,6 +439,11 @@ def create_single_problem_generator(problem,
                     "masked_lm_ids": np.zeros_like(masked_lm_ids),
                     "masked_lm_weights": np.zeros_like(masked_lm_weights),
                 }
+
+        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+            return_dict['%s_mask' % problem] = label_mask
+
+        yield return_dict
 
 
 def create_pretraining_generator(problem,

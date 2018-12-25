@@ -56,6 +56,15 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
             elif problem_type in ['cls']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update({'%s_label_ids' % problem: []})
+            elif problem_type in ['seq2seq_tag', 'seq2seq_text']:
+                output_type.update({'%s_label_ids' % problem: tf.int32})
+                output_shapes.update(
+                    {'%s_label_ids' % problem: [config.max_seq_len]})
+
+                output_type.update({'%s_mask' % problem: tf.int32})
+                output_shapes.update(
+                    {'%s_mask' % problem: [config.max_seq_len]})
+
             elif problem_type in ['pretrain']:
                 output_type.update({
                     "masked_lm_positions": tf.int32,
@@ -78,9 +87,9 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
         gen, output_types=output_type, output_shapes=output_shapes)
 
     if mode == 'train':
-        dataset = dataset.shuffle(10000)
+        dataset = dataset.shuffle(config.shuffle_buffer)
 
-    dataset = dataset.prefetch(5000)
+    dataset = dataset.prefetch(config.prefetch)
     if mode == 'train':
         dataset = dataset.batch(config.batch_size)
     else:
