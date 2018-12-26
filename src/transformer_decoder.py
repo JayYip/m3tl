@@ -1,5 +1,6 @@
 import tensorflow as tf
 import math
+from tensor2tensor.utils import beam_search
 
 from bert import modeling
 
@@ -10,7 +11,7 @@ class TransformerDecoder(object):
     def __init__(self, params: Params):
         self.params = params
 
-    def get_decoder_self_attention_bias(self, length):
+    def get_decoder_self_attention_mask(self, length):
         """Calculate bias for decoder that maintains model's autoregressive property.
         Creates a tensor that masks out locations that correspond to illegal
         connections, so prediction at position i cannot draw information from future
@@ -20,17 +21,20 @@ class TransformerDecoder(object):
         Returns:
             float tensor of shape [1, 1, length, length]
         """
-        with tf.name_scope("decoder_self_attention_bias"):
+        with tf.name_scope("decoder_self_attention_mask"):
             valid_locs = tf.matrix_band_part(tf.ones([length, length]), -1, 0)
             valid_locs = tf.reshape(valid_locs, [1, length, length])
         return valid_locs
 
-    def decode(self, decoder_inputs,
-               encoder_output,
-               attention_mask,
-               decoder_self_attention_mask,
-               cache,
-               do_return_all_layers):
+    def decode(
+            self,
+            decoder_inputs,
+            encoder_output,
+            attention_mask,
+            decoder_self_attention_mask,
+            cache,
+            num_classes,
+            do_return_all_layers):
         input_tensor = decoder_inputs
         num_hidden_layers = self.params.decoder_num_hidden_layers
         hidden_size = self.params.bert_config.hidden_size
@@ -168,9 +172,15 @@ class TransformerDecoder(object):
         else:
             final_output = modeling.reshape_from_matrix(
                 prev_output, input_shape)
-        return final_output
 
-    def train(self, features, hidden_feature, mode, problem_name):
+        dense_layer = tf.layers.Dense(num_classes,
+                                      activation=None,
+                                      kernel_initializer=tf.orthogonal_initializer()
+                                      )
+        logits = dense_layer(final_output)
+        return logits
+
+    def train_eval(self, features, hidden_feature, mode, problem_name):
 
         # prepare inputs to attention
         encoder_output = hidden_feature['seq']
@@ -178,6 +188,7 @@ class TransformerDecoder(object):
         label_mask = features['%s_mask' % problem_name]
         batch_size = self.params.batch_size
         seq_length = self.params.max_seq_len
+        num_classes = self.params.num_classes[problem_name]
 
         embedding_table = hidden_feature['embed_table']
         decoder_inputs = tf.nn.embedding_lookup(
@@ -206,7 +217,7 @@ class TransformerDecoder(object):
         attention_mask = modeling.create_attention_mask_from_input_mask(
             label_ids, label_mask)
 
-        decoder_self_attention_mask = self.get_decoder_self_attention_bias(
+        decoder_self_attention_mask = self.get_decoder_self_attention_mask(
             self.params.max_seq_len)
 
         decode_output = self.decode(
@@ -215,9 +226,15 @@ class TransformerDecoder(object):
             attention_mask=attention_mask,
             decoder_self_attention_mask=decoder_self_attention_mask,
             cache=None,
+            num_classes=num_classes,
             do_return_all_layers=False
         )
         return decode_output
+
+    def predict(self, features, hidden_feature, mode, problem_name):
+        self.embedding_table = hidden_feature['embed_table']
+        self.token_type_ids = hidden_feature['segment_ids']
+        pass
 
 
 def attention_layer_with_cache(from_tensor,
@@ -234,7 +251,7 @@ def attention_layer_with_cache(from_tensor,
                                batch_size=None,
                                from_seq_length=None,
                                to_seq_length=None,
-                               decoder_self_attention_bias=None,
+                               decoder_self_attention_mask=None,
                                cache=None):
     """
     This is a modification of attention layer from bert to support

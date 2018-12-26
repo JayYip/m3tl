@@ -8,6 +8,7 @@ from copy import copy
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
+# from sklearn.preprocessing import LabelEncoder
 import tensorflow as tf
 
 
@@ -30,19 +31,19 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
         self.encode_dict = {}
         self.decode_dict = {}
         label_set = set(y)
-        if zero_class is not None:
-            self.encode_dict[zero_class] = 0
-            self.decode_dict[0] = zero_class
-            if zero_class in label_set:
-                label_set.remove(zero_class)
+        if zero_class is None:
+            zero_class = '[PAD]'
+
+        self.encode_dict[zero_class] = 0
+        self.decode_dict[0] = zero_class
+        if zero_class in label_set:
+            label_set.remove(zero_class)
 
         label_set = sorted(list(label_set))
         for l_ind, l in enumerate(label_set):
 
-            if zero_class is not None:
-                new_ind = l_ind + 1
-            else:
-                new_ind = l_ind
+            new_ind = l_ind + 1
+
             self.encode_dict[l] = new_ind
             self.decode_dict[new_ind] = l
 
@@ -100,7 +101,7 @@ def create_path(path):
         os.makedirs(path, exist_ok=True)
 
 
-def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class='O'):
+def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class=None):
     """Simple function to create or load existing label encoder
     If mode is train, alway create new label_encder
 
