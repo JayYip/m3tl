@@ -101,10 +101,11 @@ class Params():
         self.batch_size = 32
         self.train_epoch = 15
         self.freeze_step = 0
-        # self.prefetch = 5000
-        # self.shuffle_buffer = 10000
-        self.prefetch = 100
-        self.shuffle_buffer = 100
+        self.prefetch = 5000
+        self.shuffle_buffer = 10000
+        # self.prefetch = 100
+        # self.shuffle_buffer = 100
+        # self.train_epoch = 1
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -116,6 +117,8 @@ class Params():
         # seq2seq
         self.decoder_num_hidden_layers = 3
         self.beam_size = 10
+        self.init_decoder_from_encoder = False
+        self.beam_search_alpha=0.1
 
         # multitask training
         self.label_transfer = False

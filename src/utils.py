@@ -33,6 +33,8 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
         label_set = set(y)
         if zero_class is None:
             zero_class = '[PAD]'
+        else:
+            y.append('[PAD]')
 
         self.encode_dict[zero_class] = 0
         self.decode_dict[0] = zero_class
@@ -125,9 +127,7 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
 
         label_encoder.fit(label_list, zero_class=zero_class)
         pad_ind = len(label_encoder.encode_dict)
-        if zero_class != '[PAD]':
-            label_encoder.encode_dict['[PAD]'] = pad_ind
-            label_encoder.decode_dict[pad_ind] = '[PAD]'
+
         pickle.dump(label_encoder, open(le_path, 'wb'))
 
     else:

@@ -2,6 +2,7 @@ import tensorflow as tf
 
 
 from tensor2tensor.utils import metrics
+from tensor2tensor.utils import beam_search
 
 from .t2t_utils import get_t2t_metric_op
 from .transformer_decoder import TransformerDecoder
@@ -134,6 +135,7 @@ class SequenceLabel(TopLayer):
             def metric_fn(label_ids, logits):
                 predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
                 prob = tf.nn.softmax(logits)
+
                 accuracy = tf.metrics.accuracy(
                     label_ids, predictions, weights=features['input_mask'])
                 acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
@@ -392,27 +394,137 @@ class LabelTransferHidden(TopLayer):
 
 
 class Seq2Seq(TopLayer):
+    def _get_symbol_to_logit_fn(self,
+                                max_seq_len,
+                                embedding_table,
+                                token_type_ids,
+                                decoder,
+                                num_classes,
+                                params):
+        decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
+            max_seq_len)
+
+        def symbols_to_logits_fn(ids, i, cache):
+
+            decoder_inputs = tf.nn.embedding_lookup(
+                embedding_table, ids)
+
+            decoder_inputs = modeling.embedding_postprocessor(
+                input_tensor=decoder_inputs,
+                use_token_type=False,
+                token_type_ids=token_type_ids,
+                token_type_vocab_size=params.bert_config.type_vocab_size,
+                token_type_embedding_name="token_type_embeddings",
+                use_position_embeddings=True,
+                position_embedding_name="position_embeddings",
+                initializer_range=params.bert_config.initializer_range,
+                max_position_embeddings=params.bert_config.max_position_embeddings,
+                dropout_prob=self.params.bert_config.hidden_dropout_prob)
+            final_decoder_input = decoder_inputs[:, -1:, :]
+            self_attention_mask = decoder_self_attention_mask[:, i:i+1, :i+1]
+            encoder_output = cache.get('encoder_outputs')
+            attention_mask = cache.get('encoder_decoder_attention_mask')
+            logits = decoder.decode(
+                decoder_inputs=final_decoder_input,
+                encoder_output=encoder_output,
+                attention_mask=attention_mask,
+                decoder_self_attention_mask=self_attention_mask,
+                cache=cache,
+                num_classes=num_classes,
+                do_return_all_layers=False)
+            return logits, cache
+        return symbols_to_logits_fn
+
+    def create_loss(self, labels, logits, features, problem_name):
+        batch_loss = tf.losses.sparse_softmax_cross_entropy(
+            labels, logits)
+        loss_multiplier = tf.cast(
+            features['%s_loss_multiplier' % problem_name], tf.float32)
+        # multiply with loss multiplier to make some loss as zero
+        loss = tf.reduce_mean(batch_loss*loss_multiplier)
+        return loss
+
+    def beam_search_decode(self, features, hidden_feature, mode, problem_name):
+        encoder_outputs = hidden_feature['seq']
+        max_seq_len = self.params.max_seq_len
+        embedding_table = hidden_feature['embed_table']
+        token_type_ids = features['segment_ids']
+        num_classes = self.params.num_classes[problem_name]
+        batch_size = self.params.batch_size
+        hidden_size = self.params.bert_config.hidden_size
+
+        symbol_to_logit_fn = self._get_symbol_to_logit_fn(
+            max_seq_len=max_seq_len,
+            embedding_table=embedding_table,
+            token_type_ids=token_type_ids,
+            decoder=self.decoder,
+            num_classes=num_classes,
+            params=self.params
+        )
+
+        # create cache for fast decode
+        cache = {
+            str(layer): {
+                "key_layer": tf.zeros([batch_size, 0, hidden_size]),
+                "value_layer": tf.zeros([batch_size, 0, hidden_size]),
+            } for layer in range(self.params.decoder_num_hidden_layers)}
+        cache['encoder_outputs'] = encoder_outputs
+        cache['encoder_decoder_attention_mask'] = features['input_mask']
+        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
+
+        decode_ids, _ = beam_search.beam_search(
+            symbols_to_logits_fn=symbol_to_logit_fn,
+            initial_ids=initial_ids,
+            states=cache,
+            vocab_size=self.params.num_classes[problem_name],
+            beam_size=self.params.beam_size,
+            alpha=self.params.beam_search_alpha,
+            decode_length=self.params.max_seq_len,
+            eos_id=102)
+        # Get the top sequence for each batch element
+        top_decoded_ids = decode_ids[:, 0, 1:]
+        self.prob = top_decoded_ids
+        return self.prob
 
     def __call__(self, features, hidden_feature, mode, problem_name):
         self.decoder = TransformerDecoder(self.params)
 
-        problem_type = self.params.problem_type[problem_name]
-
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            decode_output = self.decoder.train(
+        if mode != tf.estimator.ModeKeys.PREDICT:
+            labels = features['%s_label_ids' % problem_name]
+            logits = self.decoder.train_eval(
                 features, hidden_feature, mode, problem_name)
 
-        if problem_type == 'seq2seq_tag':
-            num_classes = self.params.num_classes[problem_name]
+            loss = self.create_loss(labels, logits, features, problem_name)
+
+            tf.summary.scalar('%s_loss' % problem_name, loss)
+            self.loss = loss
+
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                return self.loss
+
+            def metric_fn(label_ids, logits):
+                predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+                prob = tf.nn.softmax(logits)
+
+                accuracy = tf.metrics.accuracy(
+                    label_ids, predictions, weights=features['input_mask'])
+                acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
+                    metrics.Metrics.ACC_PER_SEQ],
+                    prob, features, label_ids)
+                # bleu_score = get_t2t_metric_op(metrics.METRICS_FNS[
+                #     metrics.Metrics.APPROX_BLEU],
+                #     prob, features, label_ids)
+
+                return {
+                    "Accuracy": accuracy,
+                    'Accuracy Per Sequence': acc_per_seq,
+                    # 'Approximate BLEU': bleu_score
+                }
+
+            eval_metrics = (metric_fn(labels, logits), loss)
+            self.eval_metrics = eval_metrics
+            return self.eval_metrics
 
         else:
-            num_classes = self.params.vocab_size
-            self.params.num_classes[problem_name] = num_classes
-
-        decode_output = {'seq': decode_output}
-
-        with tf.variable_scope('decoder_top'):
-            seq_tag = SequenceLabel(self.params)
-            loss_eval_prob = seq_tag(
-                features, decode_output, mode, problem_name)
-        return loss_eval_prob
+            return self.beam_search_decode(
+                features, hidden_feature, mode, problem_name)

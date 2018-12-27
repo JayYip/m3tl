@@ -67,7 +67,7 @@ class TransformerDecoder(object):
                 layer_input = prev_output
 
                 if cache is not None:
-                    layer_cache = cache[layer_idx]
+                    layer_cache = cache[str(layer_idx)]
                 else:
                     layer_cache = None
 
@@ -111,8 +111,7 @@ class TransformerDecoder(object):
                             do_return_2d_tensor=True,
                             batch_size=batch_size,
                             from_seq_length=seq_length,
-                            to_seq_length=seq_length,
-                            cache=layer_cache)
+                            to_seq_length=seq_length)
                         attention_heads.append(attention_head)
 
                         attention_output = None
@@ -199,8 +198,7 @@ class TransformerDecoder(object):
             decoder_inputs = tf.pad(
                 decoder_inputs, [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
 
-        token_type_ids = tf.zeros(
-            shape=[batch_size, seq_length], dtype=tf.int32)
+        token_type_ids = features['segment_ids']
 
         decoder_inputs = modeling.embedding_postprocessor(
             input_tensor=decoder_inputs,
@@ -375,13 +373,23 @@ def attention_layer_with_cache(from_tensor,
         kernel_initializer=modeling.create_initializer(initializer_range))
 
     if cache is not None:
+        n_time_h = key_layer.get_shape()[1]
+        key_layer_to_cache = tf.reshape(
+            key_layer, [batch_size, -1, n_time_h])
+        value_layer_to_cache = tf.reshape(
+            value_layer, [batch_size, -1, n_time_h])
         # Combine cached keys and values with new keys and values.
-        key_layer = tf.concat([cache["key_layer"], key_layer], axis=1)
-        value_layer = tf.concat([cache["value_layer"], value_layer], axis=1)
+        key_layer_from_cache = tf.concat(
+            [cache["key_layer"], key_layer_to_cache], axis=1)
+        value_layer_from_cache = tf.concat(
+            [cache["value_layer"], value_layer_to_cache], axis=1)
 
         # Update cache
-        cache["key_layer"] = key_layer
-        cache["value_layer"] = value_layer
+        cache["key_layer"] = key_layer_from_cache
+        cache["value_layer"] = value_layer_from_cache
+
+        key_layer = tf.reshape(key_layer_from_cache, [-1, n_time_h])
+        value_layer = tf.reshape(value_layer_from_cache, [-1, n_time_h])
 
     # `query_layer` = [B, N, F, H]
     query_layer = transpose_for_scores(query_layer, batch_size,
