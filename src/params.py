@@ -30,6 +30,7 @@ class Params():
                              'msraner': 'seq_tag',
                              'POS': 'seq_tag',
                              'weibo_fake_seq2seq_tag': 'seq2seq_tag',
+                             'weibo_fake_seq_tag': 'seq_tag',
                              'ontonotes_ner': 'seq_tag',
                              'ontonotes_cws': 'seq_tag',
                              'ontonotes_chunk': 'seq2seq_tag'}
@@ -52,8 +53,11 @@ class Params():
             'cityucws': 5,
             'bosonner': 10,
             'msraner': 10,
+            # 'msraner': 8,
+            # 'bosonner': 12,
             'POS': 62,
             'weibo_fake_seq2seq_tag': 4,
+            'weibo_fake_seq_tag': 10,
             'ontonotes_ner': 18,
             'ontonotes_cws': 5,
             'ontonotes_chunk': 190
@@ -128,10 +132,7 @@ class Params():
 
         # bert config
         self.init_checkpoint = 'chinese_L-12_H-768_A-12'
-        self.vocab_file = os.path.join(self.init_checkpoint, 'vocab.txt')
-        self.bert_config = BertConfig.from_json_file(
-            os.path.join(self.init_checkpoint, 'bert_config.json'))
-        self.bert_config_dict = self.bert_config.__dict__
+
 
         # pretrain hparm
         self.dupe_factor = 10
@@ -141,8 +142,14 @@ class Params():
         self.mask_lm_hidden_size = 768
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
-        with open(os.path.join(self.init_checkpoint, 'vocab.txt'), 'r') as vf:
-            self.vocab_size = len(vf.readlines())
+
+
+        # for label transfer
+        # self.label_transfer = True
+        # self.train_epoch = 15
+        # self.init_checkpoint = 'tmp/WeiboNER_bosonner_msraner_ckpt_bk'
+        # self.freeze_step = 99999
+        # self.init_lr = 0.001
 
         # get generator function for each problem
         self.read_data_fn = {}
@@ -192,14 +199,24 @@ class Params():
         problem_list = sorted(re.split(r'[&|]', flag_string))
 
         base = base_dir if base_dir is not None else 'tmp'
+
         dir_name = dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
         self.ckpt_dir = os.path.join(base, dir_name)
         create_path(self.ckpt_dir)
         self.params_path = os.path.join(self.ckpt_dir, 'params.json')
-        shutil.copy2(self.vocab_file, self.ckpt_dir)
-        shutil.copy2(os.path.join(self.init_checkpoint,
-                                  'bert_config.json'), self.ckpt_dir)
+        try:
+            shutil.copy2(os.path.join(self.init_checkpoint, 'vocab.txt'), self.ckpt_dir)
+            shutil.copy2(os.path.join(self.init_checkpoint,
+                                    'bert_config.json'), self.ckpt_dir)
+        except FileNotFoundError:
+            pass
+        self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
+        self.bert_config = BertConfig.from_json_file(
+            os.path.join(self.ckpt_dir, 'bert_config.json'))
+        self.bert_config_dict = self.bert_config.__dict__
+        with open(self.vocab_file, 'r', encoding='utf8') as vf:
+            self.vocab_size = len(vf.readlines())
 
         # update data_num and train_steps
         self.data_num = 0

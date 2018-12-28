@@ -90,3 +90,27 @@ def WeiboPretrain(params, mode):
                                         None,
                                         params,
                                         tokenizer)
+
+
+def weibo_fake_seq_tag(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                         proc_fn=gold_horse_ent_type_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs'][:100]
+    target_list = data['target'][:100]
+
+    flat_label = [item for sublist in target_list for item in sublist]
+
+    label_encoder = get_or_make_label_encoder(
+        params, 'weibo_fake_seq_tag', mode, flat_label)
+
+    return create_single_problem_generator('weibo_fake_seq_tag',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)

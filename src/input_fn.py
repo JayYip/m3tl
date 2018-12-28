@@ -151,17 +151,51 @@ def predict_input_fn(input_file_or_list, config: Params, mode='predict'):
     return dataset
 
 
-def no_dataset_input_fn(config: Params, mode='train', epoch=None):
-    """This function is for evaluation only
+def to_serving_input(input_file_or_list, config: Params, mode='predict'):
+        # if is string, treat it as path to file
+    if isinstance(input_file_or_list, str):
+        inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
+    else:
+        inputs = input_file_or_list
 
-    Arguments:
-        config {Params} -- Param
+    # max_len = np.max([len(i) for i in inputs])
+    # config.max_seq_len = max_len
 
-    Keyword Arguments:
-        mode {str} -- Mode (default: {'train'})
-        epoch {int} -- epoch (default: {None})
-    """
+    tokenizer = FullTokenizer(config.vocab_file)
 
-    g = create_generator(params=config, mode=mode, epoch=1)
-    for example in g:
-        yield example
+    # data_dict = {}
+    # data_dict['input_ids'] = []
+    # data_dict['input_mask'] = []
+    # data_dict['segment_ids'] = []
+
+    data_dict = {}
+    for doc in tqdm(inputs, desc='Processing Inputs'):
+        inputs_a = list(doc)
+        tokens, target = tokenize_text_with_seqs(
+            tokenizer, inputs_a, None)
+
+        tokens_a, tokens_b, target = truncate_seq_pair(
+            tokens, None, target, config.max_seq_len)
+
+        tokens, segment_ids, target = add_special_tokens_with_seqs(
+            tokens_a, tokens_b, target)
+
+        input_mask, tokens, segment_ids, target = create_mask_and_padding(
+            tokens, segment_ids, target, config.max_seq_len)
+
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
+        data_dict['input_ids'] = input_ids
+        data_dict['input_mask'] = input_mask
+        data_dict['segment_ids'] = segment_ids
+        for k in data_dict:
+            data_dict[k] = np.expand_dims(data_dict[k], axis=0)
+        yield data_dict
+
+
+def serving_input_fn():
+    features = {
+        'input_ids': tf.placeholder(tf.int32, [None, None]),
+        'input_mask': tf.placeholder(tf.int32, [None, None]),
+        'segment_ids': tf.placeholder(tf.int32, [None, None])
+    }
+    return tf.estimator.export.ServingInputReceiver(features, features)

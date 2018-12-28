@@ -4,11 +4,11 @@ import tensorflow as tf
 import tempfile
 import shutil
 
-from ..params import Params
-from ..model_fn import BertMultiTask
-from ..estimator import Estimator
-from ..ckpt_restore_hook import RestoreCheckpointHook
-from ..input_fn import train_eval_input_fn, predict_input_fn
+from src.params import Params
+from src.model_fn import BertMultiTask
+from src.estimator import Estimator
+from src.ckpt_restore_hook import RestoreCheckpointHook
+from src.input_fn import train_eval_input_fn, predict_input_fn
 
 
 class TestProblems(unittest.TestCase):
@@ -34,6 +34,58 @@ class TestProblems(unittest.TestCase):
     def test_seq2seq_tag(self):
         self.params.assign_problem(
             'weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+
+        model = BertMultiTask(self.params)
+        model_fn = model.get_model_fn(False)
+        estimator = Estimator(
+            model_fn,
+            model_dir=self.params.ckpt_dir,
+            params=self.params,
+            config=self.run_config)
+        train_hook = RestoreCheckpointHook(self.params)
+
+        def train_input_fn(): return train_eval_input_fn(self.params)
+        estimator.train(
+            train_input_fn,
+            max_steps=self.params.train_steps,
+            hooks=[train_hook])
+
+        def input_fn(): return train_eval_input_fn(self.params, mode='eval')
+        estimator.evaluate(input_fn=input_fn)
+
+        p = estimator.predict(input_fn=input_fn)
+        for _ in p:
+            pass
+
+    def test_cls(self):
+        self.params.assign_problem(
+            'WeiboFakeCLS', gpu=1, base_dir=self.test_dir)
+
+        model = BertMultiTask(self.params)
+        model_fn = model.get_model_fn(False)
+        estimator = Estimator(
+            model_fn,
+            model_dir=self.params.ckpt_dir,
+            params=self.params,
+            config=self.run_config)
+        train_hook = RestoreCheckpointHook(self.params)
+
+        def train_input_fn(): return train_eval_input_fn(self.params)
+        estimator.train(
+            train_input_fn,
+            max_steps=self.params.train_steps,
+            hooks=[train_hook])
+
+        def input_fn(): return train_eval_input_fn(self.params, mode='eval')
+        estimator.evaluate(input_fn=input_fn)
+
+        p = estimator.predict(input_fn=input_fn)
+        for _ in p:
+            pass
+
+    def test_seq_tag(self):
+        self.params.assign_problem(
+            'weibo_fake_seq_tag', gpu=1, base_dir=self.test_dir)
 
         model = BertMultiTask(self.params)
         model_fn = model.get_model_fn(False)
