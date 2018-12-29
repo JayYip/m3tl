@@ -59,11 +59,11 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
             elif problem_type in ['seq2seq_tag', 'seq2seq_text']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update(
-                    {'%s_label_ids' % problem: [config.max_seq_len]})
+                    {'%s_label_ids' % problem: [config.decode_max_seq_len]})
 
                 output_type.update({'%s_mask' % problem: tf.int32})
                 output_shapes.update(
-                    {'%s_mask' % problem: [config.max_seq_len]})
+                    {'%s_mask' % problem: [config.decode_max_seq_len]})
 
             elif problem_type in ['pretrain']:
                 output_type.update({

@@ -123,6 +123,8 @@ class Params():
         self.beam_size = 10
         self.init_decoder_from_encoder = False
         self.beam_search_alpha=0.1
+        self.decode_max_seq_len = 20
+        self.eos_id = 3
 
         # multitask training
         self.label_transfer = False

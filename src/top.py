@@ -484,7 +484,7 @@ class Seq2Seq(TopLayer):
             vocab_size=self.params.num_classes[problem_name],
             beam_size=self.params.beam_size,
             alpha=self.params.beam_search_alpha,
-            decode_length=self.params.max_seq_len,
+            decode_length=self.params.decode_max_seq_len,
             eos_id=self.params.eos_id)
         # Get the top sequence for each batch element
         top_decoded_ids = decode_ids[:, 0, 1:]
@@ -496,6 +496,7 @@ class Seq2Seq(TopLayer):
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = features['%s_label_ids' % problem_name]
+
             logits = self.decoder.train_eval(
                 features, hidden_feature, mode, problem_name)
 
@@ -512,7 +513,7 @@ class Seq2Seq(TopLayer):
                 prob = tf.nn.softmax(logits)
 
                 accuracy = tf.metrics.accuracy(
-                    label_ids, predictions, weights=features['input_mask'])
+                    label_ids, predictions, weights=features['%s_mask' % problem_name])
                 acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
                     metrics.Metrics.ACC_PER_SEQ],
                     prob, features, label_ids)

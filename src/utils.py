@@ -369,7 +369,7 @@ def create_single_problem_generator(problem,
         # create mask and padding for labels of seq2seq problem
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             label_mask, target, _, _ = create_mask_and_padding(
-                target, [0] * len(target), None, params.max_seq_len)
+                target, [0] * len(target), None, params.decode_max_seq_len)
 
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 

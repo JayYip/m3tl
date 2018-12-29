@@ -48,10 +48,14 @@ class TransformerDecoder(object):
                 "heads (%d)" % (hidden_size, num_attention_heads))
 
         attention_head_size = int(hidden_size / num_attention_heads)
-        input_shape = modeling.get_shape_list(encoder_output, expected_rank=3)
-        batch_size = input_shape[0]
-        seq_length = input_shape[1]
-        input_width = input_shape[2]
+        encode_shape = modeling.get_shape_list(
+            encoder_output, expected_rank=3)
+        batch_size = encode_shape[0]
+        encode_seq_length = encode_shape[1]
+        input_width = encode_shape[2]
+
+        input_shape = modeling.get_shape_list(input_tensor, expected_rank=3)
+        decode_seq_length = input_shape[1]
 
         # The Transformer performs sum residuals on all layers so the input needs
         # to be the same as the hidden size.
@@ -75,7 +79,7 @@ class TransformerDecoder(object):
                         layer_input, expected_rank=3)[0]
                     # broadcast encoder_output to batch*beam_size
                     encoder_output = tf.broadcast_to(
-                        encoder_output, [batch_size, seq_length, input_width])
+                        encoder_output, [batch_size, encode_seq_length, input_width])
 
                 else:
                     layer_cache = None
@@ -93,8 +97,8 @@ class TransformerDecoder(object):
                             initializer_range=initializer_range,
                             do_return_2d_tensor=False,
                             batch_size=batch_size,
-                            from_seq_length=seq_length,
-                            to_seq_length=seq_length,
+                            from_seq_length=decode_seq_length,
+                            to_seq_length=decode_seq_length,
                             cache=layer_cache)
                         attention_heads.append(attention_head)
 
@@ -122,8 +126,8 @@ class TransformerDecoder(object):
                             initializer_range=initializer_range,
                             do_return_2d_tensor=True,
                             batch_size=batch_size,
-                            from_seq_length=seq_length,
-                            to_seq_length=seq_length,
+                            from_seq_length=decode_seq_length,
+                            to_seq_length=encode_seq_length,
                             cache=None)
                         attention_heads.append(attention_head)
 
@@ -203,9 +207,7 @@ class TransformerDecoder(object):
         # prepare inputs to attention
         encoder_output = hidden_feature['seq']
         label_ids = features['%s_label_ids' % problem_name]
-        label_mask = features['%s_mask' % problem_name]
-        batch_size = self.params.batch_size
-        seq_length = self.params.max_seq_len
+        input_mask = features['input_mask']
         num_classes = self.params.num_classes[problem_name]
 
         embedding_table = hidden_feature['embed_table']
@@ -217,7 +219,7 @@ class TransformerDecoder(object):
             decoder_inputs = tf.pad(
                 decoder_inputs, [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
 
-        token_type_ids = features['segment_ids']
+        token_type_ids = tf.zeros_like(label_ids)
 
         decoder_inputs = modeling.embedding_postprocessor(
             input_tensor=decoder_inputs,
@@ -232,10 +234,10 @@ class TransformerDecoder(object):
             dropout_prob=self.params.bert_config.hidden_dropout_prob)
 
         attention_mask = modeling.create_attention_mask_from_input_mask(
-            label_ids, label_mask)
+            label_ids, input_mask)
 
         decoder_self_attention_mask = self.get_decoder_self_attention_mask(
-            self.params.max_seq_len)
+            self.params.decode_max_seq_len)
 
         decode_output = self.decode(
             decoder_inputs=decoder_inputs,
@@ -247,11 +249,6 @@ class TransformerDecoder(object):
             do_return_all_layers=False
         )
         return decode_output
-
-    def predict(self, features, hidden_feature, mode, problem_name):
-        self.embedding_table = hidden_feature['embed_table']
-        self.token_type_ids = hidden_feature['segment_ids']
-        pass
 
 
 def attention_layer_with_cache(from_tensor,
