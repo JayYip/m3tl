@@ -400,6 +400,8 @@ class Seq2Seq(TopLayer):
                                 token_type_ids,
                                 decoder,
                                 num_classes,
+                                encoder_output,
+                                attention_mask,
                                 params):
         decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
             max_seq_len)
@@ -421,9 +423,9 @@ class Seq2Seq(TopLayer):
                 max_position_embeddings=params.bert_config.max_position_embeddings,
                 dropout_prob=self.params.bert_config.hidden_dropout_prob)
             final_decoder_input = decoder_inputs[:, -1:, :]
+            # final_decoder_input = decoder_inputs
             self_attention_mask = decoder_self_attention_mask[:, i:i+1, :i+1]
-            encoder_output = cache.get('encoder_outputs')
-            attention_mask = cache.get('encoder_decoder_attention_mask')
+
             logits = decoder.decode(
                 decoder_inputs=final_decoder_input,
                 encoder_output=encoder_output,
@@ -432,6 +434,7 @@ class Seq2Seq(TopLayer):
                 cache=cache,
                 num_classes=num_classes,
                 do_return_all_layers=False)
+
             return logits, cache
         return symbols_to_logits_fn
 
@@ -459,18 +462,20 @@ class Seq2Seq(TopLayer):
             token_type_ids=token_type_ids,
             decoder=self.decoder,
             num_classes=num_classes,
+            encoder_output=encoder_outputs,
+            attention_mask=features['input_mask'],
             params=self.params
         )
 
         # create cache for fast decode
         cache = {
             str(layer): {
-                "key_layer": tf.zeros([batch_size, 0, hidden_size]),
-                "value_layer": tf.zeros([batch_size, 0, hidden_size]),
+                "key_layer": tf.zeros([1, 0, hidden_size]),
+                "value_layer": tf.zeros([1, 0, hidden_size]),
             } for layer in range(self.params.decoder_num_hidden_layers)}
-        cache['encoder_outputs'] = encoder_outputs
-        cache['encoder_decoder_attention_mask'] = features['input_mask']
-        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
+        # cache['encoder_outputs'] = encoder_outputs
+        # cache['encoder_decoder_attention_mask'] = features['input_mask']
+        initial_ids = tf.zeros([1], dtype=tf.int32)
 
         decode_ids, _ = beam_search.beam_search(
             symbols_to_logits_fn=symbol_to_logit_fn,
@@ -480,7 +485,7 @@ class Seq2Seq(TopLayer):
             beam_size=self.params.beam_size,
             alpha=self.params.beam_search_alpha,
             decode_length=self.params.max_seq_len,
-            eos_id=102)
+            eos_id=self.params.eos_id)
         # Get the top sequence for each batch element
         top_decoded_ids = decode_ids[:, 0, 1:]
         self.prob = top_decoded_ids

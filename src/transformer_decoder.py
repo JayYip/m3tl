@@ -68,6 +68,15 @@ class TransformerDecoder(object):
 
                 if cache is not None:
                     layer_cache = cache[str(layer_idx)]
+                    layer_input = tf.reshape(
+                        layer_input, [-1, 1, hidden_size])
+                    # update batch_size to batch_size*beam_size
+                    batch_size = modeling.get_shape_list(
+                        layer_input, expected_rank=3)[0]
+                    # broadcast encoder_output to batch*beam_size
+                    encoder_output = tf.broadcast_to(
+                        encoder_output, [batch_size, seq_length, input_width])
+
                 else:
                     layer_cache = None
 
@@ -97,6 +106,9 @@ class TransformerDecoder(object):
                             # them to the self-attention head before the projection.
                             self_attention_output = tf.concat(
                                 attention_heads, axis=-1)
+                    if cache is not None:
+                        self_attention_output = tf.reshape(
+                            self_attention_output, [batch_size, -1, hidden_size])
 
                     with tf.variable_scope('enc_dec_attention'):
                         attention_heads = []
@@ -111,7 +123,8 @@ class TransformerDecoder(object):
                             do_return_2d_tensor=True,
                             batch_size=batch_size,
                             from_seq_length=seq_length,
-                            to_seq_length=seq_length)
+                            to_seq_length=seq_length,
+                            cache=None)
                         attention_heads.append(attention_head)
 
                         attention_output = None
@@ -122,6 +135,9 @@ class TransformerDecoder(object):
                             # them to the self-attention head before the projection.
                             attention_output = tf.concat(
                                 attention_heads, axis=-1)
+                    if cache is not None:
+                        attention_output = tf.reshape(
+                            attention_output, [batch_size, -1, hidden_size])
 
                     # Run a linear projection of `hidden_size` then add a residual
                     # with `layer_input`.
@@ -169,8 +185,11 @@ class TransformerDecoder(object):
                 final_outputs.append(final_output)
             return final_outputs
         else:
-            final_output = modeling.reshape_from_matrix(
-                prev_output, input_shape)
+            if cache is None:
+                final_output = modeling.reshape_from_matrix(
+                    prev_output, input_shape)
+            else:
+                final_output = prev_output
 
         dense_layer = tf.layers.Dense(num_classes,
                                       activation=None,
@@ -374,6 +393,7 @@ def attention_layer_with_cache(from_tensor,
 
     if cache is not None:
         n_time_h = key_layer.get_shape()[1]
+
         key_layer_to_cache = tf.reshape(
             key_layer, [batch_size, -1, n_time_h])
         value_layer_to_cache = tf.reshape(
@@ -384,6 +404,13 @@ def attention_layer_with_cache(from_tensor,
         value_layer_from_cache = tf.concat(
             [cache["value_layer"], value_layer_to_cache], axis=1)
 
+        # update seq length
+        # from_seq_length = key_layer_from_cache.get_shape()[1]
+        from_seq_length = modeling.get_shape_list(
+            key_layer_from_cache, expected_rank=[3])[1]
+        to_seq_length = modeling.get_shape_list(
+            value_layer_from_cache, expected_rank=[3])[1]
+
         # Update cache
         cache["key_layer"] = key_layer_from_cache
         cache["value_layer"] = value_layer_from_cache
@@ -392,13 +419,22 @@ def attention_layer_with_cache(from_tensor,
         value_layer = tf.reshape(value_layer_from_cache, [-1, n_time_h])
 
     # `query_layer` = [B, N, F, H]
-    query_layer = transpose_for_scores(query_layer, batch_size,
-                                       num_attention_heads, from_seq_length,
-                                       size_per_head)
+    # In self attention of decoder, the seq_length of q always be 1
+    if cache is not None:
+        query_layer = transpose_for_scores(
+            query_layer, batch_size,
+            num_attention_heads, 1,
+            size_per_head)
+    else:
+        query_layer = transpose_for_scores(
+            query_layer, batch_size,
+            num_attention_heads, from_seq_length,
+            size_per_head)
 
     # `key_layer` = [B, N, T, H]
-    key_layer = transpose_for_scores(key_layer, batch_size, num_attention_heads,
-                                     to_seq_length, size_per_head)
+    key_layer = transpose_for_scores(
+        key_layer, batch_size, num_attention_heads,
+        to_seq_length, size_per_head)
 
     # Take the dot product between "query" and "key" to get the raw
     # attention scores.
