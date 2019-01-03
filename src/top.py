@@ -445,6 +445,7 @@ class Seq2Seq(TopLayer):
             features['%s_loss_multiplier' % problem_name], tf.float32)
         # multiply with loss multiplier to make some loss as zero
         loss = tf.reduce_mean(batch_loss*loss_multiplier)
+
         return loss
 
     def beam_search_decode(self, features, hidden_feature, mode, problem_name):
@@ -455,6 +456,13 @@ class Seq2Seq(TopLayer):
         num_classes = self.params.num_classes[problem_name]
         batch_size = self.params.batch_size
         hidden_size = self.params.bert_config.hidden_size
+
+        if self.params.problem_type[problem_name] == 'seq2seq_text':
+            embedding_table = hidden_feature['embed_table']
+        else:
+            embedding_table = tf.get_variable(
+                'tag_embed_table',
+                shape=[num_classes, hidden_size])
 
         symbol_to_logit_fn = self._get_symbol_to_logit_fn(
             max_seq_len=max_seq_len,
@@ -485,7 +493,7 @@ class Seq2Seq(TopLayer):
             beam_size=self.params.beam_size,
             alpha=self.params.beam_search_alpha,
             decode_length=self.params.decode_max_seq_len,
-            eos_id=self.params.eos_id)
+            eos_id=self.params.eos_id[problem_name])
         # Get the top sequence for each batch element
         top_decoded_ids = decode_ids[:, 0, 1:]
         self.prob = top_decoded_ids
@@ -500,7 +508,13 @@ class Seq2Seq(TopLayer):
             logits = self.decoder.train_eval(
                 features, hidden_feature, mode, problem_name)
 
-            loss = self.create_loss(labels, logits, features, problem_name)
+            with tf.name_scope("shift_targets"):
+                # Shift targets to the right, and remove the last element
+                shift_labels = tf.pad(
+                    labels, [[0, 0], [0, 1]])[:, 1:]
+
+            loss = self.create_loss(
+                shift_labels, logits, features, problem_name)
 
             tf.summary.scalar('%s_loss' % problem_name, loss)
             self.loss = loss

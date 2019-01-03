@@ -4,9 +4,10 @@ import tensorflow as tf
 from bert.tokenization import FullTokenizer
 from tqdm import tqdm
 import numpy as np
+import os
 
 from .model_fn import BertMultiTask
-from .input_fn import predict_input_fn
+from .input_fn import predict_input_fn, to_serving_input, serving_input_fn
 from .estimator import Estimator
 from .utils import get_or_make_label_encoder
 from .params import Params
@@ -18,7 +19,6 @@ class PredictModel():
         self.model_dir = model_dir
         self.params = params
         self.gpu = gpu
-        self.tokenizer = FullTokenizer(self.params.vocab_file)
 
     @property
     def label_encoder(self):
@@ -26,6 +26,7 @@ class PredictModel():
 
     def init_estimator(self, problem):
         self.params.assign_problem(problem, gpu=int(self.gpu))
+        self.tokenizer = FullTokenizer(self.params.vocab_file)
 
         # change max length
         self.params.max_seq_len = 350
@@ -50,6 +51,8 @@ class PredictModel():
             model_dir=model_dir,
             params=self.params,
             config=run_config)
+        self.predictor = tf.contrib.predictor.from_estimator(
+            self.estimator, serving_input_fn)
 
     def remove_special_tokens(self, l1, l2):
         ind_list = []
@@ -58,13 +61,52 @@ class PredictModel():
                 ind_list.append(ind)
         return [e for ie, e in enumerate(l1) if ie not in ind_list], [e for ie, e in enumerate(l2) if ie not in ind_list]
 
-    def predict(self, input_file_or_list):
+    def serving_predict(self, input_file_or_list):
+
+        pred = []
+        for d in to_serving_input(
+                input_file_or_list, self.params, mode='predict'):
+            pred.append(self.predictor(d))
+
+        new_pred = []
+        for p in pred:
+            for model in p:
+                p[model] = p[model][0]
+            new_pred.append(p)
+
+        return new_pred
+
+    def batch_predict(self, input_file_or_list):
         def input_fn(): return predict_input_fn(
             input_file_or_list, self.params, mode='predict')
 
         pred = self.estimator.predict(
             input_fn=input_fn)
         return pred
+
+    def predict(self, input_file_or_list):
+        """Predict function of models.
+
+        If input_file_or_list is string and
+        is a file, data will be read from that file.
+
+        Arguments:
+            input_file_or_list {str or list} -- file path or list of X string,
+                or X string
+
+        Returns:
+            list of dict -- list of prediction dict
+        """
+
+        if isinstance(input_file_or_list, str):
+            if os.path.isfile(input_file_or_list):
+                with open(input_file_or_list, 'r', encoding='utf8') as f:
+                    inputs = f.readlines()
+            else:
+                inputs = [inputs]
+        else:
+            inputs = input_file_or_list
+        return self.serving_predict(input_file_or_list)
 
 
 class ChineseNER(PredictModel):

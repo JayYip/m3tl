@@ -57,6 +57,17 @@ class TransformerDecoder(object):
         input_shape = modeling.get_shape_list(input_tensor, expected_rank=3)
         decode_seq_length = input_shape[1]
 
+        # create encoder-decoder attention mask
+        attention_mask_shape = modeling.get_shape_list(
+            attention_mask, expected_rank=2)[1]
+        input_batch_size = modeling.get_shape_list(
+            decoder_inputs, expected_rank=3)[0]
+        attention_mask = tf.broadcast_to(
+            attention_mask, [input_batch_size, attention_mask_shape])
+        attention_mask = modeling.create_attention_mask_from_input_mask(
+            decoder_inputs, attention_mask
+        )
+
         # The Transformer performs sum residuals on all layers so the input needs
         # to be the same as the hidden size.
         if input_width != hidden_size:
@@ -210,14 +221,20 @@ class TransformerDecoder(object):
         input_mask = features['input_mask']
         num_classes = self.params.num_classes[problem_name]
 
-        embedding_table = hidden_feature['embed_table']
+        if self.params.problem_type[problem_name] == 'seq2seq_text':
+            embed_table = hidden_feature['embed_table']
+        else:
+            embed_table = tf.get_variable(
+                'tag_embed_table', shape=[
+                    num_classes, self.params.mask_lm_hidden_size],
+                initializer=tf.orthogonal_initializer())
         decoder_inputs = tf.nn.embedding_lookup(
-            embedding_table, label_ids)
+            embed_table, label_ids)
 
-        with tf.name_scope("shift_targets"):
-            # Shift targets to the right, and remove the last element
-            decoder_inputs = tf.pad(
-                decoder_inputs, [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
+        # with tf.name_scope("shift_targets"):
+        #     # Shift targets to the right, and remove the last element
+        #     decoder_inputs = tf.pad(
+        #         decoder_inputs, [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
 
         token_type_ids = tf.zeros_like(label_ids)
 
@@ -233,8 +250,8 @@ class TransformerDecoder(object):
             max_position_embeddings=self.params.bert_config.max_position_embeddings,
             dropout_prob=self.params.bert_config.hidden_dropout_prob)
 
-        attention_mask = modeling.create_attention_mask_from_input_mask(
-            label_ids, input_mask)
+        # attention_mask = modeling.create_attention_mask_from_input_mask(
+        #     label_ids, input_mask)
 
         decoder_self_attention_mask = self.get_decoder_self_attention_mask(
             self.params.decode_max_seq_len)
@@ -242,7 +259,7 @@ class TransformerDecoder(object):
         decode_output = self.decode(
             decoder_inputs=decoder_inputs,
             encoder_output=encoder_output,
-            attention_mask=attention_mask,
+            attention_mask=input_mask,
             decoder_self_attention_mask=decoder_self_attention_mask,
             cache=None,
             num_classes=num_classes,

@@ -15,6 +15,9 @@ import tensorflow as tf
 from bert.tokenization import (_is_control,
                                printable_text)
 
+BOS_TOKEN = '[PAD]'
+EOS_TOKEN = '[SEP]'
+
 
 class LabelEncoder(BaseEstimator, TransformerMixin):
 
@@ -34,7 +37,7 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
         if zero_class is None:
             zero_class = '[PAD]'
         else:
-            y.append('[PAD]')
+            label_set.update(['[PAD]'])
 
         self.encode_dict[zero_class] = 0
         self.decode_dict[0] = zero_class
@@ -42,6 +45,7 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
             label_set.remove(zero_class)
 
         label_set = sorted(list(label_set))
+
         for l_ind, l in enumerate(label_set):
 
             new_ind = l_ind + 1
@@ -368,6 +372,12 @@ def create_single_problem_generator(problem,
 
         # create mask and padding for labels of seq2seq problem
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+
+            target, _, _ = truncate_seq_pair(
+                target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+            # since we initialize the id to 0 in prediction, we need
+            # to make sure that BOS_TOKEN is [PAD]
+            target = [BOS_TOKEN] + target + [EOS_TOKEN]
             label_mask, target, _, _ = create_mask_and_padding(
                 target, [0] * len(target), None, params.decode_max_seq_len)
 

@@ -60,7 +60,8 @@ class Params():
             'weibo_fake_seq_tag': 10,
             'ontonotes_ner': 18,
             'ontonotes_cws': 5,
-            'ontonotes_chunk': 190
+            # add '[SEP]' as eos token
+            'ontonotes_chunk': 192,
         }
 
         self.data_num_dict = {
@@ -94,6 +95,9 @@ class Params():
             'CTBPOS': 'POS'
         }
 
+        self.eos_id = {
+        }
+
         self.multitask_balance_type = 'data_balanced'
         # self.multitask_balance_type = 'problem_balanced'
 
@@ -109,7 +113,7 @@ class Params():
         self.shuffle_buffer = 10000
         # self.prefetch = 100
         # self.shuffle_buffer = 100
-        # self.train_epoch = 1
+        # self.train_epoch = 100
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -122,9 +126,8 @@ class Params():
         self.decoder_num_hidden_layers = 3
         self.beam_size = 10
         self.init_decoder_from_encoder = False
-        self.beam_search_alpha=0.1
-        self.decode_max_seq_len = 20
-        self.eos_id = 3
+        self.beam_search_alpha = 0.6
+        self.decode_max_seq_len = 90
 
         # multitask training
         self.label_transfer = False

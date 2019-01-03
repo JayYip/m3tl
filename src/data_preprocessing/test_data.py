@@ -7,7 +7,7 @@ from bert.tokenization import FullTokenizer
 
 from ..utils import (create_pretraining_generator,
                      create_single_problem_generator,
-                     get_or_make_label_encoder)
+                     get_or_make_label_encoder, BOS_TOKEN, EOS_TOKEN)
 
 from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
 
@@ -43,6 +43,7 @@ def WeiboFakeCLS(params, mode):
 
 
 def weibo_fake_seq2seq_tag(params, mode: str):
+
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
@@ -52,13 +53,23 @@ def weibo_fake_seq2seq_tag(params, mode: str):
         data = data['eval']
     inputs_list = data['inputs'][:100]
     target_list = data['target'][:100]
-    new_target_list = [[0, 1, 2] for t in target_list]
-
+    new_target_list = [['1', '2'] for t in target_list]
     label_encoder = get_or_make_label_encoder(
-        params, 'weibo_fake_seq2seq_tag', mode, [0, 1, 2])
+        params,
+        'weibo_fake_seq2seq_tag',
+        mode,
+        [BOS_TOKEN, '1', '2', EOS_TOKEN],
+        zero_class=BOS_TOKEN)
+    params.eos_id['weibo_fake_seq2seq_tag'] = label_encoder.transform(
+        [EOS_TOKEN])[0]
 
-    return create_single_problem_generator('weibo_fake_seq2seq_tag',
-                                           inputs_list, new_target_list, label_encoder, params, tokenizer)
+    return create_single_problem_generator(
+        'weibo_fake_seq2seq_tag',
+        inputs_list,
+        new_target_list,
+        label_encoder,
+        params,
+        tokenizer)
 
 
 def WeiboPretrain(params, mode):
