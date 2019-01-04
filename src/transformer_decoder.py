@@ -30,7 +30,7 @@ class TransformerDecoder(object):
             self,
             decoder_inputs,
             encoder_output,
-            attention_mask,
+            input_mask,
             decoder_self_attention_mask,
             cache,
             num_classes,
@@ -59,13 +59,15 @@ class TransformerDecoder(object):
 
         # create encoder-decoder attention mask
         attention_mask_shape = modeling.get_shape_list(
-            attention_mask, expected_rank=2)[1]
+            input_mask, expected_rank=2)[1]
+
+        # batch_size*beam_size
         input_batch_size = modeling.get_shape_list(
             decoder_inputs, expected_rank=3)[0]
-        attention_mask = tf.broadcast_to(
-            attention_mask, [input_batch_size, attention_mask_shape])
+        input_mask = tf.broadcast_to(
+            input_mask, [input_batch_size, attention_mask_shape])
         attention_mask = modeling.create_attention_mask_from_input_mask(
-            decoder_inputs, attention_mask
+            decoder_inputs, input_mask
         )
 
         # The Transformer performs sum residuals on all layers so the input needs
@@ -236,14 +238,9 @@ class TransformerDecoder(object):
         #     decoder_inputs = tf.pad(
         #         decoder_inputs, [[0, 0], [1, 0], [0, 0]])[:, :-1, :]
 
-        token_type_ids = tf.zeros_like(label_ids)
-
         decoder_inputs = modeling.embedding_postprocessor(
             input_tensor=decoder_inputs,
-            use_token_type=True,
-            token_type_ids=token_type_ids,
-            token_type_vocab_size=self.params.bert_config.type_vocab_size,
-            token_type_embedding_name="token_type_embeddings",
+            use_token_type=False,
             use_position_embeddings=True,
             position_embedding_name="position_embeddings",
             initializer_range=self.params.bert_config.initializer_range,
@@ -259,7 +256,7 @@ class TransformerDecoder(object):
         decode_output = self.decode(
             decoder_inputs=decoder_inputs,
             encoder_output=encoder_output,
-            attention_mask=input_mask,
+            input_mask=input_mask,
             decoder_self_attention_mask=decoder_self_attention_mask,
             cache=None,
             num_classes=num_classes,

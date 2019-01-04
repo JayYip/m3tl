@@ -401,7 +401,7 @@ class Seq2Seq(TopLayer):
                                 decoder,
                                 num_classes,
                                 encoder_output,
-                                attention_mask,
+                                input_mask,
                                 params):
         decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
             max_seq_len)
@@ -429,7 +429,7 @@ class Seq2Seq(TopLayer):
             logits = decoder.decode(
                 decoder_inputs=final_decoder_input,
                 encoder_output=encoder_output,
-                attention_mask=attention_mask,
+                input_mask=input_mask,
                 decoder_self_attention_mask=self_attention_mask,
                 cache=cache,
                 num_classes=num_classes,
@@ -471,7 +471,7 @@ class Seq2Seq(TopLayer):
             decoder=self.decoder,
             num_classes=num_classes,
             encoder_output=encoder_outputs,
-            attention_mask=features['input_mask'],
+            input_mask=features['input_mask'],
             params=self.params
         )
 

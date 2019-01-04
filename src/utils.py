@@ -406,12 +406,16 @@ def create_single_problem_generator(problem,
                              " ".join([str(x) for x in input_mask]))
             tf.logging.debug("segment_ids: %s" %
                              " ".join([str(x) for x in segment_ids]))
-            if is_seq:
+            if is_seq or problem_type in ['seq2seq_tag', 'seq2seq_text']:
                 tf.logging.debug("%s_label_ids: %s" %
                                  (problem, " ".join([str(x) for x in label_id])))
+                tf.logging.debug("%s_label: %s" %
+                                 (problem, " ".join([str(x) for x in target])))
             else:
                 tf.logging.debug("%s_label_ids: %s" %
                                  (problem, str(label_id)))
+                tf.logging.debug("%s_label: %s" %
+                                 (problem, str(target)))
             if params.augument_mask_lm:
                 tf.logging.debug("mask lm tokens: %s" % " ".join(
                     [printable_text(x) for x in mask_lm_tokens]))

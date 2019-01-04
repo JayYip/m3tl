@@ -3,7 +3,7 @@ import os
 
 import pickle
 
-from .input_fn import no_dataset_input_fn
+from .input_fn import to_serving_input
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -161,7 +161,7 @@ def get_ner_BIO(label_list):
 
 
 def ner_evaluate(problem, pred_list, params):
-    label_data = no_dataset_input_fn(params, mode='eval')
+    label_data = to_serving_input(params, mode='eval')
     lable_data_list = list(label_data)
 
     label_encoder = pickle.load(open(

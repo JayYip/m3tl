@@ -6,7 +6,7 @@ import shutil
 from bert.modeling import BertConfig
 
 from . import data_preprocessing
-from .utils import create_path
+from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
 
 
 class Params():
@@ -148,7 +148,6 @@ class Params():
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
 
-
         # for label transfer
         # self.label_transfer = True
         # self.train_epoch = 15
@@ -188,6 +187,7 @@ class Params():
                 will be created automatically (default: {None})
         """
 
+        # Parse problem string
         self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
@@ -203,6 +203,7 @@ class Params():
 
         problem_list = sorted(re.split(r'[&|]', flag_string))
 
+        # create dir and get vocab, config
         base = base_dir if base_dir is not None else 'tmp'
 
         dir_name = dir_name if dir_name is not None else '_'.join(
@@ -244,6 +245,15 @@ class Params():
 
         # linear scale learing rate
         self.lr = self.init_lr * gpu
+
+        # get eos_id
+        for problem in problem_list:
+            try:
+                le = get_or_make_label_encoder(self, problem, 'predict')
+                self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
+            except FileNotFoundError:
+                pass
+
         self.to_json()
 
     @property
