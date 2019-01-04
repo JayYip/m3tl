@@ -531,14 +531,20 @@ class Seq2Seq(TopLayer):
                 acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
                     metrics.Metrics.ACC_PER_SEQ],
                     prob, features, label_ids)
-                # bleu_score = get_t2t_metric_op(metrics.METRICS_FNS[
-                #     metrics.Metrics.APPROX_BLEU],
-                #     prob, features, label_ids)
+
+                blue_prob = tf.expand_dims(prob, axis=-2)
+                blue_prob = tf.expand_dims(blue_prob, axis=-2)
+
+                blue_label_ids = tf.expand_dims(label_ids, axis=-1)
+                blue_label_ids = tf.expand_dims(blue_label_ids, axis=-1)
+                bleu_score = get_t2t_metric_op(metrics.METRICS_FNS[
+                    metrics.Metrics.APPROX_BLEU],
+                    blue_prob, features, blue_label_ids)
 
                 return {
                     "Accuracy": accuracy,
                     'Accuracy Per Sequence': acc_per_seq,
-                    # 'Approximate BLEU': bleu_score
+                    'Approximate BLEU': bleu_score
                 }
 
             eval_metrics = (metric_fn(labels, logits), loss)
