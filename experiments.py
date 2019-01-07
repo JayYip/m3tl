@@ -18,19 +18,19 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
+    {'problems': ['ontonotes_cws&ontonotes_chunk&ontonotes_ner'],
+
+     'additional_params': {},
+     'name': 'ontonotes_multitask'},
+    {'problems': ['ontonotes_cws', 'ontonotes_chunk', 'ontonotes_ner'],
 
      'additional_params': {},
      'name': 'baseline'},
-    {'problems': ['WeiboNER', 'pkucws', 'CTBPOS',
-                  'cityucws', 'msrcws',  'bosonner', 'msraner',
-                  'CTBCWS',  'ascws'],
-
-     'additional_params': {'label_smoothing': 0.1},
-     'name': 'baseline_label_smooth'},
-
+    {'problems': ['pkucws', 'WeiboNER',
+                  'cityucws', 'msrcws',  'bosonner',
+                  'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
+     'additional_params': {},
+     'name': 'baseline'},
     {'problems': ['CWS|NER|POS'],
 
      'additional_params': {'crf': False},
@@ -52,12 +52,6 @@ EXPERIMENTS_LIST = [
 
         'additional_params': {}
     },
-    {
-        'problems': ['CWS|NER|POS'],
-
-        'additional_params': {'augument_mask_lm': True},
-        'name': 'multitask_aug_mask_lm'
-    }
 ]
 
 
@@ -217,7 +211,7 @@ def create_result_table(group_by='problem'):
 
 
 def main():
-    gpu = 3
+    gpu = 4
     params = Params()
 
     if os.path.exists('tmp/results.pkl'):
