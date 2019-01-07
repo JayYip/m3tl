@@ -51,10 +51,10 @@ class Params():
             'msrcws': 5,
             'pkucws': 5,
             'cityucws': 5,
-            'bosonner': 10,
-            'msraner': 10,
-            # 'msraner': 8,
-            # 'bosonner': 12,
+            # 'bosonner': 10,
+            # 'msraner': 10,
+            'msraner': 8,
+            'bosonner': 12,
             'POS': 62,
             'weibo_fake_seq2seq_tag': 4,
             'weibo_fake_seq_tag': 10,
@@ -84,14 +84,11 @@ class Params():
         # specify this will make key reuse values top
         # that it, WeiboNER problem will use NER's top
         self.share_top = {
-            'WeiboNER': 'NER',
             'CTBCWS': 'CWS',
             'ascws': 'CWS',
             'msrcws': 'CWS',
             'pkucws': 'CWS',
             'cityucws': 'CWS',
-            'bosonner': 'NER',
-            'msraner': 'NER',
             'CTBPOS': 'POS'
         }
 
@@ -107,7 +104,7 @@ class Params():
         # training
         self.init_lr = 2e-5
         self.batch_size = 32
-        self.train_epoch = 15
+        self.train_epoch = 30
         self.freeze_step = 0
         self.prefetch = 5000
         self.shuffle_buffer = 10000
@@ -248,11 +245,12 @@ class Params():
 
         # get eos_id
         for problem in problem_list:
-            try:
-                le = get_or_make_label_encoder(self, problem, 'predict')
-                self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
-            except FileNotFoundError:
-                pass
+            if self.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']:
+                try:
+                    le = get_or_make_label_encoder(self, problem, 'predict')
+                    self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
+                except FileNotFoundError:
+                    pass
 
         self.to_json()
 

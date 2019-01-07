@@ -18,46 +18,21 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
 
-     'additional_params': {},
-     'name': 'baseline'},
-    {'problems': ['WeiboNER', 'pkucws', 'CTBPOS',
-                  'cityucws', 'msrcws',  'bosonner', 'msraner',
-                  'CTBCWS',  'ascws'],
-
-     'additional_params': {'label_smoothing': 0.1},
-     'name': 'baseline_label_smooth'},
-
-    {'problems': ['CWS|NER|POS'],
-
-     'additional_params': {'crf': False},
-     'name': 'multitask_label_transfer_first_train'},
-    {'problems': ['CWS|NER|POS'],
-
-     'additional_params': {'label_transfer': True,
-                           'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_NER_POS_ckpt/',
-                           'init_lr': 0.001,
-                           'freeze_step': 999999},
-     'name': 'multitask_label_transfer'},
-    {'name': 'multitask_baseline',
-        'problems': ['CWS|NER|POS'],
-        'additional_params': {}
-     },
     {
-        'name': 'mix_data_baseline',
-        'problems': ['NER', 'POS', 'CWS'],
-
-        'additional_params': {}
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+        # 'problems': ['CWS|POS|WeiboNER'],
+        'additional_params': {'crf': False},
+        'name': 'multitask_label_transfer_first_train'
     },
     {
-        'problems': ['CWS|NER|POS'],
-
-        'additional_params': {'augument_mask_lm': True},
-        'name': 'multitask_aug_mask_lm'
-    }
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+        'additional_params': {
+            'label_transfer': True,
+            'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_POS_WeiboNER_bosonner_msraner_ckpt/',
+            'init_lr': 0.001,
+            'freeze_step': 999999},
+        'name': 'multitask_label_transfer'},
 ]
 
 

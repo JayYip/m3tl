@@ -1,5 +1,6 @@
 from glob import glob
 import re
+import random
 
 from sklearn.model_selection import train_test_split
 
@@ -10,6 +11,7 @@ from ..utils import (get_or_make_label_encoder,
                      create_pretraining_generator)
 
 NER_TYPE = ['LOC',  # location
+            'GPE',
             'PER',  # person
             'ORG',  # organization
             'PRD',  # Product
@@ -47,7 +49,7 @@ def gold_horse_ent_type_process_fn(d):
     # keep nam only
     ent_type = ent_type if 'NAM' in ent_type else 'O'
     ent_type = ent_type.replace('.NAM', '')
-    ent_type = ent_type.replace('GPE', 'LOC')
+    # ent_type = ent_type.replace('GPE', 'LOC')
     return ent_type
 
 
@@ -92,7 +94,8 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     }
     file_list = glob(file_pattern)
     for file_path in file_list:
-        raw_data = open(file_path, 'r', encoding='utf8').readlines()
+        with open(file_path, 'r', encoding='utf8') as f:
+            raw_data = f.readlines()
 
         inputs_list = [[]]
         target_list = [[]]
@@ -129,7 +132,8 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
 
 
 def WeiboNER(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
@@ -160,7 +164,8 @@ def gold_horse_segment_process_fn(d):
 
 
 def WeiboSegment(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
@@ -191,7 +196,8 @@ def read_bosonnlp_data(file_pattern, eval_size=0.2):
         'person_name': 'PER',
         'company_name': 'ORG',
         'location': 'LOC',
-        'product_name': 'PRD'
+        'product_name': 'PRD',
+        'time': 'TME'
     }
     input_list = []
     target_list = []
@@ -298,8 +304,20 @@ def read_msra(file_pattern, eval_size):
                             else:
                                 loc_char = 'I'
 
+                            # ###################################
+                            # if ent_type == 'ns':
+                            #     if random.uniform(0, 1) <= 0.1:
+                            #         target_list[-1].append(loc_char +
+                            #                                '-'+'LOC')
+                            #     else:
+                            #         target_list[-1].append(loc_char +
+                            #                                '-'+'GPE')
+                            # else:
+                            #     target_list[-1].append(loc_char +
+                            #                            '-'+project_table[ent_type])
                             target_list[-1].append(loc_char +
                                                    '-'+project_table[ent_type])
+                            # ###################################
                             input_list[-1].append(ent_char)
 
     return_input, return_target = [], []
@@ -323,7 +341,8 @@ def read_msra(file_pattern, eval_size):
 
 
 def NER(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
     weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
                                proc_fn=gold_horse_ent_type_process_fn)
     boson_data = read_bosonnlp_data(
@@ -341,15 +360,16 @@ def NER(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
 
-    flat_target_list = ['O',
-                        'B-LOC',
-                        'B-PER',
-                        'B-ORG',
-                        'B-PRD',
-                        'I-LOC',
-                        'I-PER',
-                        'I-ORG',
-                        'I-PRD', ]
+    flat_target_list = [t for sublist in target_list for t in sublist]
+    # flat_target_list = ['O',
+    #                     'B-LOC',
+    #                     'B-PER',
+    #                     'B-ORG',
+    #                     'B-PRD',
+    #                     'I-LOC',
+    #                     'I-PER',
+    #                     'I-ORG',
+    #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
         params, 'NER', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('NER',
@@ -361,7 +381,8 @@ def NER(params, mode):
 
 
 def msraner(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 
@@ -375,16 +396,16 @@ def msraner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-
-    flat_target_list = ['O',
-                        'B-LOC',
-                        'B-PER',
-                        'B-ORG',
-                        'B-PRD',
-                        'I-LOC',
-                        'I-PER',
-                        'I-ORG',
-                        'I-PRD', ]
+    flat_target_list = [t for sublist in target_list for t in sublist]
+    # flat_target_list = ['O',
+    #                     'B-LOC',
+    #                     'B-PER',
+    #                     'B-ORG',
+    #                     'B-PRD',
+    #                     'I-LOC',
+    #                     'I-PER',
+    #                     'I-ORG',
+    #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
         params, 'msraner', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('msraner',
@@ -396,7 +417,8 @@ def msraner(params, mode):
 
 
 def bosonner(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
 
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -411,16 +433,16 @@ def bosonner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-
-    flat_target_list = ['O',
-                        'B-LOC',
-                        'B-PER',
-                        'B-ORG',
-                        'B-PRD',
-                        'I-LOC',
-                        'I-PER',
-                        'I-ORG',
-                        'I-PRD', ]
+    flat_target_list = [t for sublist in target_list for t in sublist]
+    # flat_target_list = ['O',
+    #                     'B-LOC',
+    #                     'B-PER',
+    #                     'B-ORG',
+    #                     'B-PRD',
+    #                     'I-LOC',
+    #                     'I-PER',
+    #                     'I-ORG',
+    #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
         params, 'bosonner', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('bosonner',
