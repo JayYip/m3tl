@@ -114,21 +114,15 @@ def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, b
     if 'ner' not in problem and 'NER' not in problem:
         eval_dict.update(estimator.evaluate(input_fn=input_fn))
     else:
-        pred = estimator.predict(input_fn=input_fn)
-        pred_list = defaultdict(list)
-        for p in pred:
-            for pro in p:
-                pred_list[pro].append(p[pro])
-        for pro in pred_list:
-            if 'NER' in pro or 'ner' in pro:
-                raw_ner_eval = ner_evaluate(
-                    pro, pred_list[pro], params)
-                rename_dict = {}
-                rename_dict['%s_Accuracy' % pro] = raw_ner_eval['Acc']
-                rename_dict['%s_F1 Score' % pro] = raw_ner_eval['F1']
-                rename_dict['%s_Precision' % pro] = raw_ner_eval['Precision']
-                rename_dict['%s_Recall' % pro] = raw_ner_eval['Recall']
-                eval_dict.update(rename_dict)
+
+        raw_ner_eval = ner_evaluate(problem, estimator, params)
+        rename_dict = {}
+        rename_dict['%s_Accuracy' % problem] = raw_ner_eval['Acc']
+        rename_dict['%s_F1 Score' % problem] = raw_ner_eval['F1']
+        rename_dict['%s_Precision' % problem] = raw_ner_eval['Precision']
+        rename_dict['%s_Recall' % problem] = raw_ner_eval['Recall']
+        eval_dict.update(rename_dict)
+
     return eval_dict
 
 
@@ -137,18 +131,19 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
     base = os.path.join('tmp', base)
     eval_label_encoder_list = []
     for sub_problem in raw_problem.split('|'):
-        eval_problem_list.append([sub_problem])
-        if sub_problem == 'CWS':
-            eval_problem_list[-1] += ['ascws', 'msrcws', 'pkucws',
-                                      'cityucws', 'CTBCWS']
+        for single_problem in sub_problem.split('&'):
+            eval_problem_list.append([single_problem])
+            if single_problem == 'CWS':
+                eval_problem_list[-1] += ['ascws', 'msrcws', 'pkucws',
+                                          'cityucws', 'CTBCWS']
 
-        elif sub_problem == 'NER':
-            eval_problem_list[-1] += ['WeiboNER', 'bosonner', 'msraner']
-        elif sub_problem == 'POS':
-            eval_problem_list[-1] += ['CTBPOS']
+            elif single_problem == 'NER':
+                eval_problem_list[-1] += ['WeiboNER', 'bosonner', 'msraner']
+            elif single_problem == 'POS':
+                eval_problem_list[-1] += ['CTBPOS']
 
-        eval_label_encoder_list.append(os.path.join(
-            params.ckpt_dir, '%s_label_encoder.pkl' % sub_problem))
+            eval_label_encoder_list.append(os.path.join(
+                params.ckpt_dir, '%s_label_encoder.pkl' % single_problem))
 
     final_eval_dict = {}
     for problem_list, label_encoder_path in zip(

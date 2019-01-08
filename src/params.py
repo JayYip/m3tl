@@ -250,7 +250,8 @@ class Params():
         for problem in problem_list:
             try:
                 le = get_or_make_label_encoder(self, problem, 'predict')
-                self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
+                if EOS_TOKEN in le.encode_dict:
+                    self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
             except FileNotFoundError:
                 pass
 

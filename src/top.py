@@ -454,7 +454,8 @@ class Seq2Seq(TopLayer):
         embedding_table = hidden_feature['embed_table']
         token_type_ids = features['segment_ids']
         num_classes = self.params.num_classes[problem_name]
-        batch_size = self.params.batch_size
+        batch_size = modeling.get_shape_list(
+            encoder_outputs, expected_rank=3)[0]
         hidden_size = self.params.bert_config.hidden_size
 
         if self.params.problem_type[problem_name] == 'seq2seq_text':
@@ -478,12 +479,12 @@ class Seq2Seq(TopLayer):
         # create cache for fast decode
         cache = {
             str(layer): {
-                "key_layer": tf.zeros([1, 0, hidden_size]),
-                "value_layer": tf.zeros([1, 0, hidden_size]),
+                "key_layer": tf.zeros([batch_size, 0, hidden_size]),
+                "value_layer": tf.zeros([batch_size, 0, hidden_size]),
             } for layer in range(self.params.decoder_num_hidden_layers)}
         # cache['encoder_outputs'] = encoder_outputs
         # cache['encoder_decoder_attention_mask'] = features['input_mask']
-        initial_ids = tf.zeros([1], dtype=tf.int32)
+        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
 
         decode_ids, _ = beam_search.beam_search(
             symbols_to_logits_fn=symbol_to_logit_fn,
