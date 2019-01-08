@@ -158,7 +158,9 @@ class SequenceLabel(TopLayer):
         elif mode == tf.estimator.ModeKeys.PREDICT:
             viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
                 logits, crf_transition_param, seq_length)
-            self.prob = viterbi_sequence
+            self.prob = tf.identity(
+                viterbi_sequence, name='%s_predict' % problem_name)
+
             return self.prob
 
 
@@ -229,7 +231,7 @@ class Classification(TopLayer):
             return self.eval_metrics
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.softmax(logits)
-            self.prob = prob
+            self.prob = tf.identity(prob, name='%s_predict' % problem_name)
             return self.prob
 
 
@@ -553,5 +555,7 @@ class Seq2Seq(TopLayer):
             return self.eval_metrics
 
         else:
-            return self.beam_search_decode(
-                features, hidden_feature, mode, problem_name)
+            self.pred = tf.identity(self.beam_search_decode(
+                features, hidden_feature, mode, problem_name),
+                name='%s_predict' % problem_name)
+            return self.pred
