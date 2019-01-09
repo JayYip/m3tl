@@ -101,6 +101,16 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
 
         return np.array(decode_y)
 
+    def dump(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self.decode_dict, f)
+
+    def load(self, path):
+        with open(path, 'rb') as f:
+            self.decode_dict = pickle.load(f)
+
+        self.encode_dict = {v: k for k, v in self.decode_dict.items()}
+
 
 def get_text_and_label(params, problem, mode, label_id=True):
     data = list(params.read_data_fn[problem](params, mode))
@@ -144,13 +154,12 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
         label_encoder = LabelEncoder()
 
         label_encoder.fit(label_list, zero_class=zero_class)
-        pad_ind = len(label_encoder.encode_dict)
 
-        pickle.dump(label_encoder, open(le_path, 'wb'))
+        label_encoder.dump(le_path)
 
     else:
-        with open(le_path, 'rb') as f:
-            label_encoder = pickle.load(f)
+        label_encoder = LabelEncoder()
+        label_encoder.load(le_path)
 
     return label_encoder
 

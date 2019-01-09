@@ -6,7 +6,7 @@ import pickle
 from .bert.tokenization import FullTokenizer
 
 from .input_fn import predict_input_fn
-from .utils import get_text_and_label
+from .utils import get_text_and_label, LabelEncoder, get_or_make_label_encoder
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -168,8 +168,7 @@ def ner_evaluate(problem, estimator, params):
 
     def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
 
-    label_encoder = pickle.load(open(
-        os.path.join(params.ckpt_dir, '%s_label_encoder.pkl' % problem), 'rb'))
+    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
 
     pred_list = estimator.predict(pred_input_fn)
 
