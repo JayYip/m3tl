@@ -7,7 +7,7 @@ from tensor2tensor.utils import beam_search
 from .t2t_utils import get_t2t_metric_op
 from .transformer_decoder import TransformerDecoder
 
-from bert import modeling
+from .bert import modeling
 
 
 class TopLayer():

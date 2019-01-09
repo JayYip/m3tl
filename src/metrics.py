@@ -3,7 +3,7 @@ import os
 
 import pickle
 
-from bert.tokenization import FullTokenizer
+from .bert.tokenization import FullTokenizer
 
 from .input_fn import predict_input_fn
 from .utils import get_text_and_label

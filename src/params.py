@@ -3,7 +3,7 @@ import re
 import json
 import shutil
 
-from bert.modeling import BertConfig
+from .bert.modeling import BertConfig
 
 from . import data_preprocessing
 from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
