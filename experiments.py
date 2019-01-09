@@ -166,8 +166,12 @@ def create_result_table(group_by='problem'):
     table_list = []
 
     if group_by == 'problem':
-        problem_list = list(result_dict['mix_data_baseline'].keys())
-        problem_list = set([p.split('_')[0] for p in problem_list if p.split('_')[
+        problem_list = list(
+            set([
+                k
+                for problem_set in result_dict.values()
+                for k in problem_set.keys()]))
+        problem_list = set(['_'.join(p.split('_')[:-1]) for p in problem_list if p.split('_')[
                            0] not in ['loss', 'global']])
         for problem in problem_list:
             writer = pytablewriter.MarkdownTableWriter()
@@ -177,7 +181,8 @@ def create_result_table(group_by='problem'):
                 '%s_F1 Score' % problem: [],
                 '%s_Precision' % problem: [],
                 '%s_Recall' % problem: [],
-                '%s_Accuracy Per Sequence' % problem: []
+                '%s_Accuracy Per Sequence' % problem: [],
+                '%s_Approximate BLEU' % problem: []
             }
             name = []
             for experiment_name, experiment_result in result_dict.items():
@@ -191,8 +196,21 @@ def create_result_table(group_by='problem'):
 
             problem_result_dict['experiment'] = name
 
+            # only keep columns with results
+            for key in list(problem_result_dict.keys()):
+                if len(set(problem_result_dict[key])) == 1:
+                    del problem_result_dict[key]
+
             # put name in the first col
             df = pd.DataFrame(problem_result_dict)
+
+            # only keep set with results
+            keep_row = []
+            for row_ind, row in df.iterrows():
+                if len(set(row)) > 2:
+                    keep_row.append(row_ind)
+            df = df.iloc[keep_row]
+
             cols = df.columns.tolist()
             cols = cols[-1:] + cols[:-1]
             df = df[cols]
