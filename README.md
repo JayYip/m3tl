@@ -18,6 +18,8 @@ To sum up, you can use this project if you:
 
 ### How to use pretrained model
 
+*It is recommended to use [this](https://github.com/JayYip/bert-as-service) repo to serve model.*
+
 Pretrained models for CWS and NER are released. You can use simplified api defined in `src/estimator_wrapper.py` as follow.
 
 ```python
