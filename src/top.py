@@ -76,6 +76,8 @@ class SequenceLabel(TopLayer):
             sampled_label = tf.gather(
                 tf.reshape(sample_set, [-1]), flat_index)
             sampled_label = tf.reshape(sampled_label, dims[:-1])
+        else:
+            sampled_label = labels
         return sampled_label
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
