@@ -3,7 +3,7 @@ import re
 import json
 import shutil
 
-from bert.modeling import BertConfig
+from .bert.modeling import BertConfig
 
 from . import data_preprocessing
 from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
@@ -245,12 +245,12 @@ class Params():
 
         # get eos_id
         for problem in problem_list:
-            if self.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']:
-                try:
-                    le = get_or_make_label_encoder(self, problem, 'predict')
+            try:
+                le = get_or_make_label_encoder(self, problem, 'predict')
+                if EOS_TOKEN in le.encode_dict:
                     self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
-                except FileNotFoundError:
-                    pass
+            except FileNotFoundError:
+                pass
 
         self.to_json()
 

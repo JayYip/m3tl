@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 
-from bert.tokenization import FullTokenizer
+from .bert.tokenization import FullTokenizer
 from tqdm import tqdm
 import numpy as np
 import os

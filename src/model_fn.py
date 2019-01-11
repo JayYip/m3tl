@@ -3,8 +3,8 @@ from tensorflow.contrib import autograph
 import pickle
 import os
 
-from bert import modeling
-from bert.modeling import BertModel
+from .bert import modeling
+from .bert.modeling import BertModel
 
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer

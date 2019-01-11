@@ -7,7 +7,7 @@ from tensor2tensor.utils import beam_search
 from .t2t_utils import get_t2t_metric_op
 from .transformer_decoder import TransformerDecoder
 
-from bert import modeling
+from .bert import modeling
 
 
 class TopLayer():
@@ -76,6 +76,8 @@ class SequenceLabel(TopLayer):
             sampled_label = tf.gather(
                 tf.reshape(sample_set, [-1]), flat_index)
             sampled_label = tf.reshape(sampled_label, dims[:-1])
+        else:
+            sampled_label = labels
         return sampled_label
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
@@ -158,7 +160,9 @@ class SequenceLabel(TopLayer):
         elif mode == tf.estimator.ModeKeys.PREDICT:
             viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
                 logits, crf_transition_param, seq_length)
-            self.prob = viterbi_sequence
+            self.prob = tf.identity(
+                viterbi_sequence, name='%s_predict' % problem_name)
+
             return self.prob
 
 
@@ -229,7 +233,7 @@ class Classification(TopLayer):
             return self.eval_metrics
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.softmax(logits)
-            self.prob = prob
+            self.prob = tf.identity(prob, name='%s_predict' % problem_name)
             return self.prob
 
 
@@ -454,7 +458,8 @@ class Seq2Seq(TopLayer):
         embedding_table = hidden_feature['embed_table']
         token_type_ids = features['segment_ids']
         num_classes = self.params.num_classes[problem_name]
-        batch_size = self.params.batch_size
+        batch_size = modeling.get_shape_list(
+            encoder_outputs, expected_rank=3)[0]
         hidden_size = self.params.bert_config.hidden_size
 
         if self.params.problem_type[problem_name] == 'seq2seq_text':
@@ -478,12 +483,12 @@ class Seq2Seq(TopLayer):
         # create cache for fast decode
         cache = {
             str(layer): {
-                "key_layer": tf.zeros([1, 0, hidden_size]),
-                "value_layer": tf.zeros([1, 0, hidden_size]),
+                "key_layer": tf.zeros([batch_size, 0, hidden_size]),
+                "value_layer": tf.zeros([batch_size, 0, hidden_size]),
             } for layer in range(self.params.decoder_num_hidden_layers)}
         # cache['encoder_outputs'] = encoder_outputs
         # cache['encoder_decoder_attention_mask'] = features['input_mask']
-        initial_ids = tf.zeros([1], dtype=tf.int32)
+        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
 
         decode_ids, _ = beam_search.beam_search(
             symbols_to_logits_fn=symbol_to_logit_fn,
@@ -552,5 +557,7 @@ class Seq2Seq(TopLayer):
             return self.eval_metrics
 
         else:
-            return self.beam_search_decode(
-                features, hidden_feature, mode, problem_name)
+            self.pred = tf.identity(self.beam_search_decode(
+                features, hidden_feature, mode, problem_name),
+                name='%s_predict' % problem_name)
+            return self.pred

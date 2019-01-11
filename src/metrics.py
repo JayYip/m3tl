@@ -3,7 +3,10 @@ import os
 
 import pickle
 
-from .input_fn import to_serving_input
+from .bert.tokenization import FullTokenizer
+
+from .input_fn import predict_input_fn
+from .utils import get_text_and_label, LabelEncoder, get_or_make_label_encoder
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -160,21 +163,24 @@ def get_ner_BIO(label_list):
     return stand_matrix
 
 
-def ner_evaluate(problem, pred_list, params):
-    label_data = to_serving_input(params, mode='eval')
-    lable_data_list = list(label_data)
+def ner_evaluate(problem, estimator, params):
+    text, label_data = get_text_and_label(params, problem, 'eval')
 
-    label_encoder = pickle.load(open(
-        os.path.join(params.ckpt_dir, '%s_label_encoder.pkl' % problem), 'rb'))
+    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+
+    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+
+    pred_list = estimator.predict(pred_input_fn)
 
     decode_pred_list = []
     decode_label_list = []
 
-    for p, label_data in zip(pred_list, lable_data_list):
-        label = label_data['%s_label_ids' % problem]
-        true_seq_length = np.sum(label_data['input_mask']) - 1
+    for p, label, t in zip(pred_list, label_data, text):
+        true_seq_length = len(t) - 1
 
-        pred_prob = p[1:true_seq_length]
+        pred_prob = p[problem]
+
+        pred_prob = pred_prob[1:true_seq_length]
 
         # crf returns tags
         predict = pred_prob
