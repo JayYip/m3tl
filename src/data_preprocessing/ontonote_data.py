@@ -1,6 +1,6 @@
 import re
 
-from ..bert.tokenization import FullTokenizer
+from ..tokenization import FullTokenizer
 
 from ..utils import (
     get_or_make_label_encoder,

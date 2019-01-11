@@ -3,7 +3,7 @@
 import re
 from glob import glob
 
-from ..bert.tokenization import FullTokenizer
+from ..tokenization import FullTokenizer
 
 from ..utils import (create_pretraining_generator,
                      create_single_problem_generator,

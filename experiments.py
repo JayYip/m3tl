@@ -18,51 +18,50 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['msraner', 'pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS', 'CTBPOS'],
-     'additional_params': {'label_smoothing': 0.0, 'train_epoch': 30},
-     'name': 'baseline_no_label_smooth'},
-    {'problems': ['msraner', 'pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS', 'CTBPOS'],
-     'additional_params': {'init_lr': 5e-6, 'train_epoch': 30},
-     'name': 'baseline_no_lr_scale_up'},
-    {'problems': ['ontonotes_cws&ontonotes_chunk&ontonotes_ner'],
+    # {'problems': ['msraner', 'pkucws', 'WeiboNER',
+    #               'cityucws', 'msrcws',  'bosonner',
+    #               'CTBCWS', 'CTBPOS'],
+    #  'additional_params': {'label_smoothing': 0.0, 'train_epoch': 30},
+    #  'name': 'baseline_no_label_smooth'},
+    # {'problems': ['msraner', 'pkucws', 'WeiboNER',
+    #               'cityucws', 'msrcws',  'bosonner',
+    #               'CTBCWS', 'CTBPOS'],
+    #  'additional_params': {'init_lr': 5e-6, 'train_epoch': 30},
+    #  'name': 'baseline_no_lr_scale_up'},
+    # {'problems': ['ontonotes_cws&ontonotes_chunk&ontonotes_ner'],
 
-     'additional_params': {},
-     'name': 'ontonotes_multitask'},
-    {'problems': ['ontonotes_cws', 'ontonotes_chunk', 'ontonotes_ner'],
+    #  'additional_params': {},
+    #  'name': 'ontonotes_multitask'},
+    # {'problems': ['ontonotes_cws', 'ontonotes_chunk', 'ontonotes_ner'],
 
-     'additional_params': {'train_epoch': 30},
-     'name': 'baseline'},
+    #  'additional_params': {'train_epoch': 30},
+    #  'name': 'baseline'},
+    # {'problems': ['pkucws', 'WeiboNER',
+    #               'cityucws', 'msrcws',  'bosonner',
+    #               'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
+    #  'additional_params': {'train_epoch': 30},
+    #  'name': 'baseline'},
+    # {'problems': ['CWS|NER|POS'],
+
+    #  'additional_params': {'crf': False, 'train_epoch': 30},
+    #  'name': 'multitask_label_transfer_first_train'},
+    # {'problems': ['CWS|NER|POS'],
+
+    #  'additional_params': {'label_transfer': True,
+    #                        'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_NER_POS_ckpt/',
+    #                        'init_lr': 0.001,
+    #                        'freeze_step': 999999,
+    #                        'train_epoch': 30},
+    #  'name': 'multitask_label_transfer'},
+    {'name': 'multitask_multiner',
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+        'additional_params': {'train_epoch': 30}
+     },
     {'problems': ['pkucws', 'WeiboNER',
                   'cityucws', 'msrcws',  'bosonner',
                   'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
      'additional_params': {'train_epoch': 30},
-     'name': 'baseline'},
-    {'problems': ['CWS|NER|POS'],
-
-     'additional_params': {'crf': False, 'train_epoch': 30},
-     'name': 'multitask_label_transfer_first_train'},
-    {'problems': ['CWS|NER|POS'],
-
-     'additional_params': {'label_transfer': True,
-                           'init_checkpoint': 'tmp/multitask_label_transfer_first_train/CWS_NER_POS_ckpt/',
-                           'init_lr': 0.001,
-                           'freeze_step': 999999,
-                           'train_epoch': 30},
-     'name': 'multitask_label_transfer'},
-    {'name': 'multitask_baseline',
-        'problems': ['CWS|NER|POS'],
-        'additional_params': {'train_epoch': 30}
-     },
-    {
-        'name': 'mix_data_baseline',
-        'problems': ['NER', 'POS', 'CWS'],
-
-        'additional_params': {'train_epoch': 30}
-    },
+     'name': 'baseline_new_tokenizer'},
 ]
 
 

@@ -3,7 +3,7 @@ from tqdm import tqdm
 
 import tensorflow as tf
 
-from .bert.tokenization import FullTokenizer
+from .tokenization import FullTokenizer
 
 from .params import Params
 from .utils import (create_generator, tokenize_text_with_seqs, truncate_seq_pair,

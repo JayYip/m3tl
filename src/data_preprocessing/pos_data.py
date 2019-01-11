@@ -5,7 +5,7 @@ import sys
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from ..bert.tokenization import FullTokenizer
+from ..tokenization import FullTokenizer
 
 from ..utils import create_single_problem_generator, get_or_make_label_encoder
 from .ctb_data import read_ctbpos

@@ -180,21 +180,31 @@ def get_dirty_text_ind(text):
     return output
 
 
+# def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
+#     if isinstance(inputs_a, list):
+#         inputs_a_str = '\t'.join(inputs_a)
+#     else:
+#         inputs_a_str = inputs_a
+
+#     tokenized_inputs = tokenizer.tokenize(inputs_a_str)
+#     dirty_ind = get_dirty_text_ind(inputs_a)
+
+#     # get white space ind
+#     dirty_ind += [i for i, c in enumerate(inputs_a) if not c.strip()]
+
+#     if is_seq:
+#         target = [element for element_i, element in enumerate(
+#             target) if element_i not in dirty_ind]
+
+#     return (tokenized_inputs, target)
+
 def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
     if isinstance(inputs_a, list):
-        inputs_a_str = '\t'.join(inputs_a)
+        inputs_a_str = '\t'.join([t if t != '\t' else ' ' for t in inputs_a])
     else:
         inputs_a_str = inputs_a
 
     tokenized_inputs = tokenizer.tokenize(inputs_a_str)
-    dirty_ind = get_dirty_text_ind(inputs_a)
-
-    # get white space ind
-    dirty_ind += [i for i, c in enumerate(inputs_a) if not c.strip()]
-
-    if is_seq:
-        target = [element for element_i, element in enumerate(
-            target) if element_i not in dirty_ind]
 
     return (tokenized_inputs, target)
 
