@@ -373,10 +373,9 @@ def create_single_problem_generator(problem,
         if not tokens_a:
             continue
 
-        if is_seq:
-            if len(target) != len(tokens_a):
-                tf.logging.warning('Data %d broken' % ex_index)
-                continue
+        if len(raw_inputs) != len(tokens_a):
+            tf.logging.warning('Data %d broken' % ex_index)
+            continue
 
         tokens_a, tokens_b, target = truncate_seq_pair(
             tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
