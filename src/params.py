@@ -14,26 +14,35 @@ class Params():
 
         self.run_problem_list = []
 
-        self.problem_type = {'WeiboNER': 'seq_tag',
-                             'WeiboFakeCLS': 'cls',
-                             'WeiboSegment': 'seq_tag',
-                             'WeiboPretrain': 'pretrain',
-                             'CWS': 'seq_tag',
-                             'NER': 'seq_tag',
-                             'CTBPOS': 'seq_tag',
-                             'CTBCWS': 'seq_tag',
-                             'ascws': 'seq_tag',
-                             'msrcws': 'seq_tag',
-                             'pkucws': 'seq_tag',
-                             'cityucws': 'seq_tag',
-                             'bosonner': 'seq_tag',
-                             'msraner': 'seq_tag',
-                             'POS': 'seq_tag',
-                             'weibo_fake_seq2seq_tag': 'seq2seq_tag',
-                             'weibo_fake_seq_tag': 'seq_tag',
-                             'ontonotes_ner': 'seq_tag',
-                             'ontonotes_cws': 'seq_tag',
-                             'ontonotes_chunk': 'seq2seq_tag'}
+        self.problem_type = {
+            'WeiboNER': 'seq_tag',
+            'WeiboFakeCLS': 'cls',
+            'WeiboSegment': 'seq_tag',
+            'WeiboPretrain': 'pretrain',
+            'CWS': 'seq_tag',
+            'NER': 'seq_tag',
+            'CTBPOS': 'seq_tag',
+            'CTBCWS': 'seq_tag',
+            'ascws': 'seq_tag',
+            'msrcws': 'seq_tag',
+            'pkucws': 'seq_tag',
+            'cityucws': 'seq_tag',
+            'bosonner': 'seq_tag',
+            'msraner': 'seq_tag',
+            'POS': 'seq_tag',
+            'weibo_fake_seq2seq_tag': 'seq2seq_tag',
+            'weibo_fake_seq_tag': 'seq_tag',
+            'ontonotes_ner': 'seq_tag',
+            'ontonotes_cws': 'seq_tag',
+            'ontonotes_chunk': 'seq2seq_tag',
+            'boson_domain': 'cls',
+            'Weibo_domain': 'cls',
+            'msra_domain': 'cls',
+            'as_domain': 'cls',
+            'msr_domain': 'cls',
+            'pku_domain': 'cls',
+            'cityu_domain': 'cls'
+        }
         # self.problem = 'cls'
 
         self.num_classes = {
@@ -62,6 +71,13 @@ class Params():
             'ontonotes_cws': 5,
             # add '[SEP]' as eos token
             'ontonotes_chunk': 192,
+            'boson_domain': 3,
+            'Weibo_domain': 3,
+            'msra_domain': 3,
+            'as_domain': 4,
+            'msr_domain': 4,
+            'pku_domain': 4,
+            'cityu_domain': 4
         }
 
         self.data_num_dict = {
@@ -69,8 +85,8 @@ class Params():
             'NER': 60000,
             'CTBPOS': 47400,
             'CTBCWS': 47400,
-            'ascws': 708953,
             'POS': 47400,
+            'ascws': 708953,
             'msrcws': 86924,
             'cityucws': 53019,
             'pkucws': 19056,
@@ -78,7 +94,13 @@ class Params():
             'bosonner': 10000,
             'ontonotes_ner': 39086,
             'ontonotes_cws': 39086,
-            'ontonotes_chunk': 39086
+            'ontonotes_chunk': 39086,
+            'boson_domain': 10000,
+            'msra_domain': 46364,
+            'as_domain': 708953,
+            'msr_domain': 86924,
+            'pku_domain': 53019,
+            'cityu_domain': 19056
         }
 
         # specify this will make key reuse values top
@@ -89,7 +111,14 @@ class Params():
             'msrcws': 'CWS',
             'pkucws': 'CWS',
             'cityucws': 'CWS',
-            'CTBPOS': 'POS'
+            'CTBPOS': 'POS',
+            'boson_domain': 'ner_domain',
+            'Weibo_domain': 'ner_domain',
+            'msra_domain': 'ner_domain',
+            'as_domain': 'cws_domain',
+            'msr_domain': 'cws_domain',
+            'pku_domain': 'cws_domain',
+            'cityu_domain': 'cws_domain'
         }
 
         self.eos_id = {
@@ -162,7 +191,7 @@ class Params():
                 raise AttributeError(
                     '%s function not implemented in data_preprocessing.py' % problem)
 
-    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None):
+    def assign_problem(self, flag_string: str, gpu = 2, base_dir = None, dir_name = None):
         """Assign the actual run problem to param. This function will
         do the following things:
 
@@ -185,25 +214,25 @@ class Params():
         """
 
         # Parse problem string
-        self.run_problem_list = []
+        self.run_problem_list=[]
         for flag_chunk in flag_string.split('|'):
 
             if '&' not in flag_chunk:
-                problem_type = {}
-                problem_type[flag_chunk] = self.problem_type[flag_chunk]
+                problem_type={}
+                problem_type[flag_chunk]=self.problem_type[flag_chunk]
                 self.run_problem_list.append(problem_type)
             else:
-                problem_type = {}
+                problem_type={}
                 for problem in flag_chunk.split('&'):
-                    problem_type[problem] = self.problem_type[problem]
+                    problem_type[problem]=self.problem_type[problem]
                 self.run_problem_list.append(problem_type)
 
-        problem_list = sorted(re.split(r'[&|]', flag_string))
+        problem_list=sorted(re.split(r'[&|]', flag_string))
 
         # create dir and get vocab, config
-        base = base_dir if base_dir is not None else 'tmp'
+        base=base_dir if base_dir is not None else 'tmp'
 
-        dir_name = dir_name if dir_name is not None else '_'.join(
+        dir_name=dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
         self.ckpt_dir = os.path.join(base, dir_name)
         create_path(self.ckpt_dir)

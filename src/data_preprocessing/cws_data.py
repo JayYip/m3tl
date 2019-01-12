@@ -246,3 +246,99 @@ def cityucws(params, mode):
                                            label_encoder,
                                            params,
                                            tokenizer)
+
+
+def as_domain(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    if mode == 'train':
+        file_list = glob.glob('data/cws/training/as_*.utf8')
+    else:
+        file_list = ['as_testing_gold.utf8']
+        # file_list = ['msr_test_gold.utf8']
+        file_list = [os.path.join('data/cws/gold', f) for f in file_list]
+
+    inputs, target = _process_text_files(file_list)
+
+    target_list = ['ascws' for _ in target]
+    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    label_encoder = get_or_make_label_encoder(
+        params, 'cws_domain', mode, flat_target_list)
+
+    return create_single_problem_generator('as_domain',
+                                           inputs,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def msr_domain(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    if mode == 'train':
+        file_list = glob.glob('data/cws/training/msr_*.utf8')
+    else:
+        file_list = ['msr_test_gold.utf8']
+        # file_list = ['msr_test_gold.utf8']
+        file_list = [os.path.join('data/cws/gold', f) for f in file_list]
+
+    inputs, target = _process_text_files(file_list)
+
+    target_list = ['msrcws' for _ in target]
+    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    label_encoder = get_or_make_label_encoder(
+        params, 'cws_domain', mode, flat_target_list)
+
+    return create_single_problem_generator('msr_domain',
+                                           inputs,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def pku_domain(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    if mode == 'train':
+        file_list = glob.glob('data/cws/training/pku_*.utf8')
+    else:
+        file_list = ['pku_test_gold.utf8']
+        # file_list = ['msr_test_gold.utf8']
+        file_list = [os.path.join('data/cws/gold', f) for f in file_list]
+
+    inputs, target = _process_text_files(file_list)
+
+    target_list = ['pkucws' for _ in target]
+    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    label_encoder = get_or_make_label_encoder(
+        params, 'cws_domain', mode, flat_target_list)
+
+    return create_single_problem_generator('pku_domain',
+                                           inputs,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def cityu_domain(params, mode):
+    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
+    if mode == 'train':
+        file_list = glob.glob('data/cws/training/cityu_*.utf8')
+    else:
+        file_list = ['cityu_test_gold.utf8']
+        # file_list = ['msr_test_gold.utf8']
+        file_list = [os.path.join('data/cws/gold', f) for f in file_list]
+
+    inputs, target = _process_text_files(file_list)
+
+    target_list = ['cityucws' for _ in target]
+    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    label_encoder = get_or_make_label_encoder(
+        params, 'cws_domain', mode, flat_target_list)
+
+    return create_single_problem_generator('cityu_domain',
+                                           inputs,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)

@@ -53,10 +53,18 @@ EXPERIMENTS_LIST = [
     #                        'freeze_step': 999999,
     #                        'train_epoch': 30},
     #  'name': 'multitask_label_transfer'},
-    {'name': 'multitask_multiner',
+    {
+        'name': 'multitask_domain_predict',
+        'problems': ['WeiboNER&Weibo_domain|bosonner&boson_domain|msraner\
+        &msra_domain|ascws&as_domain|pkucws&pku_domain|cityucws&cityu_doma\
+        in|msrcws&msr_domain'],
+        'additional_params': {'train_epoch': 30}
+    },
+    {
+        'name': 'multitask_multiner',
         'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
         'additional_params': {'train_epoch': 30}
-     },
+    },
     {'problems': ['pkucws', 'WeiboNER',
                   'cityucws', 'msrcws',  'bosonner',
                   'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],

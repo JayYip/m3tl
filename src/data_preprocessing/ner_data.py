@@ -451,3 +451,85 @@ def bosonner(params, mode):
                                            label_encoder,
                                            params,
                                            tokenizer)
+
+
+def boson_domain(params, mode):
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
+
+    boson_data = read_bosonnlp_data(
+        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
+
+    inputs_list = []
+    target_list = []
+    for data in [boson_data]:
+        if mode == 'train':
+            inputs_list += data['train']['inputs']
+            target_list += data['train']['target']
+
+        else:
+            inputs_list += data['eval']['inputs']
+            target_list += data['eval']['target']
+    target_list = ['bosonner' for _ in target_list]
+    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    label_encoder = get_or_make_label_encoder(
+        params, 'ner_domain', mode, flat_target_list)
+    return create_single_problem_generator('boson_domain',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def Weibo_domain(params, mode):
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+                         proc_fn=gold_horse_ent_type_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs']
+    target_list = data['target']
+
+    target_list = ['WeiboNER' for _ in target_list]
+    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    label_encoder = get_or_make_label_encoder(
+        params, 'ner_domain', mode, flat_target_list)
+    return create_single_problem_generator('Weibo_domain',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
+
+
+def msra_domain(params, mode):
+    tokenizer = FullTokenizer(
+        vocab_file=params.vocab_file, do_lower_case=False)
+
+    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
+
+    inputs_list = []
+    target_list = []
+    for data in [msra_data]:
+        if mode == 'train':
+            inputs_list += data['train']['inputs']
+            target_list += data['train']['target']
+
+        else:
+            inputs_list += data['eval']['inputs']
+            target_list += data['eval']['target']
+
+    target_list = ['msraner' for _ in target_list]
+    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    label_encoder = get_or_make_label_encoder(
+        params, 'ner_domain', mode, flat_target_list)
+    return create_single_problem_generator('msra_domain',
+                                           inputs_list,
+                                           target_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer)
