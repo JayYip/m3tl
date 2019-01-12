@@ -197,7 +197,8 @@ def read_bosonnlp_data(file_pattern, eval_size=0.2):
         'company_name': 'ORG',
         'location': 'LOC',
         'product_name': 'PRD',
-        'time': 'TME'
+        'time': 'TME',
+        'org_name': 'ORG2'
     }
     input_list = []
     target_list = []

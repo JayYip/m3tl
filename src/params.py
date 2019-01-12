@@ -54,7 +54,7 @@ class Params():
             # 'bosonner': 10,
             # 'msraner': 10,
             'msraner': 8,
-            'bosonner': 12,
+            'bosonner': 14,
             'POS': 62,
             'weibo_fake_seq2seq_tag': 4,
             'weibo_fake_seq_tag': 10,
@@ -75,7 +75,7 @@ class Params():
             'cityucws': 53019,
             'pkucws': 19056,
             'msraner': 46364,
-            'bosonner': 10000,
+            'bosonner': 30000,
             'ontonotes_ner': 39086,
             'ontonotes_cws': 39086,
             'ontonotes_chunk': 39086
