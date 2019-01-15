@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from copy import copy
 
 import pickle
 
@@ -164,9 +165,14 @@ def get_ner_BIO(label_list):
 
 
 def ner_evaluate(problem, estimator, params):
+    estimator_problem = copy(params.problem_str)
+    base_dir = os.path.split(params.ckpt_dir)[0]
+    params.assign_problem(problem, base_dir=base_dir)
     text, label_data = get_text_and_label(params, problem, 'eval')
 
     def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+
+    params.assign_problem(estimator_problem, base_dir=base_dir)
 
     label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
 

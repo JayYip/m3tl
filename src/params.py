@@ -212,7 +212,7 @@ class Params():
             dir_name {str} -- dir name for ckpt, if None,
                 will be created automatically (default: {None})
         """
-
+        self.problem_str = flag_string
         # Parse problem string
         self.run_problem_list=[]
         for flag_chunk in flag_string.split('|'):
