@@ -102,10 +102,11 @@ class BertMultiTask():
                 feature_dict[logit_type] = model.get_embedding_table()
 
         # add summary
-        with tf.name_scope('bert_feature_summary'):
-            for layer_ind, layer_output in enumerate(feature_dict['all']):
-                variable_summaries(
-                    layer_output, layer_output.name.replace(':0', ''))
+        if self.config.detail_log:
+            with tf.name_scope('bert_feature_summary'):
+                for layer_ind, layer_output in enumerate(feature_dict['all']):
+                    variable_summaries(
+                        layer_output, layer_output.name.replace(':0', ''))
 
         return feature_dict
 
@@ -273,12 +274,14 @@ class BertMultiTask():
         grads = tf.gradients(
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
-        # add grad summary
-        with tf.name_scope('var_and_grads'):
-            for g, v in zip(grads, tvars):
-                if g is not None:
-                    variable_summaries(g, v.name.replace(':0', '-grad'))
-                    variable_summaries(v, v.name.replace(':0', ''))
+
+        if self.config.detail_log:
+            # add grad summary
+            with tf.name_scope('var_and_grads'):
+                for g, v in zip(grads, tvars):
+                    if g is not None:
+                        variable_summaries(g, v.name.replace(':0', '-grad'))
+                        variable_summaries(v, v.name.replace(':0', ''))
 
         # grads = make_grad(global_step, loss_eval_pred,
         #                   hidden_features, tvars, self.config.freeze_step)
