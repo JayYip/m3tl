@@ -41,6 +41,7 @@ This project is still in very early stage, and the available problems are quite 
 - CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
 - NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
 - CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
+- CWS|POS|WeiboNER|bosonner|msraner (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw))
 
 #### Multitask Training
 

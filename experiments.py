@@ -127,6 +127,10 @@ def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, b
 
 
 def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
+
+    # set bigger max seq len
+    params.max_seq_len = 350
+
     eval_problem_list = []
     base = os.path.join('tmp', base)
     eval_label_encoder_list = []
@@ -156,6 +160,9 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
                 estimator=estiamtor,
                 gpu=gpu,
                 base=base))
+
+    params.max_seq_len = 128
+
     return final_eval_dict
 
 
