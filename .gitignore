@@ -112,3 +112,5 @@ data/ctb8.0
 data/ontonotes
 .vscode
 .idea
+comet_experiments.py
+comet_experiments_label_transfer.py

@@ -287,6 +287,7 @@ class Params():
     def features_to_dump(self):
         # training
         return [
+                'multitask_balance_type',
                 'init_lr',
                 'batch_size',
                 'train_epoch',
@@ -300,6 +301,17 @@ class Params():
                 'max_seq_len',
                 'use_one_hot_embeddings',
                 'label_smoothing',
+                'crf',
+
+                'decoder_num_hidden_layers',
+                'beam_size',
+                'init_decoder_from_encoder',
+                'beam_search_alpha',
+                'decode_max_seq_len',
+                'label_transfer',
+                'augument_mask_lm',
+                'augument_rate',
+                'distillation',
 
                 # pretrain hparm
                 'dupe_factor',
@@ -308,10 +320,7 @@ class Params():
                 'max_predictions_per_seq',
                 'mask_lm_hidden_size',
                 'mask_lm_hidden_act',
-                'mask_lm_initializer_range',
-                'multitask_balance_type',
-                'run_problem_list',
-                'bert_config_dict']
+                'mask_lm_initializer_range']
 
     def to_json(self):
         dump_dict = {}
