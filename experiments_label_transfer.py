@@ -5,6 +5,7 @@ import pickle
 from shutil import copy2, SameFileError
 import pytablewriter
 import pandas as pd
+from copy import copy
 
 import tensorflow as tf
 
@@ -18,40 +19,39 @@ from src.ckpt_restore_hook import RestoreCheckpointHook
 
 
 EXPERIMENTS_LIST = [
-    {'problems': ['msraner', 'pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS', 'CTBPOS'],
-     'additional_params': {'label_smoothing': 0.0, 'train_epoch': 30},
-     'name': 'baseline_no_label_smooth'},
-    {'problems': ['msraner', 'pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS', 'CTBPOS'],
-     'additional_params': {'init_lr': 5e-6, 'train_epoch': 30},
-     'name': 'baseline_no_lr_scale_up'},
-    {'problems': ['ontonotes_cws&ontonotes_chunk&ontonotes_ner'],
-
-     'additional_params': {},
-     'name': 'ontonotes_multitask'},
-    {'problems': ['ontonotes_cws', 'ontonotes_chunk', 'ontonotes_ner'],
-
-     'additional_params': {'train_epoch': 30},
-     'name': 'baseline'},
-    {'problems': ['pkucws', 'WeiboNER',
-                  'cityucws', 'msrcws',  'bosonner',
-                  'CTBCWS',  'ascws', 'msraner', 'CTBPOS'],
-     'additional_params': {'train_epoch': 30},
-     'name': 'baseline'},
-
-    {
-        'name': 'multitask_domain_predict',
-        'problems': ['WeiboNER&Weibo_domain|bosonner&boson_domain|msraner&msra_domain|ascws&as_domain|pkucws&pku_domain|cityucws&cityu_domain|msrcws&msr_domain'],
-        'additional_params': {'train_epoch': 30}
-    },
-    {
-        'name': 'multitask_multiner',
+    # {'name': 'multitask_multiner_label_transfer_2nd',
+    #     'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+    #  'additional_params': {'label_transfer': True,
+    #                        'init_checkpoint': 'tmp/multitask_multiner_label_transfer_1st/CWS_POS_WeiboNER_bosonner_msraner_ckpt/',
+    #                        'init_lr': 0.001,
+    #                        'freeze_step': 999999,
+    #                        'train_epoch': 1},
+    #  },
+    {'name': 'multitask_multiner_label_transfer_1st',
         'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
-        'additional_params': {'train_epoch': 30}
-    },
+        'additional_params': {'train_epoch': 1, 'crf': False}
+     },
+
+    {'name': 'multitask_multiner_label_transfer_3rd',
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+     'additional_params': {'label_transfer': True,
+                           'init_checkpoint': 'tmp/multitask_multiner_label_transfer_1st/CWS_POS_WeiboNER_bosonner_msraner_ckpt/',
+                           'train_epoch': 15},
+     },
+    {'name': 'multitask_multiner_label_transfer_4th',
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+     'additional_params': {'label_transfer': True,
+                           'init_checkpoint': 'tmp/multitask_multiner_label_transfer_1st/CWS_POS_WeiboNER_bosonner_msraner_ckpt/',
+                           'freeze_step': 999999,
+                           'train_epoch': 15},
+     },
+    {'name': 'multitask_multiner_label_transfer_5th',
+        'problems': ['CWS|POS|WeiboNER|bosonner|msraner'],
+     'additional_params': {'label_transfer': True,
+                           'init_checkpoint': 'tmp/multitask_multiner_label_transfer_4th/CWS_POS_WeiboNER_bosonner_msraner_ckpt/',
+                           'init_lr': 5e-6,
+                           'train_epoch': 15},
+     },
 ]
 
 
@@ -100,6 +100,8 @@ def train_problem(params, problem, gpu=4, base='baseline'):
 
 def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, base='baseline'):
 
+    estimator_problem = copy(params.problem_str)
+
     params.assign_problem(problem, gpu=int(gpu), base_dir=base)
     eval_dict = {}
 
@@ -111,8 +113,10 @@ def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, b
         pass
 
     def input_fn(): return train_eval_input_fn(params, mode='eval')
+    params.assign_problem(estimator_problem, gpu=int(gpu), base_dir=base)
     if 'ner' not in problem and 'NER' not in problem:
-        eval_dict.update(estimator.evaluate(input_fn=input_fn))
+        pass
+        # eval_dict.update(estimator.evaluate(input_fn=input_fn))
     else:
 
         raw_ner_eval = ner_evaluate(problem, estimator, params)
@@ -127,6 +131,8 @@ def eval_single_problem(params, problem, label_encoder_path, estimator, gpu=4, b
 
 
 def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
+    # set bigger max seq len
+    params.max_seq_len = 350
     eval_problem_list = []
     base = os.path.join('tmp', base)
     eval_label_encoder_list = []
@@ -156,6 +162,7 @@ def eval_problem(params, raw_problem, estiamtor, gpu=4, base='baseline'):
                 estimator=estiamtor,
                 gpu=gpu,
                 base=base))
+    params.max_seq_len = 128
     return final_eval_dict
 
 
@@ -224,7 +231,7 @@ def create_result_table(group_by='problem'):
 
 
 def main():
-    gpu = 4
+    gpu = 3
     params = Params()
 
     if os.path.exists('tmp/results.pkl'):
