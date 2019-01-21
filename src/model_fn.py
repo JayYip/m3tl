@@ -164,6 +164,8 @@ class BertMultiTask():
 
                     if self.config.label_transfer:
                         top_scope_name = top_scope_name + '_lt'
+                        if self.config.hidden_gru:
+                            top_scope_name += '_gru'
 
                     with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                         if self.config.problem_type[problem] == 'seq_tag':
