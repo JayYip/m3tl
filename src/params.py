@@ -81,7 +81,7 @@ class Params():
         }
 
         self.data_num_dict = {
-            'CWS': 867952,
+            'CWS': 157952,
             'NER': 60000,
             'CTBPOS': 47400,
             'CTBCWS': 47400,
@@ -160,6 +160,9 @@ class Params():
 
         self.hidden_gru = False
         self.label_transfer_gru = False
+        # if None, we will use the same hidden_size as inputs
+        # e.g. # of labels
+        self.label_transfer_gru_hidden_size = None
 
         # bert config
         self.init_checkpoint = 'chinese_L-12_H-768_A-12'
@@ -323,7 +326,8 @@ class Params():
                 'mask_lm_hidden_act',
                 'mask_lm_initializer_range',
                 'hidden_gru',
-                'label_transfer_gru']
+                'label_transfer_gru',
+                'label_transfer_gru_hidden_size']
 
     def to_json(self):
         dump_dict = {}

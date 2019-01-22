@@ -55,7 +55,8 @@ def make_cudnngru(
         params,
         mode,
         res_connection=True,
-        merge_mode='concat'):
+        merge_mode='concat',
+        input_hidden_size=None):
 
     if merge_mode == 'concat':
         return_hidden_size = 2*hidden_size
@@ -66,16 +67,25 @@ def make_cudnngru(
         hidden_feature = tf.zeros(
             [0, tf.shape(hidden_feature)[1], return_hidden_size])
     else:
+
         rnn_layer = keras.layers.CuDNNGRU(
             units=hidden_size,
             return_sequences=True,
             return_state=False)
-        bi_dir_rnn_layer = keras.layers.Bidirectional(
+        rnn_output = keras.layers.Bidirectional(
             layer=rnn_layer,
-            merge_mode=merge_mode)
-        rnn_output = bi_dir_rnn_layer(
-            inputs=hidden_feature)
+            merge_mode=merge_mode)(hidden_feature)
+        rnn_output = keras.layers.ReLU()(rnn_output)
+
         if res_connection:
+            if tf.shape(rnn_output)[-1] != tf.shape(hidden_feature)[-1]:
+                with tf.variable_scope('hidden_gru_projection'):
+                    rnn_output = keras.layers.Dense(
+                        units=input_hidden_size)(rnn_output)
+                    if mode == tf.estimator.ModeKeys.TRAIN:
+                        rnn_output = keras.layers.Dropout(
+                            rate=1 - params.dropout_keep_prob)(rnn_output)
+
             res_feature = rnn_output + hidden_feature
         else:
             res_feature = rnn_output
@@ -496,6 +506,10 @@ class LabelTransferHidden(TopLayer):
                     lt_hidden_size += self.params.num_classes[p]
 
             seq_features = hidden_feature['seq']
+            if self.params.label_transfer_gru_hidden_size is not None:
+                lt_hidden_size = self.params.label_transfer_gru_hidden_size
+
+            input_hidden_size = seq_features.get_shape().as_list()[-1]
             with tf.variable_scope('label_transfer_rnn'):
                 rnn_output = make_cudnngru(
                     seq_features,
@@ -503,7 +517,8 @@ class LabelTransferHidden(TopLayer):
                     self.params,
                     mode,
                     True,
-                    'ave')
+                    'ave',
+                    input_hidden_size)
                 rnn_output.set_shape(
                     [None, self.params.max_seq_len, lt_hidden_size])
             hidden_feature['seq'] = rnn_output
