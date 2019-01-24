@@ -49,23 +49,15 @@ def gather_indexes(sequence_tensor, positions):
 
 
 @autograph.convert()
-def make_cudnngru(
+def _make_cudnngru(
         hidden_feature,
         hidden_size,
-        params,
-        mode,
-        res_connection=True,
-        merge_mode='concat',
-        input_hidden_size=None):
+        merge_mode='concat'):
 
-    if merge_mode == 'concat':
-        return_hidden_size = 2*hidden_size
-    else:
-        return_hidden_size = hidden_size
     if tf.shape(hidden_feature)[0] == 0:
 
-        hidden_feature = tf.zeros(
-            [0, tf.shape(hidden_feature)[1], return_hidden_size])
+        rnn_output = tf.zeros(
+            [0, tf.shape(hidden_feature)[1], hidden_size])
     else:
 
         rnn_layer = keras.layers.CuDNNGRU(
@@ -77,29 +69,41 @@ def make_cudnngru(
             merge_mode=merge_mode)(hidden_feature)
         rnn_output = keras.layers.ReLU()(rnn_output)
 
-        if res_connection:
-            if tf.shape(rnn_output)[-1] != tf.shape(hidden_feature)[-1]:
-                with tf.variable_scope('hidden_gru_projection'):
-                    rnn_output = keras.layers.Dense(
-                        units=input_hidden_size)(rnn_output)
-                    if mode == tf.estimator.ModeKeys.TRAIN:
-                        rnn_output = keras.layers.Dropout(
-                            rate=1 - params.dropout_keep_prob)(rnn_output)
+    return rnn_output
 
-            res_feature = rnn_output + hidden_feature
-        else:
-            res_feature = rnn_output
-        if mode == tf.estimator.ModeKeys.TRAIN:
 
-            # res connection and layer norm
-            hidden_feature = modeling.layer_norm_and_dropout(
-                res_feature,
-                1 - params.dropout_keep_prob)
-        else:
-            hidden_feature = modeling.layer_norm(
-                res_feature
-            )
+def make_cudnngru(
+        hidden_feature,
+        hidden_size,
+        params,
+        mode,
+        res_connection=True,
+        merge_mode='concat'):
 
+    rnn_output = _make_cudnngru(hidden_feature, hidden_size, merge_mode)
+
+    if res_connection:
+        hidden_feature_size = hidden_feature.get_shape().as_list()[-1]
+        if hidden_size != tf.shape(hidden_feature)[-1]:
+            with tf.variable_scope('hidden_gru_projection'):
+                rnn_output = keras.layers.Dense(
+                    units=hidden_feature_size)(rnn_output)
+                if mode == tf.estimator.ModeKeys.TRAIN:
+                    rnn_output = keras.layers.Dropout(
+                        rate=1 - params.dropout_keep_prob)(rnn_output)
+
+        rnn_output = rnn_output + hidden_feature
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+
+        # res connection and layer norm
+        hidden_feature = modeling.layer_norm_and_dropout(
+            rnn_output,
+            1 - params.dropout_keep_prob)
+    else:
+        hidden_feature = modeling.layer_norm(
+            rnn_output
+        )
     return hidden_feature
 
 
@@ -517,10 +521,9 @@ class LabelTransferHidden(TopLayer):
                     self.params,
                     mode,
                     True,
-                    'ave',
-                    input_hidden_size)
+                    'ave')
                 rnn_output.set_shape(
-                    [None, self.params.max_seq_len, lt_hidden_size])
+                    [None, self.params.max_seq_len, input_hidden_size])
             hidden_feature['seq'] = rnn_output
 
         return hidden_feature
