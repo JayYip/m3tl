@@ -114,3 +114,4 @@ data/ontonotes
 .idea
 comet_experiments.py
 comet_experiments_label_transfer.py
+data/

@@ -41,7 +41,8 @@ class Params():
             'as_domain': 'cls',
             'msr_domain': 'cls',
             'pku_domain': 'cls',
-            'cityu_domain': 'cls'
+            'cityu_domain': 'cls',
+            'emotion_analysis': 'cls'
         }
         # self.problem = 'cls'
 
@@ -77,11 +78,12 @@ class Params():
             'as_domain': 4,
             'msr_domain': 4,
             'pku_domain': 4,
-            'cityu_domain': 4
+            'cityu_domain': 4,
+            'emotion_analysis': 2
         }
 
         self.data_num_dict = {
-            'CWS': 867952,
+            'CWS': 167952,
             'NER': 60000,
             'CTBPOS': 47400,
             'CTBCWS': 47400,
@@ -100,7 +102,8 @@ class Params():
             'as_domain': 708953,
             'msr_domain': 86924,
             'pku_domain': 53019,
-            'cityu_domain': 19056
+            'cityu_domain': 19056,
+            'emotion_analysis': 130000
         }
 
         # specify this will make key reuse values top

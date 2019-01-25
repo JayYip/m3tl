@@ -32,7 +32,7 @@ def main(_):
         os.mkdir('tmp')
 
     if FLAGS.model_dir:
-        base_dir, dir_name = os.path.split(FLAGS.model)
+        base_dir, dir_name = os.path.split(FLAGS.model_dir)
     else:
         base_dir, dir_name = None, None
 

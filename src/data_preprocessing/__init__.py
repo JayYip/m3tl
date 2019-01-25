@@ -4,3 +4,4 @@ from .ctb_data import *
 from .pos_data import *
 from .test_data import *
 from .ontonote_data import *
+from .emotion_data import *
