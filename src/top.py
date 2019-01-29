@@ -52,12 +52,12 @@ def gather_indexes(sequence_tensor, positions):
 def _make_cudnngru(
         hidden_feature,
         hidden_size,
+        output_hidden_size,
         merge_mode='concat'):
 
     if tf.shape(hidden_feature)[0] == 0:
-
         rnn_output = tf.zeros(
-            [0, tf.shape(hidden_feature)[1], hidden_size])
+            [0, tf.shape(hidden_feature)[1], output_hidden_size])
     else:
 
         rnn_layer = keras.layers.CuDNNGRU(
@@ -80,17 +80,27 @@ def make_cudnngru(
         res_connection=True,
         merge_mode='concat'):
 
-    rnn_output = _make_cudnngru(hidden_feature, hidden_size, merge_mode)
+    if merge_mode == 'concat':
+        output_hidden_size = 2*hidden_size
+    else:
+        output_hidden_size = hidden_size
+
+    rnn_output = _make_cudnngru(
+        hidden_feature, hidden_size, output_hidden_size, merge_mode)
+
+    rnn_output.set_shape(
+        [None, params.max_seq_len, output_hidden_size])
 
     if res_connection:
         hidden_feature_size = hidden_feature.get_shape().as_list()[-1]
         if hidden_size != tf.shape(hidden_feature)[-1]:
             with tf.variable_scope('hidden_gru_projection'):
-                rnn_output = keras.layers.Dense(
-                    units=hidden_feature_size)(rnn_output)
+                rnn_output = tf.layers.Dense(
+                    hidden_feature_size, activation=None,
+                    kernel_initializer=tf.orthogonal_initializer())(rnn_output)
                 if mode == tf.estimator.ModeKeys.TRAIN:
-                    rnn_output = keras.layers.Dropout(
-                        rate=1 - params.dropout_keep_prob)(rnn_output)
+                    rnn_output = tf.nn.dropout(
+                        rnn_output, params.dropout_keep_prob)
 
         rnn_output = rnn_output + hidden_feature
 
