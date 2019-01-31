@@ -53,7 +53,8 @@ def _make_cudnngru(
         hidden_feature,
         hidden_size,
         output_hidden_size,
-        merge_mode='concat'):
+        merge_mode='concat',
+        dropout_keep_prob=1.0):
 
     if tf.shape(hidden_feature)[0] == 0:
         rnn_output = tf.zeros(
@@ -67,6 +68,7 @@ def _make_cudnngru(
         rnn_output = keras.layers.Bidirectional(
             layer=rnn_layer,
             merge_mode=merge_mode)(hidden_feature)
+        rnn_output = tf.nn.dropout(rnn_output, keep_prob=dropout_keep_prob)
         rnn_output = keras.layers.ReLU()(rnn_output)
 
     return rnn_output
@@ -86,7 +88,7 @@ def make_cudnngru(
         output_hidden_size = hidden_size
 
     rnn_output = _make_cudnngru(
-        hidden_feature, hidden_size, output_hidden_size, merge_mode)
+        hidden_feature, hidden_size, output_hidden_size, merge_mode, params.dropout_keep_prob)
 
     rnn_output.set_shape(
         [None, params.max_seq_len, output_hidden_size])
