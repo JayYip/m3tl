@@ -316,6 +316,15 @@ def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=Fals
     return input_mask, tokens, segment_ids, target
 
 
+def punc_augument(raw_inputs, params):
+    for char_ind, char in enumerate(raw_inputs):
+        if char in params.punc_list:
+            if random.uniform(0, 1) <= params.punc_replace_prob:
+                raw_inputs[char_ind] = random.choice(params.punc_list)
+
+    return raw_inputs
+
+
 def create_single_problem_generator(problem,
                                     inputs_list,
                                     target_list,
@@ -355,6 +364,9 @@ def create_single_problem_generator(problem,
 
     for ex_index, example in enumerate(zip(inputs_list, target_list)):
         raw_inputs, raw_target = example
+
+        if params.punc_replace_prob > 0:
+            raw_inputs = punc_augument(raw_inputs, params)
 
         if isinstance(raw_inputs, dict):
             tokens_a, target = tokenize_text_with_seqs(

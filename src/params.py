@@ -162,6 +162,11 @@ class Params():
         self.augument_rate = 0.5
         self.distillation = False
 
+        # random replace punctuation by some prob to
+        # ease the punctuation sensitive problem
+        self.punc_replace_prob = 0.5
+        self.punc_list = list(',.!?！。？，、')
+
         # bert config
         self.init_checkpoint = 'chinese_L-12_H-768_A-12'
 
@@ -174,13 +179,6 @@ class Params():
         self.mask_lm_hidden_size = 768
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
-
-        # for label transfer
-        # self.label_transfer = True
-        # self.train_epoch = 15
-        # self.init_checkpoint = 'tmp/WeiboNER_bosonner_msraner_ckpt_bk'
-        # self.freeze_step = 99999
-        # self.init_lr = 0.001
 
         # get generator function for each problem
         self.read_data_fn = {}
@@ -321,7 +319,8 @@ class Params():
                 'max_predictions_per_seq',
                 'mask_lm_hidden_size',
                 'mask_lm_hidden_act',
-                'mask_lm_initializer_range']
+                'mask_lm_initializer_range',
+                'punc_replace_prob']
 
     def to_json(self):
         dump_dict = {}
