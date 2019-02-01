@@ -208,10 +208,9 @@ class SequenceLabel(TopLayer):
         if mask is not None:
             logits = logits*mask
 
-        if self.params.crf:
-            # CRF transition param
-            crf_transition_param = tf.get_variable(
-                'crf_transition', shape=[num_classes, num_classes])
+        # CRF transition param
+        crf_transition_param = tf.get_variable(
+            'crf_transition', shape=[num_classes, num_classes])
 
         # sequence_weight = tf.cast(features["input_mask"], tf.float32)
         seq_length = tf.reduce_sum(features["input_mask"], axis=-1)
