@@ -153,7 +153,8 @@ def CWS(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def ascws(params, mode):
@@ -176,7 +177,8 @@ def ascws(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def msrcws(params, mode):
@@ -199,7 +201,8 @@ def msrcws(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def pkucws(params, mode):
@@ -222,7 +225,8 @@ def pkucws(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def cityucws(params, mode):
@@ -245,7 +249,8 @@ def cityucws(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def as_domain(params, mode):
@@ -269,7 +274,8 @@ def as_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def msr_domain(params, mode):
@@ -293,7 +299,8 @@ def msr_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def pku_domain(params, mode):
@@ -317,7 +324,8 @@ def pku_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def cityu_domain(params, mode):
@@ -341,4 +349,5 @@ def cityu_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)

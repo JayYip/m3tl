@@ -32,4 +32,5 @@ def POS(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)

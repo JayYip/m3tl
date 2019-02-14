@@ -89,7 +89,8 @@ def WeiboFakeCLS(params, mode):
                                            new_target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 ```
 
 ## TODO
