@@ -81,7 +81,7 @@ class Params():
         }
 
         self.data_num_dict = {
-            'CWS': 867952,
+            'CWS': 157952,
             'NER': 60000,
             'CTBPOS': 47400,
             'CTBCWS': 47400,
@@ -137,10 +137,6 @@ class Params():
         self.train_epoch = 30
         self.freeze_step = 0
         self.prefetch = 5000
-        self.shuffle_buffer = 10000
-        # self.prefetch = 100
-        # self.shuffle_buffer = 100
-        # self.train_epoch = 100
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -166,10 +162,14 @@ class Params():
         # ease the punctuation sensitive problem
         self.punc_replace_prob = 0.5
         self.punc_list = list(',.!?！。？，、')
+        self.hidden_gru = False
+        self.label_transfer_gru = False
+        # if None, we will use the same hidden_size as inputs
+        # e.g. # of labels
+        self.label_transfer_gru_hidden_size = None
 
         # bert config
         self.init_checkpoint = 'chinese_L-12_H-768_A-12'
-
 
         # pretrain hparm
         self.dupe_factor = 10
@@ -179,6 +179,8 @@ class Params():
         self.mask_lm_hidden_size = 768
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
+
+        self.label_transfer_problem = None
 
         # get generator function for each problem
         self.read_data_fn = {}
@@ -190,7 +192,7 @@ class Params():
                 raise AttributeError(
                     '%s function not implemented in data_preprocessing.py' % problem)
 
-    def assign_problem(self, flag_string: str, gpu = 2, base_dir = None, dir_name = None):
+    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None):
         """Assign the actual run problem to param. This function will
         do the following things:
 
@@ -213,31 +215,34 @@ class Params():
         """
         self.problem_str = flag_string
         # Parse problem string
-        self.run_problem_list=[]
+        self.run_problem_list = []
         for flag_chunk in flag_string.split('|'):
 
             if '&' not in flag_chunk:
-                problem_type={}
-                problem_type[flag_chunk]=self.problem_type[flag_chunk]
+                problem_type = {}
+                problem_type[flag_chunk] = self.problem_type[flag_chunk]
                 self.run_problem_list.append(problem_type)
             else:
-                problem_type={}
+                problem_type = {}
                 for problem in flag_chunk.split('&'):
-                    problem_type[problem]=self.problem_type[problem]
+                    problem_type[problem] = self.problem_type[problem]
                 self.run_problem_list.append(problem_type)
+        if self.label_transfer and self.label_transfer_problem is None:
+            self.label_transfer_problem = [p for p in self.run_problem_list]
 
-        problem_list=sorted(re.split(r'[&|]', flag_string))
+        problem_list = sorted(re.split(r'[&|]', flag_string))
 
         # create dir and get vocab, config
-        base=base_dir if base_dir is not None else 'tmp'
+        base = base_dir if base_dir is not None else 'tmp'
 
-        dir_name=dir_name if dir_name is not None else '_'.join(
+        dir_name = dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
         self.ckpt_dir = os.path.join(base, dir_name)
         create_path(self.ckpt_dir)
         self.params_path = os.path.join(self.ckpt_dir, 'params.json')
         try:
-            shutil.copy2(os.path.join(self.init_checkpoint, 'vocab.txt'), self.ckpt_dir)
+            shutil.copy2(os.path.join(self.init_checkpoint,
+                         'vocab.txt'), self.ckpt_dir)
             shutil.copy2(os.path.join(self.init_checkpoint,
                                     'bert_config.json'), self.ckpt_dir)
         except FileNotFoundError:
@@ -259,6 +264,8 @@ class Params():
                     list(self.read_data_fn[problem](self, 'train')))
             else:
                 self.data_num += self.data_num_dict[problem]
+
+        self.shuffle_buffer = min([200000, self.data_num])
 
         if self.problem_type[problem] == 'pretrain':
             dup_fac = self.dupe_factor
@@ -320,7 +327,10 @@ class Params():
                 'mask_lm_hidden_size',
                 'mask_lm_hidden_act',
                 'mask_lm_initializer_range',
-                'punc_replace_prob']
+                'punc_replace_prob',
+                'hidden_gru',
+                'label_transfer_gru',
+                'label_transfer_gru_hidden_size']
 
     def to_json(self):
         dump_dict = {}

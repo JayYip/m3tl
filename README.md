@@ -16,32 +16,9 @@ To sum up, you can use this project if you:
 
 ## How to run pre-defined problems
 
-### How to use pretrained model
-
-*It is recommended to use [this](https://github.com/JayYip/bert-as-service) repo to serve model.*
-
-Pretrained models for CWS and NER are released. You can use simplified api defined in `src/estimator_wrapper.py` as follow.
-
-```python
-    params = Params()
-    m = ChineseNER(params, gpu=1)
-    print(m.ner(['''正如老K教练所说，勒布朗詹姆斯的领袖气质开始凸显。面对外界的质疑，勒布朗表
-示，“梦十队”一定会在伦敦奥运会上成功卫冕，“我们的球队不只想变得更强，而
-且想拿到金牌，”詹姆斯说，“很多人都认为表示没法拿到金牌。他们认为我们在
-身高上存在缺陷，说我们没有全身心地投入到国家队当中。但是我们会全身心地投
-入，去迎接挑战。我现在已经迫不及待要出场比赛了。”''']))
-```
-
 ### How to train
 
 This project is still in very early stage, and the available problems are quite limited. You can find available problems and baseline [here](baseline.md)
-
-#### Avalable trained checkpoint
-
-- CWS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetSfhcrMKkjE5VSWA))
-- NER (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetZrmW7a2hH2kSluw))
-- CTBPOS (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dgetj9SCvFcOBKy2g8g))
-- CWS|POS|WeiboNER|bosonner|msraner (download trained checkpoint [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw))
 
 #### Multitask Training
 
@@ -64,6 +41,23 @@ For evaluation, you need to separate the problems.
 python main.py --problem "CWS" --schedule eval --model_dir "tmp/multitask"
 python main.py --problem "NER" --schedule eval --model_dir "tmp/multitask"
 python main.py --problem "WeiboNER&WeiboSegment" --schedule eval --model_dir "tmp/multitask"
+```
+
+### How to use trained model
+
+*It is recommended to use [this](https://github.com/JayYip/bert-as-service) repo to serve model.*
+
+```bash
+python main.py --problem "CWS|NER|WeiboNER&WeiboSegment" --schedule train --model_dir "tmp/multitask"
+python export_model.py --problem "CWS|NER|WeiboNER&WeiboSegment" --model_dir "tmp/multitask"
+```
+
+The above command will train the model and export to the path `tmp/multitask` and create two files: `export_model` and `params.json`.
+
+Then you can start the service with command below. You need to make sure `export_model` and `params.json` and corresponding label encoders are located in the folder you specified below.
+
+```bash
+bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -problem "CWS|NER|WeiboNER&WeiboSegment" -model_dir tmp/multitask
 ```
 
 ## How to add problems

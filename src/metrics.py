@@ -207,3 +207,63 @@ def ner_evaluate(problem, estimator, params):
         print('%s Score: %f' % (metric_name,  result))
         result_dict[metric_name] = result
     return result_dict
+
+
+def acc_evaluate(problem, estimator, params):
+    estimator_problem = copy(params.problem_str)
+    base_dir = os.path.split(params.ckpt_dir)[0]
+    params.assign_problem(problem, base_dir=base_dir)
+    text, label_data = get_text_and_label(params, problem, 'eval')
+
+    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+
+    params.assign_problem(estimator_problem, base_dir=base_dir)
+
+    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+
+    pred_list = estimator.predict(pred_input_fn)
+
+    decode_pred_list = []
+    decode_label_list = []
+
+    if problem in params.share_top:
+        top_problem_name = params.share_top[problem]
+    else:
+        top_problem_name = problem
+
+    for p, label, t in zip(pred_list, label_data, text):
+        true_seq_length = len(t) - 1
+
+        pred_prob = p[top_problem_name]
+
+        pred_prob = pred_prob[1:true_seq_length]
+
+        # crf returns tags
+        predict = pred_prob
+        label = label[1:true_seq_length]
+
+        decode_pred = label_encoder.inverse_transform(predict)
+        decode_label = label_encoder.inverse_transform(label)
+
+        decode_pred_list.append(decode_pred)
+        decode_label_list.append(decode_label)
+
+    correct_char_count = 0
+    correct_seq_count = 0
+    total_char = 0
+
+    for pred, label in zip(decode_pred_list, decode_label_list):
+        total_char += len(label)
+        if np.array(pred == label).all():
+            correct_seq_count += 1
+            correct_char_count += len(label)
+        else:
+            for pred_char, label_char in zip(pred, label):
+                if pred_char == label_char:
+                    correct_char_count += 1
+
+    result_dict = {
+        '%s_Accuracy' % problem: correct_char_count / total_char,
+        '%s_Accuracy Per Sequence' % problem: correct_seq_count / len(decode_label_list)}
+
+    return result_dict
