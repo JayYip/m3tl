@@ -1,5 +1,7 @@
 # Bert for Multi-task Learning
 
+*Update:* Download trained checkpoint for Chinese NLP problems [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw)(Problem: "CWS|POS|WeiboNER|bosonner|msraner").
+
 ## What is it
 
 This a project that uses [BERT](https://github.com/google-research/bert) to do **multi-task learning** with multiple GPU support.
@@ -17,8 +19,6 @@ To sum up, you can use this project if you:
 ## How to run pre-defined problems
 
 ### How to train
-
-This project is still in very early stage, and the available problems are quite limited. You can find available problems and baseline [here](baseline.md)
 
 #### Multitask Training
 
