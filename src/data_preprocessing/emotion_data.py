@@ -45,4 +45,5 @@ def emotion_analysis(params, mode):
         target_list,
         label_encoder,
         params,
-        tokenizer)
+        tokenizer,
+        mode)
