@@ -153,7 +153,8 @@ def WeiboNER(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def gold_horse_segment_process_fn(d):
@@ -185,7 +186,8 @@ def WeiboSegment(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def read_bosonnlp_data(file_pattern, eval_size=0.2):
@@ -378,7 +380,8 @@ def NER(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def msraner(params, mode):
@@ -414,7 +417,8 @@ def msraner(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def bosonner(params, mode):
@@ -451,7 +455,8 @@ def bosonner(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def boson_domain(params, mode):
@@ -480,7 +485,8 @@ def boson_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def Weibo_domain(params, mode):
@@ -504,7 +510,8 @@ def Weibo_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def msra_domain(params, mode):
@@ -533,4 +540,5 @@ def msra_domain(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)

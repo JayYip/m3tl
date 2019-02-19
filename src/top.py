@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tensorflow import keras
+from tensorflow.contrib import autograph
 
 
 from tensor2tensor.utils import metrics
@@ -46,6 +48,77 @@ def gather_indexes(sequence_tensor, positions):
     return output_tensor
 
 
+@autograph.convert()
+def _make_cudnngru(
+        hidden_feature,
+        hidden_size,
+        output_hidden_size,
+        merge_mode='concat',
+        dropout_keep_prob=1.0):
+
+    if tf.shape(hidden_feature)[0] == 0:
+        rnn_output = tf.zeros(
+            [0, tf.shape(hidden_feature)[1], output_hidden_size])
+    else:
+
+        rnn_layer = keras.layers.CuDNNGRU(
+            units=hidden_size,
+            return_sequences=True,
+            return_state=False)
+        rnn_output = keras.layers.Bidirectional(
+            layer=rnn_layer,
+            merge_mode=merge_mode)(hidden_feature)
+        rnn_output = tf.nn.dropout(rnn_output, keep_prob=dropout_keep_prob)
+        rnn_output = keras.layers.ReLU()(rnn_output)
+
+    return rnn_output
+
+
+def make_cudnngru(
+        hidden_feature,
+        hidden_size,
+        params,
+        mode,
+        res_connection=True,
+        merge_mode='concat'):
+
+    if merge_mode == 'concat':
+        output_hidden_size = 2*hidden_size
+    else:
+        output_hidden_size = hidden_size
+
+    rnn_output = _make_cudnngru(
+        hidden_feature, hidden_size, output_hidden_size, merge_mode, params.dropout_keep_prob)
+
+    rnn_output.set_shape(
+        [None, params.max_seq_len, output_hidden_size])
+
+    if res_connection:
+        hidden_feature_size = hidden_feature.get_shape().as_list()[-1]
+        if hidden_size != tf.shape(hidden_feature)[-1]:
+            with tf.variable_scope('hidden_gru_projection'):
+                rnn_output = tf.layers.Dense(
+                    hidden_feature_size, activation=None,
+                    kernel_initializer=tf.orthogonal_initializer())(rnn_output)
+                if mode == tf.estimator.ModeKeys.TRAIN:
+                    rnn_output = tf.nn.dropout(
+                        rnn_output, params.dropout_keep_prob)
+
+        rnn_output = rnn_output + hidden_feature
+
+    if mode == tf.estimator.ModeKeys.TRAIN:
+
+        # res connection and layer norm
+        hidden_feature = modeling.layer_norm_and_dropout(
+            rnn_output,
+            1 - params.dropout_keep_prob)
+    else:
+        hidden_feature = modeling.layer_norm(
+            rnn_output
+        )
+    return hidden_feature
+
+
 class SequenceLabel(TopLayer):
 
     def create_smooth_label(self, labels, num_classes):
@@ -59,10 +132,11 @@ class SequenceLabel(TopLayer):
                 num_classes)]*self.params.max_seq_len, axis=0)
             batch_size_this_turn = tf.shape(true_labels)[0]
             label_set = tf.broadcast_to(
-                input=single_label_set, shape=[batch_size_this_turn,
-                                               single_label_set.shape.as_list()[
-                                                   0],
-                                               single_label_set.shape.as_list()[1]])
+                input=single_label_set, shape=[
+                    batch_size_this_turn,
+                    single_label_set.shape.as_list()[
+                        0],
+                    single_label_set.shape.as_list()[1]])
             sample_set = tf.concat([true_labels, label_set], axis=-1)
 
             dims = tf.shape(sample_set)
@@ -80,6 +154,35 @@ class SequenceLabel(TopLayer):
             sampled_label = labels
         return sampled_label
 
+    def make_batch_loss(self, logits, seq_labels, seq_length, crf_transition_param):
+        if self.params.crf:
+            with tf.variable_scope('CRF'):
+                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
+                    logits, seq_labels, seq_length,
+                    transition_params=crf_transition_param)
+                batch_loss = -log_likelihood
+        else:
+            batch_loss = tf.reduce_mean(
+                tf.nn.sparse_softmax_cross_entropy_with_logits(
+                    logits=logits, labels=seq_labels), axis=1)
+        return batch_loss
+
+    def make_hidden_model(self, features, hidden_feature, mode):
+        if self.params.hidden_gru:
+            with tf.variable_scope('hidden'):
+                new_hidden_feature = make_cudnngru(
+                    hidden_feature,
+                    int(self.params.bert_config.hidden_size / 2),
+                    self.params,
+                    mode)
+
+                new_hidden_feature.set_shape(
+                    [None, self.params.max_seq_len, self.params.bert_config.hidden_size])
+
+                return new_hidden_feature
+        else:
+            return hidden_feature
+
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['seq']
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -91,6 +194,10 @@ class SequenceLabel(TopLayer):
             num_classes = self.params.num_classes[problem_name]
         else:
             num_classes = mask.shape[0]
+
+        # make hidden model
+        hidden_feature = self.make_hidden_model(
+            features, hidden_feature, mode)
 
         output_layer = tf.layers.Dense(
             num_classes, activation=None,
@@ -111,28 +218,22 @@ class SequenceLabel(TopLayer):
         if mode == tf.estimator.ModeKeys.TRAIN:
             seq_labels = features['%s_label_ids' % problem_name]
             seq_labels = self.create_smooth_label(seq_labels, num_classes)
-            with tf.variable_scope('CRF'):
-                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
-                    logits, seq_labels, seq_length,
-                    transition_params=crf_transition_param)
+            batch_loss = self.make_batch_loss(
+                logits, seq_labels, seq_length, crf_transition_param)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
             # multiply with loss multiplier to make some loss as zero
-            seq_loss = tf.reduce_mean(-log_likelihood * loss_multiplier)
+            seq_loss = tf.reduce_mean(batch_loss * loss_multiplier)
             tf.summary.scalar('%s_loss' % problem_name, seq_loss)
             self.loss = seq_loss
             return self.loss
 
         elif mode == tf.estimator.ModeKeys.EVAL:
             seq_labels = features['%s_label_ids' % problem_name]
+            batch_loss = self.make_batch_loss(
+                logits, seq_labels, seq_length, crf_transition_param)
 
-            with tf.variable_scope('CRF'):
-
-                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
-                    logits, seq_labels, seq_length,
-                    transition_params=crf_transition_param)
-
-            seq_loss = tf.reduce_mean(-log_likelihood)
+            seq_loss = tf.reduce_mean(batch_loss)
 
             def metric_fn(label_ids, logits):
                 predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -158,10 +259,14 @@ class SequenceLabel(TopLayer):
             self.eval_metrics = eval_metrics
             return self.eval_metrics
         elif mode == tf.estimator.ModeKeys.PREDICT:
-            viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
-                logits, crf_transition_param, seq_length)
-            self.prob = tf.identity(
-                viterbi_sequence, name='%s_predict' % problem_name)
+            if self.params.crf:
+                viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
+                    logits, crf_transition_param, seq_length)
+                self.prob = tf.identity(
+                    viterbi_sequence, name='%s_predict' % problem_name)
+            else:
+                self.prob = tf.nn.softmax(
+                    logits, name='%s_predict' % problem_name)
 
             return self.prob
 
@@ -363,7 +468,15 @@ class LabelTransferHidden(TopLayer):
         new_hidden_feature = {}
         seq_hidden_state = []
         pooled_hidden_state = []
-        for problem_dict in self.params.run_problem_list:
+
+        if self.params.hidden_gru:
+            hidden_gru = True
+        else:
+            hidden_gru = False
+
+        self.params.hidden_gru = False
+
+        for problem_dict in self.params.label_transfer_problem:
             for problem in problem_dict:
                 if problem in self.params.share_top:
                     top_name = self.params.share_top[problem]
@@ -377,15 +490,21 @@ class LabelTransferHidden(TopLayer):
                     if self.params.problem_type[problem] == 'seq_tag':
                         seq_tag = SequenceLabel(self.params)
                         seq_tag(features,
-                                hidden_feature, mode, problem)
+                                hidden_feature,
+                                tf.estimator.ModeKeys.PREDICT,
+                                problem)
 
                         seq_hidden_state.append(seq_tag.get_logit())
                     elif self.params.problem_type[problem] == 'cls':
                         cls = Classification(self.params)
 
                         cls(features,
-                            hidden_feature, mode, problem)
+                            hidden_feature,
+                            tf.estimator.ModeKeys.PREDICT,
+                            problem)
                         pooled_hidden_state.append(cls.get_logit())
+
+        self.params.hidden_gru = hidden_gru
 
         if len(seq_hidden_state) >= 2:
             new_hidden_feature['seq'] = tf.concat(seq_hidden_state, axis=-1)
@@ -393,6 +512,30 @@ class LabelTransferHidden(TopLayer):
             new_hidden_feature['pooled'] = tf.concat(
                 pooled_hidden_state, axis=-1)
         hidden_feature.update(new_hidden_feature)
+
+        if self.params.label_transfer_gru:
+
+            lt_hidden_size = 0
+            for problem_dict in self.params.label_transfer_problem:
+                for p in problem_dict:
+                    lt_hidden_size += self.params.num_classes[p]
+
+            seq_features = hidden_feature['seq']
+            if self.params.label_transfer_gru_hidden_size is not None:
+                lt_hidden_size = self.params.label_transfer_gru_hidden_size
+
+            input_hidden_size = seq_features.get_shape().as_list()[-1]
+            with tf.variable_scope('label_transfer_rnn'):
+                rnn_output = make_cudnngru(
+                    seq_features,
+                    lt_hidden_size,
+                    self.params,
+                    mode,
+                    True,
+                    'ave')
+                rnn_output.set_shape(
+                    [None, self.params.max_seq_len, input_hidden_size])
+            hidden_feature['seq'] = rnn_output
 
         return hidden_feature
 

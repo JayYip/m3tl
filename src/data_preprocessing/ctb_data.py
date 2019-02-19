@@ -65,7 +65,8 @@ def CTBPOS(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def CTBCWS(params, mode):
@@ -119,4 +120,5 @@ def CTBCWS(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)

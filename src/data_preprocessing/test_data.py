@@ -39,7 +39,8 @@ def WeiboFakeCLS(params, mode):
                                            new_target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def weibo_fake_seq2seq_tag(params, mode: str):
@@ -69,7 +70,8 @@ def weibo_fake_seq2seq_tag(params, mode: str):
         new_target_list,
         label_encoder,
         params,
-        tokenizer)
+        tokenizer,
+        mode)
 
 
 def WeiboPretrain(params, mode):
@@ -100,7 +102,8 @@ def WeiboPretrain(params, mode):
                                         None,
                                         None,
                                         params,
-                                        tokenizer)
+                                        tokenizer,
+                                        mode)
 
 
 def weibo_fake_seq_tag(params, mode):
@@ -124,4 +127,5 @@ def weibo_fake_seq_tag(params, mode):
                                            target_list,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)

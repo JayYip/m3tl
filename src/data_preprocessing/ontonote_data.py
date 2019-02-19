@@ -74,7 +74,8 @@ def ontonotes_ner(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def ontonotes_cws(params, mode):
@@ -97,7 +98,8 @@ def ontonotes_cws(params, mode):
                                            target,
                                            label_encoder,
                                            params,
-                                           tokenizer)
+                                           tokenizer,
+                                           mode)
 
 
 def ontonotes_chunk(params, mode):
@@ -124,4 +126,5 @@ def ontonotes_chunk(params, mode):
         target,
         label_encoder,
         params,
-        tokenizer)
+        tokenizer,
+        mode)

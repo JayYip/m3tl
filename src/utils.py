@@ -316,12 +316,22 @@ def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=Fals
     return input_mask, tokens, segment_ids, target
 
 
+def punc_augument(raw_inputs, params):
+    for char_ind, char in enumerate(raw_inputs):
+        if char in params.punc_list:
+            if random.uniform(0, 1) <= params.punc_replace_prob:
+                raw_inputs[char_ind] = random.choice(params.punc_list)
+
+    return raw_inputs
+
+
 def create_single_problem_generator(problem,
                                     inputs_list,
                                     target_list,
                                     label_encoder,
                                     params,
-                                    tokenizer):
+                                    tokenizer,
+                                    mode):
     """Function to create iterator for single problem
 
     This function will:
@@ -356,6 +366,11 @@ def create_single_problem_generator(problem,
     for ex_index, example in enumerate(zip(inputs_list, target_list)):
         raw_inputs, raw_target = example
 
+        # punctuation augumentation
+        if params.punc_replace_prob > 0 and mode == 'train':
+            raw_inputs = punc_augument(raw_inputs, params)
+
+        # tokenize inputs, now the length is fixed, target == raw_target
         if isinstance(raw_inputs, dict):
             tokens_a, target = tokenize_text_with_seqs(
                 tokenizer, raw_inputs['a'], raw_target, is_seq)
@@ -372,18 +387,21 @@ def create_single_problem_generator(problem,
 
         if not tokens_a:
             continue
-
+        # check whether tokenization changed the length
         if len(raw_inputs) != len(tokens_a):
             tf.logging.warning('Data %d broken' % ex_index)
             continue
 
+        # truncate tokens and target to max_seq_len
         tokens_a, tokens_b, target = truncate_seq_pair(
             tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
 
+        # add [SEP], [CLS] tokens
         tokens, segment_ids, target = add_special_tokens_with_seqs(
             tokens_a, tokens_b, target, is_seq)
 
-        if params.augument_mask_lm:
+        # train mask lm as augument task while training
+        if params.augument_mask_lm and mode == 'train':
             rng = random.Random()
             (mask_lm_tokens, masked_lm_positions,
                 masked_lm_labels) = create_masked_lm_predictions(
@@ -428,6 +446,7 @@ def create_single_problem_generator(problem,
         if is_seq:
             assert len(label_id) == params.max_seq_len
 
+        # logging in debug mode
         if ex_index < 5:
             tf.logging.debug("*** Example ***")
             tf.logging.debug("tokens: %s" % " ".join(
@@ -448,7 +467,7 @@ def create_single_problem_generator(problem,
                                  (problem, str(label_id)))
                 tf.logging.debug("%s_label: %s" %
                                  (problem, str(target)))
-            if params.augument_mask_lm:
+            if params.augument_mask_lm and mode == 'train':
                 tf.logging.debug("mask lm tokens: %s" % " ".join(
                     [printable_text(x) for x in mask_lm_tokens]))
                 tf.logging.debug("mask lm input_ids: %s" %
@@ -458,7 +477,8 @@ def create_single_problem_generator(problem,
                 tf.logging.debug("mask lm position: %s" %
                                  " ".join([str(x) for x in masked_lm_positions]))
 
-        if not params.augument_mask_lm:
+        # create return dict
+        if not params.augument_mask_lm and mode == 'train':
             return_dict = {
                 'input_ids': input_ids,
                 'input_mask': input_mask,
