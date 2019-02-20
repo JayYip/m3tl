@@ -478,7 +478,7 @@ def create_single_problem_generator(problem,
                                  " ".join([str(x) for x in masked_lm_positions]))
 
         # create return dict
-        if not params.augument_mask_lm and mode == 'train':
+        if not params.augument_mask_lm:
             return_dict = {
                 'input_ids': input_ids,
                 'input_mask': input_mask,
@@ -486,7 +486,7 @@ def create_single_problem_generator(problem,
                 '%s_label_ids' % problem: label_id
             }
         else:
-            if random.uniform(0, 1) <= params.augument_rate:
+            if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
                 return_dict = {
                     'input_ids': mask_lm_input_ids,
                     'input_mask': input_mask,

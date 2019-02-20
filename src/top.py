@@ -1,3 +1,4 @@
+from collections import defaultdict
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.contrib import autograph
@@ -120,6 +121,13 @@ def make_cudnngru(
 
 
 class SequenceLabel(TopLayer):
+    '''Top model for sequence labeling.
+    It's a dense net with body output features as input with following support.
+
+    crf: Conditional Random Field. Take logits(output of dense layer) as input
+    hidden_gru: Take body features as input and apply rnn on it.
+    label_smoothing: Hard label smoothing. Random replace label by some prob.
+    '''
 
     def create_smooth_label(self, labels, num_classes):
         # since crf dose not take the smoothed label, consider the
@@ -272,6 +280,12 @@ class SequenceLabel(TopLayer):
 
 
 class Classification(TopLayer):
+    '''Top model for classification.
+    It's a dense net with body output features as input with following support.
+
+    label_smoothing: Soft label smoothing.
+    '''
+
     def create_loss(self, labels, logits,  num_classes):
         if self.params.label_smoothing > 0:
             one_hot_labels = tf.one_hot(labels, depth=num_classes)
@@ -301,8 +315,8 @@ class Classification(TopLayer):
         self.logits = logits
         if mask is not None:
             logits = logits*mask
-        labels = features['%s_label_ids' % problem_name]
         if mode == tf.estimator.ModeKeys.TRAIN:
+            labels = features['%s_label_ids' % problem_name]
             batch_loss = self.create_loss(labels, logits, num_classes)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
@@ -313,6 +327,7 @@ class Classification(TopLayer):
             self.loss = loss
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
+            labels = features['%s_label_ids' % problem_name]
             batch_loss = self.create_loss(labels, logits, num_classes)
             loss_multiplier = tf.cast(
                 features['%s_loss_multiplier' % problem_name], tf.float32)
@@ -343,6 +358,11 @@ class Classification(TopLayer):
 
 
 class MaskLM(TopLayer):
+    '''Top model for mask language model.
+    It's a dense net with body output features as input.
+    Major logic is from original bert code
+    '''
+
     def __call__(self, features, hidden_feature, mode, problem_name):
         """Get loss and log probs for the masked LM.
 
@@ -439,6 +459,10 @@ class MaskLM(TopLayer):
 
 
 class PreTrain(TopLayer):
+    '''Top model for pretrain.
+    It's MaskLM + Classification(next sentence prediction)
+    '''
+
     def __call__(self, features, hidden_feature, mode, problem_name):
         mask_lm_top = MaskLM(self.params)
         cls = Classification(self.params)
@@ -463,6 +487,13 @@ class PreTrain(TopLayer):
 
 
 class LabelTransferHidden(TopLayer):
+    '''Top model for label transfer, specific for multitask.
+    It's a dense net with body output features as input.
+
+    This layer will apply SequenceLabel or Classification for each problem
+    and then concat each problems' logits together as new hidden feature.
+
+    '''
 
     def __call__(self, features, hidden_feature, mode):
         new_hidden_feature = {}
@@ -541,6 +572,11 @@ class LabelTransferHidden(TopLayer):
 
 
 class Seq2Seq(TopLayer):
+    '''Top model for seq2seq problem.
+    This is basically a decoder of encoder-decoder framework.
+    Here uses transformer decoder architecture with beam search support.
+    '''
+
     def _get_symbol_to_logit_fn(self,
                                 max_seq_len,
                                 embedding_table,
@@ -704,3 +740,146 @@ class Seq2Seq(TopLayer):
                 features, hidden_feature, mode, problem_name),
                 name='%s_predict' % problem_name)
             return self.pred
+
+
+class MutualPrediction(TopLayer):
+    '''Top model for mutual prediction, specific for multitask
+
+    In training, each problem will have three logits:
+    1. standard logits
+    2. mutual prediction logits, use logits from OTHER problem to predict, for example, 
+        a|b|c, for problem a, it's mutual prediction logits is [standard_logits(b), standard_logits(c)]
+    3. final logits, use [standard_logits(a), mutual_logits(a)] to do final prediction
+
+    Losses created by above three logits will be added together and optimized.
+    '''
+
+    def make_top_layer(self, top_scope_name, top_name, features, hidden_feature, mode, problem):
+
+        with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+            if self.params.problem_type[problem] == 'seq_tag':
+                seq_tag = SequenceLabel(self.params)
+                loss = seq_tag(
+                    features,
+                    hidden_feature,
+                    mode,
+                    problem)
+                res = seq_tag
+
+            elif self.params.problem_type[problem] == 'cls':
+                cls = Classification(self.params)
+
+                loss = cls(
+                    features,
+                    hidden_feature,
+                    mode,
+                    problem)
+                res = cls
+
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            tf.summary.scalar(top_scope_name, loss)
+        return res
+
+    def __call__(self, features, hidden_feature, mode, problem_name):
+        crt_flag = self.params.crf
+        self.params.crf = False
+        # apply standard top to problems
+        single_problem_top = {}
+        for problem_dict in self.params.label_transfer_problem:
+            for problem in problem_dict:
+                if problem in self.params.share_top:
+                    top_name = self.params.share_top[problem]
+
+                else:
+                    top_name = problem
+
+                top_scope_name = '%s_top' % top_name
+
+                single_problem_top[problem] = self.make_top_layer(
+                    top_scope_name,
+                    top_name,
+                    features,
+                    hidden_feature,
+                    mode,
+                    problem)
+
+        # Mutual prediction top
+        mutual_top = {}
+        for problem in single_problem_top:
+            problem_type = self.params.problem_type[problem]
+            if problem in self.params.share_top:
+                top_name = self.params.share_top[problem]
+
+            else:
+                top_name = problem
+
+            top_scope_name = '%s_mutual' % top_name
+            mutual_hidden_feature = defaultdict(list)
+
+            # append logits of same problem type other than
+            # the main problem to mutual_hidden_feature
+            for side_problem in single_problem_top:
+                if side_problem in self.params.share_top:
+                    side_top_name = self.params.share_top[side_problem]
+
+                else:
+                    side_top_name = side_problem
+
+                if side_top_name != top_name and \
+                        self.params.problem_type[side_problem] == problem_type:
+                    if problem_type == 'seq_tag':
+                        mutual_hidden_feature['seq'].append(
+                            single_problem_top[side_top_name].get_logit())
+                    elif problem_type == 'cls':
+                        mutual_hidden_feature['pooled'].append(
+                            single_problem_top[side_top_name].get_logit())
+            if problem_type == 'seq_tag':
+                mutual_hidden_feature['seq'] = tf.concat(
+                    mutual_hidden_feature['seq'], axis=-1)
+            elif problem_type == 'cls':
+                mutual_hidden_feature['pooled'] = tf.concat(
+                    mutual_hidden_feature['pooled'], axis=-1)
+            mutual_top[problem] = self.make_top_layer(
+                top_scope_name,
+                top_name,
+                features,
+                mutual_hidden_feature,
+                mode,
+                problem)
+
+        self.params.crf = crt_flag
+        # Final prediction
+        final_return_dict = {}
+        for problem in single_problem_top:
+            final_hidden_feature = tf.concat([
+                single_problem_top[problem].get_logit(), mutual_top[problem].get_logit()],
+                axis=-1)
+            final_hidden_feature_dict = {
+                'seq': final_hidden_feature, 'pooled': final_hidden_feature}
+            if problem in self.params.share_top:
+                top_name = self.params.share_top[problem]
+
+            else:
+                top_name = problem
+
+            top_scope_name = '%s_final_top' % top_name
+
+            final_top_layer = self.make_top_layer(
+                top_scope_name,
+                top_name,
+                features,
+                final_hidden_feature_dict,
+                mode,
+                problem)
+
+            # if is train, add loss of single problem top and mutual top
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                final_return_dict[problem] = final_top_layer.get_train()
+                final_return_dict[problem] += single_problem_top[problem].get_train() + \
+                    mutual_top[problem].get_train()
+            elif mode == tf.estimator.ModeKeys.EVAL:
+                final_return_dict[problem] = final_top_layer.get_eval()
+            else:
+                final_return_dict[problem] = final_top_layer.get_predict()
+
+        return final_return_dict

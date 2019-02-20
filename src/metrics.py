@@ -232,18 +232,23 @@ def acc_evaluate(problem, estimator, params):
         top_problem_name = problem
 
     for p, label, t in zip(pred_list, label_data, text):
-        true_seq_length = len(t) - 1
 
         pred_prob = p[top_problem_name]
 
-        pred_prob = pred_prob[1:true_seq_length]
+        if params.problem_type[problem] in ['seq_tag']:
+            true_seq_length = len(t) - 1
+            pred_prob = pred_prob[1:true_seq_length]
 
-        # crf returns tags
-        predict = pred_prob
-        label = label[1:true_seq_length]
+            # crf returns tags
+            predict = pred_prob
+            label = label[1:true_seq_length]
+            decode_pred = label_encoder.inverse_transform(predict)
+            decode_label = label_encoder.inverse_transform(label)
+        else:
+            predict = np.argmax(pred_prob)
 
-        decode_pred = label_encoder.inverse_transform(predict)
-        decode_label = label_encoder.inverse_transform(label)
+            decode_pred = label_encoder.inverse_transform([predict])
+            decode_label = label_encoder.inverse_transform([label])
 
         decode_pred_list.append(decode_pred)
         decode_label_list.append(decode_label)
