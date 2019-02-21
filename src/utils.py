@@ -12,8 +12,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 import tensorflow as tf
 
 
-from .bert.tokenization import (_is_control,
-                                printable_text, FullTokenizer)
+from .tokenization import (_is_control,
+                           printable_text, FullTokenizer)
 
 BOS_TOKEN = '[PAD]'
 EOS_TOKEN = '[SEP]'
