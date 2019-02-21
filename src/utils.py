@@ -502,9 +502,9 @@ def create_single_problem_generator(problem,
                     'input_mask': input_mask,
                     'segment_ids': segment_ids,
                     '%s_label_ids' % problem: label_id,
-                    "masked_lm_positions": np.zeros_like(masked_lm_positions),
-                    "masked_lm_ids": np.zeros_like(masked_lm_ids),
-                    "masked_lm_weights": np.zeros_like(masked_lm_weights),
+                    "masked_lm_positions": np.zeros([1]),
+                    "masked_lm_ids": np.zeros([1]),
+                    "masked_lm_weights": np.zeros([1]),
                 }
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
