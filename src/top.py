@@ -775,10 +775,12 @@ class MutualPrediction(TopLayer):
                     mode,
                     problem)
                 res = cls
+            else:
+                return None
 
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            tf.summary.scalar(top_scope_name, loss)
-        return res
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                tf.summary.scalar(top_scope_name, loss)
+            return res
 
     def __call__(self, features, hidden_feature, mode, problem_name):
         crt_flag = self.params.crf
@@ -851,32 +853,46 @@ class MutualPrediction(TopLayer):
         # Final prediction
         final_return_dict = {}
         for problem in single_problem_top:
-            final_hidden_feature = tf.concat([
-                single_problem_top[problem].get_logit(), mutual_top[problem].get_logit()],
-                axis=-1)
-            final_hidden_feature_dict = {
-                'seq': final_hidden_feature, 'pooled': final_hidden_feature}
-            if problem in self.params.share_top:
-                top_name = self.params.share_top[problem]
+            problem_type = self.params.problem_type[problem]
+            if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+                final_top_layer = Seq2Seq(self.params)
+                loss = final_top_layer(
+                    features,
+                    hidden_feature,
+                    mode,
+                    problem)
+
+                if mode == tf.estimator.ModeKeys.TRAIN:
+                    tf.summary.scalar(top_scope_name, loss)
 
             else:
-                top_name = problem
+                final_hidden_feature = tf.concat([
+                    single_problem_top[problem].get_logit(), mutual_top[problem].get_logit()],
+                    axis=-1)
+                final_hidden_feature_dict = {
+                    'seq': final_hidden_feature, 'pooled': final_hidden_feature}
+                if problem in self.params.share_top:
+                    top_name = self.params.share_top[problem]
 
-            top_scope_name = '%s_final_top' % top_name
+                else:
+                    top_name = problem
 
-            final_top_layer = self.make_top_layer(
-                top_scope_name,
-                top_name,
-                features,
-                final_hidden_feature_dict,
-                mode,
-                problem)
+                top_scope_name = '%s_final_top' % top_name
+
+                final_top_layer = self.make_top_layer(
+                    top_scope_name,
+                    top_name,
+                    features,
+                    final_hidden_feature_dict,
+                    mode,
+                    problem)
 
             # if is train, add loss of single problem top and mutual top
             if mode == tf.estimator.ModeKeys.TRAIN:
                 final_return_dict[problem] = final_top_layer.get_train()
-                final_return_dict[problem] += single_problem_top[problem].get_train() + \
-                    mutual_top[problem].get_train()
+                if problem_type not in ['seq2seq_tag', 'seq2seq_text']:
+                    final_return_dict[problem] += single_problem_top[problem].get_train() + \
+                        mutual_top[problem].get_train()
             elif mode == tf.estimator.ModeKeys.EVAL:
                 final_return_dict[problem] = final_top_layer.get_eval()
             else:

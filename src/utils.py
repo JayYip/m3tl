@@ -310,6 +310,7 @@ def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=Fals
     input_mask += [0]*len(pad_list)
     segment_ids += [0]*len(pad_list)
     tokens += pad_list
+
     if is_seq:
         target += pad_list
 
@@ -502,9 +503,9 @@ def create_single_problem_generator(problem,
                     'input_mask': input_mask,
                     'segment_ids': segment_ids,
                     '%s_label_ids' % problem: label_id,
-                    "masked_lm_positions": np.zeros([1]),
-                    "masked_lm_ids": np.zeros([1]),
-                    "masked_lm_weights": np.zeros([1]),
+                    "masked_lm_positions": np.zeros([params.max_predictions_per_seq]),
+                    "masked_lm_ids": np.zeros([params.max_predictions_per_seq]),
+                    "masked_lm_weights": np.zeros([params.max_predictions_per_seq]),
                 }
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
@@ -682,7 +683,7 @@ def create_generator(params, mode, epoch):
             base_dict.update(instance)
             if base_input is None:
                 base_input = instance['input_ids']
-            else:
+            elif not params.augument_mask_lm:
                 assert base_input == instance[
                     'input_ids'], 'Inputs id of two chained problem not aligned. Please double check!'
 

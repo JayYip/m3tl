@@ -71,7 +71,7 @@ class Params():
             'ontonotes_ner': 18,
             'ontonotes_cws': 5,
             # add '[SEP]' as eos token
-            'ontonotes_chunk': 192,
+            'ontonotes_chunk': 194,
             'boson_domain': 3,
             'Weibo_domain': 3,
             'msra_domain': 3,
@@ -137,7 +137,7 @@ class Params():
         # training
         self.init_lr = 2e-5
         self.batch_size = 32
-        self.train_epoch = 30
+        self.train_epoch = 15
         self.freeze_step = 0
         self.prefetch = 5000
 
@@ -164,7 +164,7 @@ class Params():
 
         # random replace punctuation by some prob to
         # ease the punctuation sensitive problem
-        self.punc_replace_prob = 0.5
+        self.punc_replace_prob = 0.0
         self.punc_list = list(',.!?！。？，、')
         self.hidden_gru = False
         self.label_transfer_gru = False

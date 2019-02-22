@@ -235,7 +235,7 @@ def acc_evaluate(problem, estimator, params):
 
         pred_prob = p[top_problem_name]
 
-        if params.problem_type[problem] in ['seq_tag']:
+        if params.problem_type[problem] in ['seq_tag', 'seq2seq_tag', 'seq2seq_text']:
             true_seq_length = len(t) - 1
             pred_prob = pred_prob[1:true_seq_length]
 
