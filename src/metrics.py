@@ -2,12 +2,8 @@ import numpy as np
 import os
 from copy import copy
 
-import pickle
-
-from .tokenization import FullTokenizer
-
 from .input_fn import predict_input_fn
-from .utils import get_text_and_label, LabelEncoder, get_or_make_label_encoder
+from .utils import get_text_and_label, get_or_make_label_encoder
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -272,3 +268,142 @@ def acc_evaluate(problem, estimator, params):
         '%s_Accuracy Per Sequence' % problem: correct_seq_count / len(decode_label_list)}
 
     return result_dict
+
+
+def cws_evaluate(problem, estimator, params):
+    estimator_problem = copy(params.problem_str)
+    base_dir = os.path.split(params.ckpt_dir)[0]
+    params.assign_problem(problem, base_dir=base_dir)
+    text, label_data = get_text_and_label(params, problem, 'eval')
+
+    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+
+    params.assign_problem(estimator_problem, base_dir=base_dir)
+
+    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+
+    pred_list = estimator.predict(pred_input_fn)
+
+    decode_pred_list = []
+    decode_label_list = []
+
+    for p, label, t in zip(pred_list, label_data, text):
+        true_seq_length = len(t) - 1
+
+        pred_prob = p[problem]
+
+        pred_prob = pred_prob[1:true_seq_length]
+
+        # crf returns tags
+        predict = pred_prob
+        label = label[1:true_seq_length]
+
+        decode_pred = label_encoder.inverse_transform(predict)
+        decode_label = label_encoder.inverse_transform(label)
+
+        decode_pred_list.append(decode_pred)
+        decode_label_list.append(decode_label)
+
+    result_dict = {}
+
+    for metric_name, result in zip(['Acc', 'Precision', 'Recall', 'F1'],
+                                   get_cws_fmeasure(decode_label_list,
+                                                    decode_pred_list)):
+        print('%s Score: %f' % (metric_name,  result))
+        result_dict[metric_name] = result
+    return result_dict
+
+
+def get_cws_fmeasure(goldTagList, resTagList):
+    scoreList = []
+    assert len(resTagList) == len(goldTagList)
+
+    # calculate tag wise acc
+    total_length = 0
+    for g in goldTagList:
+        total_length += len(g)
+    acc = np.sum(
+        [
+            np.sum(g == resTagList[i])
+            for i, g in enumerate(goldTagList)]) / total_length
+
+    getNewTagList(goldTagList)
+    getNewTagList(resTagList)
+    goldChunkList = getChunks(goldTagList)
+    resChunkList = getChunks(resTagList)
+    gold_chunk = 0
+    res_chunk = 0
+    correct_chunk = 0
+    for i in range(len(goldChunkList)):
+        res = resChunkList[i]
+        gold = goldChunkList[i]
+        resChunkAry = res.split(',')
+        tmp = []
+        for t in resChunkAry:
+            if len(t) > 0:
+                tmp.append(t)
+        resChunkAry = tmp
+        goldChunkAry = gold.split(',')
+        tmp = []
+        for t in goldChunkAry:
+            if len(t) > 0:
+                tmp.append(t)
+        goldChunkAry = tmp
+        gold_chunk += len(goldChunkAry)
+        res_chunk += len(resChunkAry)
+        goldChunkSet = set()
+        for im in goldChunkAry:
+            goldChunkSet.add(im)
+        for im in resChunkAry:
+            if im in goldChunkSet:
+                correct_chunk += 1
+    pre = correct_chunk / res_chunk
+    rec = correct_chunk / gold_chunk
+    f1 = 0 if correct_chunk == 0 else 2 * pre * rec / (pre + rec)
+    scoreList.append(acc)
+    scoreList.append(pre)
+    scoreList.append(rec)
+    scoreList.append(f1)
+
+    infoList = []
+    infoList.append(gold_chunk)
+    infoList.append(res_chunk)
+    infoList.append(correct_chunk)
+    return scoreList
+
+
+def getNewTagList(tagList):
+    tmpList = []
+    for im in tagList:
+        tagAry = im
+        newTags = ",".join(tagAry)
+        tmpList.append(newTags)
+    tagList.clear()
+    for im in tmpList:
+        tagList.append(im)
+
+
+def getChunks(tagList):
+    tmpList = []
+    for im in tagList:
+        tagAry = im.split(',')
+        tmp = []
+        for t in tagAry:
+            if t != "":
+                tmp.append(t)
+        tagAry = tmp
+        chunks = ""
+        for i in range(len(tagAry)):
+            if tagAry[i].startswith("B"):
+                pos = i
+                length = 1
+                ty = tagAry[i]
+                for j in range(i + 1, len(tagAry)):
+                    if tagAry[j] in ["M", "E"]:
+                        length += 1
+                    else:
+                        break
+                chunk = ty + "*" + str(length) + "*" + str(pos)
+                chunks = chunks + chunk + ","
+        tmpList.append(chunks)
+    return tmpList

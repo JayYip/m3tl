@@ -8,6 +8,7 @@ from src.model_fn import BertMultiTask
 from src.params import Params
 from src.estimator import Estimator
 from src.ckpt_restore_hook import RestoreCheckpointHook
+from src import metrics
 
 flags = tf.flags
 
@@ -24,6 +25,8 @@ flags.DEFINE_integer("gpu", 2,
 
 flags.DEFINE_string("model_dir", "",
                     "Model dir. If not specified, will use problem_name + _ckpt")
+flags.DEFINE_string("eval_scheme", "ner",
+                    "Evaluation Scheme, Example: ner/cws")
 
 
 def main(_):
@@ -76,8 +79,8 @@ def main(_):
 
     elif FLAGS.schedule == 'eval':
 
-        def input_fn(): return train_eval_input_fn(params, mode='eval')
-        estimator.evaluate(input_fn=input_fn)
+        evaluate_func = getattr(metrics, FLAGS.eval_scheme+'_evaluate')
+        print(evaluate_func(FLAGS.problem, estimator, params))
 
     elif FLAGS.schedule == 'predict':
         def input_fn(): return predict_input_fn(
