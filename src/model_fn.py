@@ -129,7 +129,9 @@ class BertMultiTask():
             'seq2seq_text': Seq2Seq
         }
         if self.config.label_transfer:
-            ori_hidden_feature = {'ori_'+k: v for k, v in hidden_feature}
+            ori_hidden_feature = {
+                'ori_'+k: v for k,
+                v in hidden_feature.items()}
             label_transfer_layer = LabelTransferHidden(self.config)
             hidden_feature = label_transfer_layer(
                 features, hidden_feature, mode)
