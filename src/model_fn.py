@@ -129,9 +129,11 @@ class BertMultiTask():
             'seq2seq_text': Seq2Seq
         }
         if self.config.label_transfer:
+            ori_hidden_feature = {'ori_'+k: v for k, v in hidden_feature}
             label_transfer_layer = LabelTransferHidden(self.config)
             hidden_feature = label_transfer_layer(
                 features, hidden_feature, mode)
+            hidden_feature.update(ori_hidden_feature)
 
         global_step = tf.train.get_or_create_global_step()
 

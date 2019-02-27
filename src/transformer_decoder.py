@@ -218,7 +218,9 @@ class TransformerDecoder(object):
     def train_eval(self, features, hidden_feature, mode, problem_name):
 
         # prepare inputs to attention
-        encoder_output = hidden_feature['seq']
+        key = 'ori_seq' if self.params.label_transfer else 'seq'
+        encoder_output = hidden_feature[key]
+
         label_ids = features['%s_label_ids' % problem_name]
         input_mask = features['input_mask']
         num_classes = self.params.num_classes[problem_name]
