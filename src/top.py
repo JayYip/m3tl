@@ -632,7 +632,9 @@ class Seq2Seq(TopLayer):
         return loss
 
     def beam_search_decode(self, features, hidden_feature, mode, problem_name):
-        encoder_outputs = hidden_feature['seq']
+        # prepare inputs to attention
+        key = 'ori_seq' if self.params.label_transfer else 'seq'
+        encoder_outputs = hidden_feature[key]
         max_seq_len = self.params.max_seq_len
         embedding_table = hidden_feature['embed_table']
         token_type_ids = features['segment_ids']
