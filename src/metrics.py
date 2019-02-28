@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from copy import copy
+from nltk.translate import bleu_score
 
 from .input_fn import predict_input_fn
 from .utils import get_text_and_label, get_or_make_label_encoder
@@ -407,3 +408,47 @@ def getChunks(tagList):
                 chunks = chunks + chunk + ","
         tmpList.append(chunks)
     return tmpList
+
+
+def seq2seq_evaluate(problem, estimator, params):
+    estimator_problem = copy(params.problem_str)
+    base_dir = os.path.split(params.ckpt_dir)[0]
+    params.assign_problem(problem, base_dir=base_dir)
+    text, label_data = get_text_and_label(params, problem, 'eval')
+
+    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+
+    params.assign_problem(estimator_problem, base_dir=base_dir)
+
+    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+
+    pred_list = estimator.predict(pred_input_fn)
+
+    decode_pred_list = []
+    decode_label_list = []
+
+    for p, label, t in zip(pred_list, label_data, text):
+
+        pred_prob = p[problem]
+
+        # crf returns tags
+        predict = pred_prob
+
+        decode_pred = [t for t in label_encoder.inverse_transform(
+            predict) if t != '[PAD]']
+        decode_label = [t for t in label_encoder.inverse_transform(
+            label) if t != '[PAD]']
+
+        decode_pred_list.append(decode_pred)
+        decode_label_list.append([decode_label])
+
+    result_dict = {}
+    bleu1 = bleu_score.corpus_bleu(
+        decode_label_list, decode_pred_list, weights=(1, 0, 0, 0))
+    bleu4 = bleu_score.corpus_bleu(decode_label_list, decode_pred_list)
+
+    for metric_name, result in zip(['BLEU1', 'BLEU4'],
+                                   [bleu1, bleu4]):
+        print('%s Score: %f' % (metric_name,  result))
+        result_dict[metric_name] = result
+    return result_dict
