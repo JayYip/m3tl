@@ -4,9 +4,9 @@ from ..tokenization import FullTokenizer
 
 from ..utils import (
     get_or_make_label_encoder,
-    create_single_problem_generator,
     BOS_TOKEN,
     EOS_TOKEN)
+from ..create_generators import create_single_problem_generator
 
 
 def parse_one(s):

@@ -1,13 +1,12 @@
 
 
 import re
-from glob import glob
 
 from ..tokenization import FullTokenizer
 
-from ..utils import (create_pretraining_generator,
-                     create_single_problem_generator,
-                     get_or_make_label_encoder, BOS_TOKEN, EOS_TOKEN)
+from ..utils import (
+    get_or_make_label_encoder, BOS_TOKEN, EOS_TOKEN)
+from ..create_generators import create_pretraining_generator, create_single_problem_generator
 
 from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
 

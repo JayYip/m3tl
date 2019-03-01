@@ -1,4 +1,4 @@
-from collections import defaultdict
+
 from tqdm import tqdm
 import numpy as np
 
@@ -7,8 +7,9 @@ import tensorflow as tf
 from .tokenization import FullTokenizer
 
 from .params import Params
-from .utils import (create_generator, tokenize_text_with_seqs, truncate_seq_pair,
+from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
                     add_special_tokens_with_seqs, create_mask_and_padding)
+from .create_generators import create_generator
 
 
 def train_eval_input_fn(config: Params, mode='train', epoch=None):

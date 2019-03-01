@@ -7,8 +7,8 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import (get_or_make_label_encoder,
-                     create_single_problem_generator)
+from ..utils import get_or_make_label_encoder
+from ..create_generators import create_single_problem_generator
 
 
 def read_ctbpos():
