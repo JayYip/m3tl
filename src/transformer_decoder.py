@@ -259,8 +259,9 @@ class TransformerDecoder(object):
 
         # attention_mask = modeling.create_attention_mask_from_input_mask(
         #     label_ids, input_mask)
-
-        decoder_self_attention_mask = self.get_decoder_self_attention_mask(
+        label_mask = tf.expand_dims(
+            tf.cast(features['%s_mask' % problem_name], tf.float32), axis=1)
+        decoder_self_attention_mask = label_mask * self.get_decoder_self_attention_mask(
             self.params.decode_max_seq_len)
 
         decode_output = self.decode(
