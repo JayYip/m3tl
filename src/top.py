@@ -30,6 +30,27 @@ class TopLayer():
     def get_logit(self):
         return self.logits
 
+    def eval_metric_fn(self, features, logits, loss, problem):
+        label_ids = features['%s_label_ids' % problem]
+
+        def metric_fn(label_ids, logits):
+            predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+            prob = tf.nn.softmax(logits)
+
+            accuracy = tf.metrics.accuracy(
+                label_ids, predictions, weights=features['input_mask'])
+            acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
+                metrics.Metrics.ACC_PER_SEQ],
+                prob, features, label_ids)
+
+            return {
+                "Accuracy": accuracy,
+                'Accuracy Per Sequence': acc_per_seq
+            }
+        eval_metrics = (metric_fn(label_ids, logits), loss)
+        self.eval_metrics = eval_metrics
+        return self.eval_metrics
+
     def __call__(self, features, hidden_feature, mode, problem_name):
         raise NotImplementedError
 
@@ -121,6 +142,40 @@ def make_cudnngru(
     return hidden_feature
 
 
+def create_seq_smooth_label(params, labels, num_classes):
+    # since crf dose not take the smoothed label, consider the
+    # 'hard' smoothing. That is, sample a tag based on smooth factor
+    if params.label_smoothing > 0:
+
+        true_labels = tf.stack(
+            [labels]*int(num_classes/params.label_smoothing), axis=-1)
+        single_label_set = tf.stack([tf.range(
+            num_classes)]*params.max_seq_len, axis=0)
+        batch_size_this_turn = tf.shape(true_labels)[0]
+        label_set = tf.broadcast_to(
+            input=single_label_set, shape=[
+                batch_size_this_turn,
+                single_label_set.shape.as_list()[
+                    0],
+                single_label_set.shape.as_list()[1]])
+        sample_set = tf.concat([true_labels, label_set], axis=-1)
+
+        dims = tf.shape(sample_set)
+        sample_set = tf.reshape(sample_set, shape=[-1, dims[-1]])
+
+        samples_index = tf.random_uniform(
+            shape=[tf.shape(sample_set)[0], 1], minval=0, maxval=tf.shape(sample_set)[1], dtype=tf.int32)
+        flat_offsets = tf.reshape(
+            tf.range(0, tf.shape(sample_set)[0], dtype=tf.int32) * tf.shape(sample_set)[1], [-1, 1])
+        flat_index = tf.reshape(samples_index+flat_offsets, [-1])
+        sampled_label = tf.gather(
+            tf.reshape(sample_set, [-1]), flat_index)
+        sampled_label = tf.reshape(sampled_label, dims[:-1])
+    else:
+        sampled_label = labels
+    return sampled_label
+
+
 class SequenceLabel(TopLayer):
     '''Top model for sequence labeling.
     It's a dense net with body output features as input with following support.
@@ -129,39 +184,6 @@ class SequenceLabel(TopLayer):
     hidden_gru: Take body features as input and apply rnn on it.
     label_smoothing: Hard label smoothing. Random replace label by some prob.
     '''
-
-    def create_smooth_label(self, labels, num_classes):
-        # since crf dose not take the smoothed label, consider the
-        # 'hard' smoothing. That is, sample a tag based on smooth factor
-        if self.params.label_smoothing > 0:
-
-            true_labels = tf.stack(
-                [labels]*int(num_classes/self.params.label_smoothing), axis=-1)
-            single_label_set = tf.stack([tf.range(
-                num_classes)]*self.params.max_seq_len, axis=0)
-            batch_size_this_turn = tf.shape(true_labels)[0]
-            label_set = tf.broadcast_to(
-                input=single_label_set, shape=[
-                    batch_size_this_turn,
-                    single_label_set.shape.as_list()[
-                        0],
-                    single_label_set.shape.as_list()[1]])
-            sample_set = tf.concat([true_labels, label_set], axis=-1)
-
-            dims = tf.shape(sample_set)
-            sample_set = tf.reshape(sample_set, shape=[-1, dims[-1]])
-
-            samples_index = tf.random_uniform(
-                shape=[tf.shape(sample_set)[0], 1], minval=0, maxval=tf.shape(sample_set)[1], dtype=tf.int32)
-            flat_offsets = tf.reshape(
-                tf.range(0, tf.shape(sample_set)[0], dtype=tf.int32) * tf.shape(sample_set)[1], [-1, 1])
-            flat_index = tf.reshape(samples_index+flat_offsets, [-1])
-            sampled_label = tf.gather(
-                tf.reshape(sample_set, [-1]), flat_index)
-            sampled_label = tf.reshape(sampled_label, dims[:-1])
-        else:
-            sampled_label = labels
-        return sampled_label
 
     def make_batch_loss(self, logits, seq_labels, seq_length, crf_transition_param):
         if self.params.crf:
@@ -226,7 +248,8 @@ class SequenceLabel(TopLayer):
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             seq_labels = features['%s_label_ids' % problem_name]
-            seq_labels = self.create_smooth_label(seq_labels, num_classes)
+            seq_labels = create_seq_smooth_label(
+                self.params, seq_labels, num_classes)
             batch_loss = self.make_batch_loss(
                 logits, seq_labels, seq_length, crf_transition_param)
             loss_multiplier = tf.cast(
@@ -244,29 +267,9 @@ class SequenceLabel(TopLayer):
 
             seq_loss = tf.reduce_mean(batch_loss)
 
-            def metric_fn(label_ids, logits):
-                predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-                prob = tf.nn.softmax(logits)
+            return self.eval_metric_fn(
+                features, logits, seq_loss, problem_name)
 
-                accuracy = tf.metrics.accuracy(
-                    label_ids, predictions, weights=features['input_mask'])
-                acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
-                    metrics.Metrics.ACC_PER_SEQ],
-                    prob, features, label_ids)
-                one_hot_labels = tf.one_hot(
-                    label_ids, depth=num_classes)
-                f1_score = tf.contrib.metrics.f1_score(
-                    one_hot_labels, prob, weights=features['input_mask'])
-
-                return {
-                    "Accuracy": accuracy,
-                    'Accuracy Per Sequence': acc_per_seq,
-                    'F1 Score': f1_score
-                }
-
-            eval_metrics = (metric_fn(seq_labels, logits), seq_loss)
-            self.eval_metrics = eval_metrics
-            return self.eval_metrics
         elif mode == tf.estimator.ModeKeys.PREDICT:
             if self.params.crf:
                 viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
@@ -335,23 +338,8 @@ class Classification(TopLayer):
             # multiply with loss multiplier to make some loss as zero
             loss = tf.reduce_mean(batch_loss*loss_multiplier)
 
-            def metric_fn(label_ids, logits):
-                predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-                prob = tf.nn.softmax(logits)
-                accuracy = tf.metrics.accuracy(
-                    label_ids, predictions)
-                one_hot_labels = tf.one_hot(
-                    label_ids, depth=num_classes)
-                f1_score = tf.contrib.metrics.f1_score(
-                    one_hot_labels, prob)
-
-                return {
-                    "Accuracy": accuracy,
-                    'F1 Score': f1_score
-                }
-            eval_metrics = (metric_fn(labels, logits), loss)
-            self.eval_metrics = eval_metrics
-            return self.eval_metrics
+            return self.eval_metric_fn(
+                features, logits, loss, problem_name)
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.softmax(logits)
             self.prob = tf.identity(prob, name='%s_predict' % problem_name)
@@ -708,35 +696,9 @@ class Seq2Seq(TopLayer):
 
             if mode == tf.estimator.ModeKeys.TRAIN:
                 return self.loss
-
-            def metric_fn(label_ids, logits):
-                predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-                prob = tf.nn.softmax(logits)
-
-                accuracy = tf.metrics.accuracy(
-                    label_ids, predictions, weights=features['%s_mask' % problem_name])
-                acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
-                    metrics.Metrics.ACC_PER_SEQ],
-                    prob, features, label_ids)
-
-                blue_prob = tf.expand_dims(prob, axis=-2)
-                blue_prob = tf.expand_dims(blue_prob, axis=-2)
-
-                blue_label_ids = tf.expand_dims(label_ids, axis=-1)
-                blue_label_ids = tf.expand_dims(blue_label_ids, axis=-1)
-                bleu_score = get_t2t_metric_op(metrics.METRICS_FNS[
-                    metrics.Metrics.APPROX_BLEU],
-                    blue_prob, features, blue_label_ids)
-
-                return {
-                    "Accuracy": accuracy,
-                    'Accuracy Per Sequence': acc_per_seq,
-                    'Approximate BLEU': bleu_score
-                }
-
-            eval_metrics = (metric_fn(labels, logits), loss)
-            self.eval_metrics = eval_metrics
-            return self.eval_metrics
+            else:
+                return self.eval_metric_fn(
+                    features, logits, loss, problem_name)
 
         else:
             self.pred = tf.identity(self.beam_search_decode(

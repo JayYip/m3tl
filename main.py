@@ -79,6 +79,7 @@ def main(_):
 
     elif FLAGS.schedule == 'eval':
 
+        params.from_json()
         evaluate_func = getattr(metrics, FLAGS.eval_scheme+'_evaluate')
         print(evaluate_func(FLAGS.problem, estimator, params))
 

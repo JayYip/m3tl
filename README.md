@@ -95,7 +95,6 @@ def WeiboFakeCLS(params, mode):
 
 ## TODO
 
-- ~~Add multiple GPU support AdamWeightDecayOptimizer~~
-- ~~Add Pretraining~~
-- Add better evaluation
-- ~~Add more ner problem~~
+- model_fn top clean up
+- better share top management
+- top model clean up

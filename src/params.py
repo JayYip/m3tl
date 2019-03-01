@@ -145,7 +145,7 @@ class Params():
         self.dropout_keep_prob = 0.9
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
-        self.label_smoothing = 0.1
+        self.label_smoothing = 0.0
         self.crf = True
         self.bert_num_hidden_layer = 12
 
