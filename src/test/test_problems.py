@@ -31,83 +31,75 @@ class TestProblems(unittest.TestCase):
             eval_distribute=self.dist_trategy,
             log_step_count_steps=self.params.log_every_n_steps)
 
-    def test_seq2seq_tag(self):
-        self.params.assign_problem(
-            'weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
-
-        model = BertMultiTask(self.params)
+    def train_eval_pred(self, params):
+        model = BertMultiTask(params)
         model_fn = model.get_model_fn(False)
         estimator = Estimator(
             model_fn,
-            model_dir=self.params.ckpt_dir,
-            params=self.params,
+            model_dir=params.ckpt_dir,
+            params=params,
             config=self.run_config)
-        train_hook = RestoreCheckpointHook(self.params)
+        train_hook = RestoreCheckpointHook(params)
 
-        def train_input_fn(): return train_eval_input_fn(self.params)
+        def train_input_fn(): return train_eval_input_fn(params)
         estimator.train(
             train_input_fn,
-            max_steps=self.params.train_steps,
+            max_steps=params.train_steps,
             hooks=[train_hook])
 
-        def input_fn(): return train_eval_input_fn(self.params, mode='eval')
+        def input_fn(): return train_eval_input_fn(params, mode='eval')
         estimator.evaluate(input_fn=input_fn)
 
         p = estimator.predict(input_fn=input_fn)
         for _ in p:
             pass
+
+    def test_seq2seq_tag(self):
+        self.params.assign_problem(
+            'weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+
+        self.train_eval_pred(self.params)
 
     def test_cls(self):
         self.params.assign_problem(
             'WeiboFakeCLS', gpu=1, base_dir=self.test_dir)
 
-        model = BertMultiTask(self.params)
-        model_fn = model.get_model_fn(False)
-        estimator = Estimator(
-            model_fn,
-            model_dir=self.params.ckpt_dir,
-            params=self.params,
-            config=self.run_config)
-        train_hook = RestoreCheckpointHook(self.params)
-
-        def train_input_fn(): return train_eval_input_fn(self.params)
-        estimator.train(
-            train_input_fn,
-            max_steps=self.params.train_steps,
-            hooks=[train_hook])
-
-        def input_fn(): return train_eval_input_fn(self.params, mode='eval')
-        estimator.evaluate(input_fn=input_fn)
-
-        p = estimator.predict(input_fn=input_fn)
-        for _ in p:
-            pass
+        self.train_eval_pred(self.params)
 
     def test_seq_tag(self):
         self.params.assign_problem(
             'weibo_fake_seq_tag', gpu=1, base_dir=self.test_dir)
 
-        model = BertMultiTask(self.params)
-        model_fn = model.get_model_fn(False)
-        estimator = Estimator(
-            model_fn,
-            model_dir=self.params.ckpt_dir,
-            params=self.params,
-            config=self.run_config)
-        train_hook = RestoreCheckpointHook(self.params)
+        self.train_eval_pred(self.params)
 
-        def train_input_fn(): return train_eval_input_fn(self.params)
-        estimator.train(
-            train_input_fn,
-            max_steps=self.params.train_steps,
-            hooks=[train_hook])
+    def test_pretrain(self):
+        pass
 
-        def input_fn(): return train_eval_input_fn(self.params, mode='eval')
-        estimator.evaluate(input_fn=input_fn)
+    def test_lt_gru(self):
+        self.params.assign_problem(
+            'WeiboFakeCLS&weibo_fake_seq_tag&weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+        self.params.label_transfer = True
+        self.params.label_transfer_gru = True
 
-        p = estimator.predict(input_fn=input_fn)
-        for _ in p:
-            pass
+        self.train_eval_pred(self.params)
+
+    def test_mutual_predict(self):
+        self.params.assign_problem(
+            'WeiboFakeCLS&weibo_fake_seq_tag&weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+        self.params.mutual_prediction = True
+        self.train_eval_pred(self.params)
+
+    def test_grid_transformer(self):
+        self.params.assign_problem(
+            'WeiboFakeCLS&weibo_fake_seq_tag&weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+        self.params.grid_transformer = True
+        self.train_eval_pred(self.params)
+
+    def test_augument_mask_lm(self):
+        self.params.assign_problem(
+            'WeiboFakeCLS&weibo_fake_seq_tag&weibo_fake_seq2seq_tag', gpu=1, base_dir=self.test_dir)
+        self.params.augument_mask_lm = True
+        self.train_eval_pred(self.params)
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
