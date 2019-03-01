@@ -51,6 +51,21 @@ class TopLayer():
         self.eval_metrics = eval_metrics
         return self.eval_metrics
 
+    def create_loss(self, batch_loss, loss_multiplier):
+        '''This helper function is used to multiply batch loss
+        with loss multiplier
+
+        Arguments:
+            batch_loss {} -- batch loss
+            loss_multiplier {} -- loss multiplier
+        '''
+        loss_multiplier = tf.cast(
+            loss_multiplier, tf.float32)
+        # multiply with loss multiplier to make some loss as zero
+        loss = tf.reduce_mean(batch_loss * loss_multiplier)
+        tf.summary.scalar('loss', loss)
+        return loss
+
     def __call__(self, features, hidden_feature, mode, problem_name):
         raise NotImplementedError
 
@@ -252,12 +267,8 @@ class SequenceLabel(TopLayer):
                 self.params, seq_labels, num_classes)
             batch_loss = self.make_batch_loss(
                 logits, seq_labels, seq_length, crf_transition_param)
-            loss_multiplier = tf.cast(
-                features['%s_loss_multiplier' % problem_name], tf.float32)
-            # multiply with loss multiplier to make some loss as zero
-            seq_loss = tf.reduce_mean(batch_loss * loss_multiplier)
-            tf.summary.scalar('%s_loss' % problem_name, seq_loss)
-            self.loss = seq_loss
+            self.loss = self.create_loss(
+                batch_loss, features['%s_loss_multiplier' % problem_name])
             return self.loss
 
         elif mode == tf.estimator.ModeKeys.EVAL:
@@ -290,7 +301,7 @@ class Classification(TopLayer):
     label_smoothing: Soft label smoothing.
     '''
 
-    def create_loss(self, labels, logits,  num_classes):
+    def create_batch_loss(self, labels, logits,  num_classes):
         if self.params.label_smoothing > 0:
             one_hot_labels = tf.one_hot(labels, depth=num_classes)
             return tf.losses.softmax_cross_entropy(
@@ -321,22 +332,15 @@ class Classification(TopLayer):
             logits = logits*mask
         if mode == tf.estimator.ModeKeys.TRAIN:
             labels = features['%s_label_ids' % problem_name]
-            batch_loss = self.create_loss(labels, logits, num_classes)
-            loss_multiplier = tf.cast(
-                features['%s_loss_multiplier' % problem_name], tf.float32)
-            # multiply with loss multiplier to make some loss as zero
-            loss = tf.reduce_mean(batch_loss*loss_multiplier)
-
-            tf.summary.scalar('%s_loss' % problem_name, loss)
-            self.loss = loss
+            batch_loss = self.create_batch_loss(labels, logits, num_classes)
+            self.loss = self.create_loss(
+                batch_loss, features['%s_loss_multiplier' % problem_name])
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
-            batch_loss = self.create_loss(labels, logits, num_classes)
-            loss_multiplier = tf.cast(
-                features['%s_loss_multiplier' % problem_name], tf.float32)
+            batch_loss = self.create_batch_loss(labels, logits, num_classes)
             # multiply with loss multiplier to make some loss as zero
-            loss = tf.reduce_mean(batch_loss*loss_multiplier)
+            loss = tf.reduce_mean(batch_loss)
 
             return self.eval_metric_fn(
                 features, logits, loss, problem_name)
@@ -610,16 +614,6 @@ class Seq2Seq(TopLayer):
             return logits, cache
         return symbols_to_logits_fn
 
-    def create_loss(self, labels, logits, features, problem_name):
-        batch_loss = tf.losses.sparse_softmax_cross_entropy(
-            labels, logits)
-        loss_multiplier = tf.cast(
-            features['%s_loss_multiplier' % problem_name], tf.float32)
-        # multiply with loss multiplier to make some loss as zero
-        loss = tf.reduce_mean(batch_loss*loss_multiplier)
-
-        return loss
-
     def beam_search_decode(self, features, hidden_feature, mode, problem_name):
         # prepare inputs to attention
         key = 'ori_seq' if self.params.label_transfer else 'seq'
@@ -687,11 +681,10 @@ class Seq2Seq(TopLayer):
                 # Shift targets to the right, and remove the last element
                 shift_labels = tf.pad(
                     labels, [[0, 0], [0, 1]])[:, 1:]
-
+            batch_loss = tf.losses.sparse_softmax_cross_entropy(
+                shift_labels, logits)
             loss = self.create_loss(
-                shift_labels, logits, features, problem_name)
-
-            tf.summary.scalar('%s_loss' % problem_name, loss)
+                batch_loss, features['%s_loss_multiplier' % problem_name])
             self.loss = loss
 
             if mode == tf.estimator.ModeKeys.TRAIN:
