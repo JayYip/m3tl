@@ -2,6 +2,7 @@ from collections import defaultdict
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.contrib import autograph
+from copy import copy
 
 
 from tensor2tensor.utils import metrics
@@ -901,3 +902,48 @@ class MutualPrediction(TopLayer):
                 final_return_dict[problem] = final_top_layer.get_predict()
 
         return final_return_dict
+
+
+class GridTransformer(TopLayer):
+
+    def __call__(self, features, hidden_feature, mode, problem_name):
+        key_hidden_feature = hidden_feature['all']
+
+        query_hidden_feature = hidden_feature['seq']
+        hidden_size = self.params.bert_config.hidden_size
+
+        # transform hidden feature to batch_size, max_seq*num_layers, hidden_size
+        key_hidden_feature = tf.reshape(
+            key_hidden_feature,
+            [-1, self.params.bert_config.num_hidden_layers*self.params.max_seq_len, hidden_size])
+
+        # dense transformation to same shape
+        output_layer = tf.layers.Dense(
+            hidden_size, activation=tf.nn.relu,
+            kernel_initializer=tf.orthogonal_initializer()
+        )
+        hidden_logits = output_layer(query_hidden_feature)
+
+        grid_transformer_params = copy(self.params)
+        grid_transformer_params.decoder_num_hidden_layers = 1
+        self.decoder = TransformerDecoder(self.params)
+
+        encoder_output = key_hidden_feature
+        decoder_inputs = hidden_logits
+        input_mask = features['input_mask']
+        self_attention_mask = input_mask
+        enc_dec_attention_mask = tf.concat(
+            [input_mask]*self.params.bert_config.num_hidden_layers, axis=1)
+
+        decode_output = self.decoder.decode(
+            decoder_inputs=decoder_inputs,
+            encoder_output=encoder_output,
+            input_mask=input_mask,
+            decoder_self_attention_mask=self_attention_mask,
+            cache=None,
+            num_classes=None,
+            do_return_all_layers=False,
+            enc_dec_attention_mask=enc_dec_attention_mask
+        )
+
+        return decode_output

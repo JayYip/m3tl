@@ -161,6 +161,7 @@ class Params():
         self.augument_rate = 0.5
         self.distillation = False
         self.mutual_prediction = False
+        self.grid_transformer = False
 
         # random replace punctuation by some prob to
         # ease the punctuation sensitive problem
@@ -335,7 +336,8 @@ class Params():
                 'hidden_gru',
                 'label_transfer_gru',
                 'label_transfer_gru_hidden_size',
-                'mutual_prediction']
+                'mutual_prediction',
+                'grid_transformer']
 
     def to_json(self):
         dump_dict = {}

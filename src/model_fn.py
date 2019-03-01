@@ -8,7 +8,7 @@ from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
     Seq2Seq, SequenceLabel, Classification, LabelTransferHidden,
-    MutualPrediction, MaskLM, PreTrain)
+    MutualPrediction, MaskLM, PreTrain, GridTransformer)
 
 
 @autograph.convert()
@@ -149,6 +149,7 @@ class BertMultiTask():
         else:
             for problem_dict in self.config.run_problem_list:
                 for problem in problem_dict:
+                    problem_type = self.config.problem_type[problem]
 
                     if problem in self.config.share_top:
                         top_name = self.config.share_top[problem]
@@ -156,7 +157,7 @@ class BertMultiTask():
                     else:
                         top_name = problem
 
-                    if self.config.problem_type[problem] == 'pretrain':
+                    if problem_type == 'pretrain':
                         pretrain = PreTrain(self.config)
                         return_dict[problem] = pretrain(
                             features, hidden_feature, mode, problem)
@@ -183,10 +184,24 @@ class BertMultiTask():
                             if self.config.hidden_gru:
                                 top_scope_name += '_gru'
 
+                        if self.config.label_transfer and self.config.grid_transformer:
+                            raise ValueError(
+                                'Label Transfer and grid transformer cannot be enabled in the same time.'
+                            )
+
+                        if self.config.grid_transformer:
+                            grid_scope_name = top_scope_name + '_grid'
+                            with tf.variable_scope(grid_scope_name):
+                                grid_layer = GridTransformer(self.config)
+                                hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
+
+                                hidden_feature_this_round[hidden_feature_key] = grid_layer(
+                                    feature_this_round, hidden_feature_this_round, mode, problem)
+
                         with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
 
                             layer = problem_type_layer[
-                                self.config.problem_type[problem]](
+                                problem_type](
                                 self.config)
                             return_dict[problem] = layer(
                                 feature_this_round,

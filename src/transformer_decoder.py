@@ -34,7 +34,8 @@ class TransformerDecoder(object):
             decoder_self_attention_mask,
             cache,
             num_classes,
-            do_return_all_layers):
+            do_return_all_layers,
+            enc_dec_attention_mask=None):
         input_tensor = decoder_inputs
         num_hidden_layers = self.params.decoder_num_hidden_layers
         hidden_size = self.params.bert_config.hidden_size
@@ -62,13 +63,16 @@ class TransformerDecoder(object):
             input_mask, expected_rank=2)[1]
 
         # batch_size*beam_size
-        input_batch_size = modeling.get_shape_list(
-            decoder_inputs, expected_rank=3)[0]
-        input_mask = tf.broadcast_to(
-            input_mask, [input_batch_size, attention_mask_shape])
-        attention_mask = modeling.create_attention_mask_from_input_mask(
-            decoder_inputs, input_mask
-        )
+        if enc_dec_attention_mask is None:
+            input_batch_size = modeling.get_shape_list(
+                decoder_inputs, expected_rank=3)[0]
+            input_mask = tf.broadcast_to(
+                input_mask, [input_batch_size, attention_mask_shape])
+            attention_mask = modeling.create_attention_mask_from_input_mask(
+                decoder_inputs, input_mask
+            )
+        else:
+            attention_mask = enc_dec_attention_mask
 
         # The Transformer performs sum residuals on all layers so the input needs
         # to be the same as the hidden size.
@@ -208,11 +212,15 @@ class TransformerDecoder(object):
             else:
                 final_output = prev_output
 
-        dense_layer = tf.layers.Dense(num_classes,
-                                      activation=None,
-                                      kernel_initializer=tf.orthogonal_initializer()
-                                      )
-        logits = dense_layer(final_output)
+        if num_classes:
+            dense_layer = tf.layers.Dense(
+                num_classes,
+                activation=None,
+                kernel_initializer=tf.orthogonal_initializer()
+            )
+            logits = dense_layer(final_output)
+        else:
+            logits = final_output
         return logits
 
     def train_eval(self, features, hidden_feature, mode, problem_name):
