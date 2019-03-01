@@ -108,6 +108,8 @@ class BertMultiTask():
                     variable_summaries(
                         layer_output, layer_output.name.replace(':0', ''))
 
+        feature_dict['all'] = tf.concat(feature_dict['all'], axis=1)
+
         return feature_dict
 
     def top(self, features, hidden_feature, mode):

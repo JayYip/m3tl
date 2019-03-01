@@ -147,6 +147,7 @@ class Params():
         self.use_one_hot_embeddings = True
         self.label_smoothing = 0.1
         self.crf = True
+        self.bert_num_hidden_layer = 12
 
         # seq2seq
         self.decoder_num_hidden_layers = 3
@@ -255,6 +256,7 @@ class Params():
         self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
         self.bert_config = BertConfig.from_json_file(
             os.path.join(self.ckpt_dir, 'bert_config.json'))
+        self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
         self.bert_config_dict = self.bert_config.__dict__
         with open(self.vocab_file, 'r', encoding='utf8') as vf:
             self.vocab_size = len(vf.readlines())
@@ -313,6 +315,7 @@ class Params():
                 'use_one_hot_embeddings',
                 'label_smoothing',
                 'crf',
+                'bert_num_hidden_layer',
 
                 'decoder_num_hidden_layers',
                 'beam_size',

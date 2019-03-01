@@ -35,7 +35,8 @@ class TransformerDecoder(object):
             cache,
             num_classes,
             do_return_all_layers,
-            enc_dec_attention_mask=None):
+            enc_dec_attention_mask=None,
+            add_self_attention=True):
         input_tensor = decoder_inputs
         num_hidden_layers = self.params.decoder_num_hidden_layers
         hidden_size = self.params.bert_config.hidden_size
@@ -103,33 +104,37 @@ class TransformerDecoder(object):
 
                 with tf.variable_scope("attention"):
                     attention_heads = []
-                    with tf.variable_scope("self"):
-                        attention_head = attention_layer_with_cache(
-                            from_tensor=layer_input,
-                            to_tensor=layer_input,
-                            attention_mask=decoder_self_attention_mask,
-                            num_attention_heads=num_attention_heads,
-                            size_per_head=attention_head_size,
-                            attention_probs_dropout_prob=attention_probs_dropout_prob,
-                            initializer_range=initializer_range,
-                            do_return_2d_tensor=False,
-                            batch_size=batch_size,
-                            from_seq_length=decode_seq_length,
-                            to_seq_length=decode_seq_length,
-                            cache=layer_cache)
-                        attention_heads.append(attention_head)
+                    if add_self_attention:
+                        with tf.variable_scope("self"):
+                            attention_head = attention_layer_with_cache(
+                                from_tensor=layer_input,
+                                to_tensor=layer_input,
+                                attention_mask=decoder_self_attention_mask,
+                                num_attention_heads=num_attention_heads,
+                                size_per_head=attention_head_size,
+                                attention_probs_dropout_prob=attention_probs_dropout_prob,
+                                initializer_range=initializer_range,
+                                do_return_2d_tensor=False,
+                                batch_size=batch_size,
+                                from_seq_length=decode_seq_length,
+                                to_seq_length=decode_seq_length,
+                                cache=layer_cache)
+                            attention_heads.append(attention_head)
 
-                        self_attention_output = None
-                        if len(attention_heads) == 1:
-                            self_attention_output = attention_heads[0]
-                        else:
-                            # In the case where we have other sequences, we just concatenate
-                            # them to the self-attention head before the projection.
-                            self_attention_output = tf.concat(
-                                attention_heads, axis=-1)
-                    if cache is not None:
+                            self_attention_output = None
+                            if len(attention_heads) == 1:
+                                self_attention_output = attention_heads[0]
+                            else:
+                                # In the case where we have other sequences, we just concatenate
+                                # them to the self-attention head before the projection.
+                                self_attention_output = tf.concat(
+                                    attention_heads, axis=-1)
+                        if cache is not None:
+                            self_attention_output = tf.reshape(
+                                self_attention_output, [batch_size, -1, hidden_size])
+                    else:
                         self_attention_output = tf.reshape(
-                            self_attention_output, [batch_size, -1, hidden_size])
+                            layer_input, [batch_size, -1, hidden_size])
 
                     with tf.variable_scope('enc_dec_attention'):
                         attention_heads = []
