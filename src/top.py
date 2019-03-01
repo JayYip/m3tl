@@ -926,7 +926,7 @@ class GridTransformer(TopLayer):
 
         grid_transformer_params = copy(self.params)
         grid_transformer_params.decoder_num_hidden_layers = 1
-        self.decoder = TransformerDecoder(self.params)
+        self.decoder = TransformerDecoder(grid_transformer_params)
 
         encoder_output = key_hidden_feature
         decoder_inputs = hidden_logits
