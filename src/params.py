@@ -161,7 +161,8 @@ class Params():
         self.augument_mask_lm = False
         self.augument_rate = 0.5
         self.distillation = False
-        self.mutual_prediction = False
+        # dep since not good
+        # self.mutual_prediction = False
         self.grid_transformer = False
 
         # random replace punctuation by some prob to
@@ -233,7 +234,8 @@ class Params():
                 for problem in flag_chunk.split('&'):
                     problem_type[problem] = self.problem_type[problem]
                 self.run_problem_list.append(problem_type)
-        if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
+        # if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
+        if self.label_transfer and self.label_transfer_problem is None:
             self.label_transfer_problem = [p for p in self.run_problem_list]
 
         problem_list = sorted(re.split(r'[&|]', flag_string))
@@ -339,7 +341,7 @@ class Params():
                 'hidden_gru',
                 'label_transfer_gru',
                 'label_transfer_gru_hidden_size',
-                'mutual_prediction',
+                # 'mutual_prediction',
                 'grid_transformer']
 
     def to_json(self):
