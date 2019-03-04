@@ -30,7 +30,7 @@ class TopLayer():
     def get_logit(self):
         return self.logits
 
-    def eval_metric_fn(self, features, logits, loss, problem):
+    def eval_metric_fn(self, features, logits, loss, problem, weights=None):
         label_ids = features['%s_label_ids' % problem]
 
         def metric_fn(label_ids, logits):
@@ -38,7 +38,7 @@ class TopLayer():
             prob = tf.nn.softmax(logits)
 
             accuracy = tf.metrics.accuracy(
-                label_ids, predictions, weights=features['input_mask'])
+                label_ids, predictions, weights=weights)
             acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
                 metrics.Metrics.ACC_PER_SEQ],
                 prob, features, label_ids)
@@ -279,7 +279,7 @@ class SequenceLabel(TopLayer):
             seq_loss = tf.reduce_mean(batch_loss)
 
             return self.eval_metric_fn(
-                features, logits, seq_loss, problem_name)
+                features, logits, seq_loss, problem_name, features['input_mask'])
 
         elif mode == tf.estimator.ModeKeys.PREDICT:
             if self.params.crf:
@@ -691,7 +691,7 @@ class Seq2Seq(TopLayer):
                 return self.loss
             else:
                 return self.eval_metric_fn(
-                    features, logits, loss, problem_name)
+                    features, logits, loss, problem_name, features['%s_mask' % problem_name])
 
         else:
             self.pred = tf.identity(self.beam_search_decode(

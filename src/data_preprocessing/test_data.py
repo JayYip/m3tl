@@ -28,10 +28,10 @@ def WeiboFakeCLS(params, mode):
     inputs_list = data['inputs'][:100]
     target_list = data['target'][:100]
 
-    new_target_list = [1 if len(set(t)) > 1 else 0 for t in target_list]
+    new_target_list = ['1' if len(set(t)) > 1 else '0' for t in target_list]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'WeiboFakeCLS', mode, new_target_list, 'O')
+        params, 'WeiboFakeCLS', mode, new_target_list, '0')
 
     return create_single_problem_generator('WeiboFakeCLS',
                                            inputs_list,
