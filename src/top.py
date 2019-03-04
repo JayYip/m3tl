@@ -751,6 +751,6 @@ class GridTransformer(TopLayer):
             add_self_attention=False
         )
         if problem_type == 'cls':
-            decode_output = tf.squeeze(decode_output)
+            decode_output = tf.squeeze(decode_output, axis=1)
 
         return decode_output
