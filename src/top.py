@@ -909,7 +909,12 @@ class GridTransformer(TopLayer):
     def __call__(self, features, hidden_feature, mode, problem_name):
         key_hidden_feature = hidden_feature['all']
 
-        query_hidden_feature = hidden_feature['seq']
+        problem_type = self.params.problem_type[problem_name]
+        q_key = 'pooled' if problem_type == 'cls' else 'seq'
+        query_hidden_feature = hidden_feature[q_key]
+        if problem_type == 'cls':
+            query_hidden_feature = tf.expand_dims(
+                query_hidden_feature, axis=1)
         hidden_size = self.params.bert_config.hidden_size
 
         # transform hidden feature to batch_size, max_seq*num_layers, hidden_size
@@ -949,5 +954,7 @@ class GridTransformer(TopLayer):
             enc_dec_attention_mask=enc_dec_attention_mask,
             add_self_attention=False
         )
+        if problem_type == 'cls':
+            decode_output = tf.squeeze(decode_output, axis=1)
 
         return decode_output
