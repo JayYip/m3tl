@@ -156,6 +156,11 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
         label_encoder = LabelEncoder()
         label_encoder.load(le_path)
 
+    params.num_classes[problem] = len(label_encoder.encode_dict)
+    if EOS_TOKEN in label_encoder.encode_dict:
+        params.eos_id[problem] = int(
+            label_encoder.transform([EOS_TOKEN])[0])
+
     return label_encoder
 
 

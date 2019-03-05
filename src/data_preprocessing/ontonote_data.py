@@ -126,7 +126,6 @@ def ontonotes_chunk(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_chunk', mode, flat_target_list)
-    params.eos_id['ontonotes_chunk'] = label_encoder.transform([EOS_TOKEN])[0]
 
     return create_single_problem_generator(
         'ontonotes_chunk',

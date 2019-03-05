@@ -44,67 +44,6 @@ class Params():
             'cityu_domain': 'cls',
             'emotion_analysis': 'cls'
         }
-        # self.problem = 'cls'
-
-        self.num_classes = {
-            # num of classes of problems
-            # including padding if padding is needed
-            'WeiboNER': 10,
-            'WeiboFakeCLS': 2,
-            'WeiboSegment': 4,
-            'next_sentence': 2,
-            'CWS': 5,
-            'NER': 10,
-            'CTBPOS': 62,
-            'CTBCWS': 5,
-            'ascws': 5,
-            'msrcws': 5,
-            'pkucws': 5,
-            'cityucws': 5,
-            # 'bosonner': 10,
-            # 'msraner': 10,
-            'msraner': 8,
-            'bosonner': 14,
-            'POS': 62,
-            'weibo_fake_seq2seq_tag': 4,
-            'weibo_fake_seq_tag': 10,
-            'ontonotes_ner': 18,
-            'ontonotes_cws': 5,
-            # add '[SEP]' as eos token
-            'ontonotes_chunk': 194,
-            'boson_domain': 3,
-            'Weibo_domain': 3,
-            'msra_domain': 3,
-            'as_domain': 4,
-            'msr_domain': 4,
-            'pku_domain': 4,
-            'cityu_domain': 4,
-            'emotion_analysis': 2
-        }
-
-        self.data_num_dict = {
-            'CWS': 157952,
-            'NER': 60000,
-            'CTBPOS': 47400,
-            'CTBCWS': 47400,
-            'POS': 47400,
-            'ascws': 708953,
-            'msrcws': 86924,
-            'cityucws': 53019,
-            'pkucws': 19056,
-            'msraner': 46364,
-            'bosonner': 30000,
-            'ontonotes_ner': 39086,
-            'ontonotes_cws': 39086,
-            'ontonotes_chunk': 39086,
-            'boson_domain': 10000,
-            'msra_domain': 46364,
-            'as_domain': 708953,
-            'msr_domain': 86924,
-            'pku_domain': 53019,
-            'cityu_domain': 19056,
-            'emotion_analysis': 130000
-        }
 
         # specify this will make key reuse values top
         # that it, WeiboNER problem will use NER's top
@@ -122,9 +61,6 @@ class Params():
             'msr_domain': 'cws_domain',
             'pku_domain': 'cws_domain',
             'cityu_domain': 'cws_domain'
-        }
-
-        self.eos_id = {
         }
 
         self.multitask_balance_type = 'data_balanced'
@@ -220,81 +156,26 @@ class Params():
             dir_name {str} -- dir name for ckpt, if None,
                 will be created automatically (default: {None})
         """
-        self.problem_str = flag_string
-        # Parse problem string
-        self.run_problem_list = []
-        for flag_chunk in flag_string.split('|'):
 
-            if '&' not in flag_chunk:
-                problem_type = {}
-                problem_type[flag_chunk] = self.problem_type[flag_chunk]
-                self.run_problem_list.append(problem_type)
-            else:
-                problem_type = {}
-                for problem in flag_chunk.split('&'):
-                    problem_type[problem] = self.problem_type[problem]
-                self.run_problem_list.append(problem_type)
-        # if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
-        if self.label_transfer and self.label_transfer_problem is None:
-            self.label_transfer_problem = [p for p in self.run_problem_list]
-
-        problem_list = sorted(re.split(r'[&|]', flag_string))
-
+        problem_list = self.parse_problem_string(flag_string)
         # create dir and get vocab, config
-        base = base_dir if base_dir is not None else 'tmp'
+        self.prepare_dir(base_dir, dir_name, problem_list)
 
-        dir_name = dir_name if dir_name is not None else '_'.join(
-            problem_list)+'_ckpt'
-        self.ckpt_dir = os.path.join(base, dir_name)
-        create_path(self.ckpt_dir)
-        self.params_path = os.path.join(self.ckpt_dir, 'params.json')
-        try:
-            shutil.copy2(os.path.join(self.init_checkpoint,
-                         'vocab.txt'), self.ckpt_dir)
-            shutil.copy2(os.path.join(self.init_checkpoint,
-                                    'bert_config.json'), self.ckpt_dir)
-        except FileNotFoundError:
-            pass
-        self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
-        self.bert_config = BertConfig.from_json_file(
-            os.path.join(self.ckpt_dir, 'bert_config.json'))
-        self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
-        self.bert_config_dict = self.bert_config.__dict__
-        with open(self.vocab_file, 'r', encoding='utf8') as vf:
-            self.vocab_size = len(vf.readlines())
-
-        # update data_num and train_steps
-        self.data_num = 0
-        for problem in problem_list:
-            if problem not in self.data_num_dict:
-                self.data_num += len(
-                    list(self.read_data_fn[problem](self, 'train')))
-                self.data_num_dict[problem] = len(
-                    list(self.read_data_fn[problem](self, 'train')))
-            else:
-                self.data_num += self.data_num_dict[problem]
+        self.get_data_info(problem_list, 'tmp')
 
         self.shuffle_buffer = min([200000, self.data_num])
-
-        if self.problem_type[problem] == 'pretrain':
-            dup_fac = self.dupe_factor
-        else:
-            dup_fac = 1
+        for problem in problem_list:
+            if self.problem_type[problem] == 'pretrain':
+                dup_fac = self.dupe_factor
+                break
+            else:
+                dup_fac = 1
         self.train_steps = int((
             self.data_num * self.train_epoch * dup_fac) / (self.batch_size*gpu))
         self.num_warmup_steps = int(0.1 * self.train_steps)
 
         # linear scale learing rate
         self.lr = self.init_lr * gpu
-
-        # get eos_id
-        for problem in problem_list:
-            try:
-                le = get_or_make_label_encoder(self, problem, 'predict')
-                if EOS_TOKEN in le.encode_dict:
-                    self.eos_id[problem] = le.transform([EOS_TOKEN])[0]
-            except FileNotFoundError:
-                pass
 
         self.to_json()
 
@@ -359,3 +240,100 @@ class Params():
             dump_dict = json.load(f)
         for att in dump_dict:
             setattr(self, att, dump_dict[att])
+
+    def get_data_info(self, problem_list, base):
+        '''Get number of data, number of classes of data and eos_id of data.
+
+        Arguments:
+            problem_list {list} -- problem list
+            base {str} -- path to store data_info.json
+        '''
+
+        json_path = os.path.join(base, 'data_info.json')
+        if os.path.exists(json_path):
+            data_info = json.load(open(json_path, 'r', encoding='utf8'))
+            self.data_num_dict = data_info['data_num']
+            self.num_classes = data_info['num_classes']
+            self.eos_id = data_info['eos_id']
+        else:
+            self.data_num_dict = {}
+            self.num_classes = {}
+            self.eos_id = {}
+
+        # update data_num and train_steps
+        self.data_num = 0
+        for problem in problem_list:
+            if problem not in self.data_num_dict:
+                self.data_num += len(
+                    list(self.read_data_fn[problem](self, 'train')))
+                self.data_num_dict[problem] = len(
+                    list(self.read_data_fn[problem](self, 'train')))
+            else:
+                self.data_num += self.data_num_dict[problem]
+
+        data_info = {
+            'data_num': self.data_num_dict,
+            'num_classes': self.num_classes,
+            'eos_id': self.eos_id
+        }
+
+        json.dump(data_info, open(json_path, 'w', encoding='utf8'))
+
+    def parse_problem_string(self, flag_string):
+        '''Parse problem string
+        Example:
+            CWS|POS|WeiboNER&WeiboSegment
+
+            self.run_problem_list = [{CWS:seq_tag}, {POS:seq_tag}, {WeiboNER:seq_tag, WeiboSegment:seq_tag}]
+            problem_list = [CWS, POS, WeiboNER, WeiboSegment]
+
+        Arguments:
+            flag_string {str} -- problem string
+
+        Returns:
+            list -- problem list
+        '''
+
+        self.problem_str = flag_string
+        # Parse problem string
+        self.run_problem_list = []
+        for flag_chunk in flag_string.split('|'):
+
+            if '&' not in flag_chunk:
+                problem_type = {}
+                problem_type[flag_chunk] = self.problem_type[flag_chunk]
+                self.run_problem_list.append(problem_type)
+            else:
+                problem_type = {}
+                for problem in flag_chunk.split('&'):
+                    problem_type[problem] = self.problem_type[problem]
+                self.run_problem_list.append(problem_type)
+        # if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
+        if self.label_transfer and self.label_transfer_problem is None:
+            self.label_transfer_problem = [p for p in self.run_problem_list]
+
+        problem_list = sorted(re.split(r'[&|]', flag_string))
+        return problem_list
+
+    def prepare_dir(self, base_dir, dir_name, problem_list):
+        base = base_dir if base_dir is not None else 'tmp'
+
+        dir_name = dir_name if dir_name is not None else '_'.join(
+            problem_list)+'_ckpt'
+        self.ckpt_dir = os.path.join(base, dir_name)
+        create_path(self.ckpt_dir)
+        self.params_path = os.path.join(self.ckpt_dir, 'params.json')
+        try:
+            shutil.copy2(os.path.join(self.init_checkpoint,
+                         'vocab.txt'), self.ckpt_dir)
+            shutil.copy2(os.path.join(self.init_checkpoint,
+                                    'bert_config.json'), self.ckpt_dir)
+        except FileNotFoundError:
+            pass
+        self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
+        self.bert_config = BertConfig.from_json_file(
+            os.path.join(self.ckpt_dir, 'bert_config.json'))
+        self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
+        self.bert_config_dict = self.bert_config.__dict__
+        with open(self.vocab_file, 'r', encoding='utf8') as vf:
+            self.vocab_size = len(vf.readlines())

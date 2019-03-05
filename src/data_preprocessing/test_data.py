@@ -60,8 +60,6 @@ def weibo_fake_seq2seq_tag(params, mode: str):
         mode,
         [BOS_TOKEN, '1', '2', EOS_TOKEN],
         zero_class=BOS_TOKEN)
-    params.eos_id['weibo_fake_seq2seq_tag'] = label_encoder.transform(
-        [EOS_TOKEN])[0]
 
     return create_single_problem_generator(
         'weibo_fake_seq2seq_tag',
