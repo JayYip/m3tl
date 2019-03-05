@@ -149,65 +149,61 @@ class BertMultiTask():
             for problem in problem_dict:
                 problem_type = self.config.problem_type[problem]
 
-                if problem in self.config.share_top:
-                    top_name = self.config.share_top[problem]
-
-                else:
-                    top_name = problem
+                scope_name = self.config.share_top[problem]
 
                 if problem_type == 'pretrain':
                     pretrain = PreTrain(self.config)
                     return_dict[problem] = pretrain(
                         features, hidden_feature, mode, problem)
+                    return return_dict
 
+                # get features with ind == 1
+                if mode == tf.estimator.ModeKeys.TRAIN:
+                    record_ind = tf.cast(
+                        features['%s_loss_multiplier' % problem], tf.bool)
+                    feature_this_round = {
+                        k: tf.boolean_mask(v, record_ind)
+                        for k, v in features.items()}
+                    hidden_feature_this_round = {
+                        k: tf.boolean_mask(v, record_ind)
+                        for k, v in hidden_feature.items()}
                 else:
-                    # get features with ind == 1
+                    feature_this_round = features
+                    hidden_feature_this_round = hidden_feature
+
+                top_scope_name = '%s_top' % scope_name
+
+                if self.config.label_transfer:
+                    top_scope_name = top_scope_name + '_lt'
+                    if self.config.hidden_gru:
+                        top_scope_name += '_gru'
+
+                if self.config.label_transfer and self.config.grid_transformer:
+                    raise ValueError(
+                        'Label Transfer and grid transformer cannot be enabled in the same time.'
+                    )
+
+                if self.config.grid_transformer:
+                    grid_scope_name = top_scope_name + '_grid'
+                    with tf.variable_scope(grid_scope_name):
+                        grid_layer = GridTransformer(self.config)
+                        hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
+
+                        hidden_feature_this_round[hidden_feature_key] = grid_layer(
+                            feature_this_round, hidden_feature_this_round, mode, problem)
+
+                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+
+                    layer = problem_type_layer[
+                        problem_type](
+                        self.config)
+                    return_dict[problem] = layer(
+                        feature_this_round,
+                        hidden_feature_this_round, mode, problem)
+
                     if mode == tf.estimator.ModeKeys.TRAIN:
-                        record_ind = tf.cast(
-                            features['%s_loss_multiplier' % problem], tf.bool)
-                        feature_this_round = {
-                            k: tf.boolean_mask(v, record_ind)
-                            for k, v in features.items()}
-                        hidden_feature_this_round = {
-                            k: tf.boolean_mask(v, record_ind)
-                            for k, v in hidden_feature.items()}
-                    else:
-                        feature_this_round = features
-                        hidden_feature_this_round = hidden_feature
-
-                    top_scope_name = '%s_top' % top_name
-
-                    if self.config.label_transfer:
-                        top_scope_name = top_scope_name + '_lt'
-                        if self.config.hidden_gru:
-                            top_scope_name += '_gru'
-
-                    if self.config.label_transfer and self.config.grid_transformer:
-                        raise ValueError(
-                            'Label Transfer and grid transformer cannot be enabled in the same time.'
-                        )
-
-                    if self.config.grid_transformer:
-                        grid_scope_name = top_scope_name + '_grid'
-                        with tf.variable_scope(grid_scope_name):
-                            grid_layer = GridTransformer(self.config)
-                            hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
-
-                            hidden_feature_this_round[hidden_feature_key] = grid_layer(
-                                feature_this_round, hidden_feature_this_round, mode, problem)
-
-                    with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-
-                        layer = problem_type_layer[
-                            problem_type](
-                            self.config)
-                        return_dict[problem] = layer(
-                            feature_this_round,
-                            hidden_feature_this_round, mode, problem)
-
-                        if mode == tf.estimator.ModeKeys.TRAIN:
-                            return_dict[problem] = filter_loss(
-                                return_dict[problem], feature_this_round, problem)
+                        return_dict[problem] = filter_loss(
+                            return_dict[problem], feature_this_round, problem)
 
         if self.config.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             try:

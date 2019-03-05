@@ -62,6 +62,7 @@ class Params():
             'pku_domain': 'cws_domain',
             'cityu_domain': 'cws_domain'
         }
+        self.share_top = dict(self.share_top, **self.problem_type)
 
         self.multitask_balance_type = 'data_balanced'
         # self.multitask_balance_type = 'problem_balanced'
