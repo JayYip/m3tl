@@ -62,7 +62,9 @@ class Params():
             'pku_domain': 'cws_domain',
             'cityu_domain': 'cws_domain'
         }
-        self.share_top = dict(self.share_top, **self.problem_type)
+        for p in self.problem_type:
+            if p not in self.share_top:
+                self.share_top[p] = p
 
         self.multitask_balance_type = 'data_balanced'
         # self.multitask_balance_type = 'problem_balanced'
