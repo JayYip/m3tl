@@ -734,10 +734,16 @@ class GridTransformer(TopLayer):
         decoder_inputs = hidden_logits
         input_mask = features['input_mask']
 
-        self_attention_mask = modeling.create_attention_mask_from_input_mask(
-            features['input_ids'], input_mask)
-        enc_dec_attention_mask = tf.concat(
-            [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
+        if problem_type == 'cls':
+            self_attention_mask = modeling.create_attention_mask_from_input_mask(
+                query_hidden_feature, input_mask)
+            enc_dec_attention_mask = tf.concat(
+                [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
+        else:
+            self_attention_mask = modeling.create_attention_mask_from_input_mask(
+                features['input_ids'], input_mask)
+            enc_dec_attention_mask = tf.concat(
+                [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
 
         decode_output = self.decoder.decode(
             decoder_inputs=decoder_inputs,
