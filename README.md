@@ -92,9 +92,3 @@ def WeiboFakeCLS(params, mode):
                                            tokenizer,
                                            mode)
 ```
-
-## TODO
-
-- model_fn top clean up
-- better share top management
-- top model clean up
