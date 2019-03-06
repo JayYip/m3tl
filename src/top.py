@@ -724,6 +724,11 @@ class GridTransformer(TopLayer):
             kernel_initializer=tf.orthogonal_initializer()
         )
         hidden_logits = output_layer(query_hidden_feature)
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            hidden_logits = tf.nn.dropout(
+                hidden_logits,
+                keep_prob=self.params.dropout_keep_prob)
+        hidden_logits = query_hidden_feature
 
         grid_transformer_params = copy(self.params)
         grid_transformer_params.decoder_num_hidden_layers = 1
@@ -739,11 +744,15 @@ class GridTransformer(TopLayer):
                 query_hidden_feature, input_mask)
             enc_dec_attention_mask = tf.concat(
                 [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
+            self_attention_mask = self_attention_mask[:, :, 0]
+            # For cls, no need to add self attention
+            self_attention = False
         else:
             self_attention_mask = modeling.create_attention_mask_from_input_mask(
                 features['input_ids'], input_mask)
             enc_dec_attention_mask = tf.concat(
                 [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
+            self_attention = True
 
         decode_output = self.decoder.decode(
             decoder_inputs=decoder_inputs,
@@ -754,7 +763,7 @@ class GridTransformer(TopLayer):
             num_classes=None,
             do_return_all_layers=False,
             enc_dec_attention_mask=enc_dec_attention_mask,
-            add_self_attention=False
+            add_self_attention=self_attention
         )
         if problem_type == 'cls':
             decode_output = tf.squeeze(decode_output, axis=1)
