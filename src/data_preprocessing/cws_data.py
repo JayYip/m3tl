@@ -157,7 +157,7 @@ def CWS(params, mode):
                                            mode)
 
 
-def ascws(params, mode):
+def as_cws(params, mode):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
@@ -170,9 +170,9 @@ def ascws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        params, 'ascws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'as_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
-    return create_single_problem_generator('ascws',
+    return create_single_problem_generator('as_cws',
                                            inputs,
                                            target,
                                            label_encoder,
@@ -181,7 +181,7 @@ def ascws(params, mode):
                                            mode)
 
 
-def msrcws(params, mode):
+def msr_cws(params, mode):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
@@ -194,9 +194,9 @@ def msrcws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        params, 'msrcws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'msr_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
-    return create_single_problem_generator('msrcws',
+    return create_single_problem_generator('msr_cws',
                                            inputs,
                                            target,
                                            label_encoder,
@@ -205,7 +205,7 @@ def msrcws(params, mode):
                                            mode)
 
 
-def pkucws(params, mode):
+def pku_cws(params, mode):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
@@ -218,9 +218,9 @@ def pkucws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        params, 'pkucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'pku_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
-    return create_single_problem_generator('pkucws',
+    return create_single_problem_generator('pku_cws',
                                            inputs,
                                            target,
                                            label_encoder,
@@ -229,7 +229,7 @@ def pkucws(params, mode):
                                            mode)
 
 
-def cityucws(params, mode):
+def city_cws(params, mode):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
@@ -242,9 +242,9 @@ def cityucws(params, mode):
     inputs, target = _process_text_files(file_list)
 
     label_encoder = get_or_make_label_encoder(
-        params, 'cityucws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'city_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
 
-    return create_single_problem_generator('cityucws',
+    return create_single_problem_generator('city_cws',
                                            inputs,
                                            target,
                                            label_encoder,
@@ -264,8 +264,8 @@ def as_domain(params, mode):
 
     inputs, target = _process_text_files(file_list)
 
-    target_list = ['ascws' for _ in target]
-    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    target_list = ['as_cws' for _ in target]
+    flat_target_list = ['as_cws', 'pku_cws', 'city_cws', 'msr_cws']
     label_encoder = get_or_make_label_encoder(
         params, 'cws_domain', mode, flat_target_list)
 
@@ -289,8 +289,8 @@ def msr_domain(params, mode):
 
     inputs, target = _process_text_files(file_list)
 
-    target_list = ['msrcws' for _ in target]
-    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    target_list = ['msr_cws' for _ in target]
+    flat_target_list = ['as_cws', 'pku_cws', 'city_cws', 'msr_cws']
     label_encoder = get_or_make_label_encoder(
         params, 'cws_domain', mode, flat_target_list)
 
@@ -314,8 +314,8 @@ def pku_domain(params, mode):
 
     inputs, target = _process_text_files(file_list)
 
-    target_list = ['pkucws' for _ in target]
-    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    target_list = ['pku_cws' for _ in target]
+    flat_target_list = ['as_cws', 'pku_cws', 'city_cws', 'msr_cws']
     label_encoder = get_or_make_label_encoder(
         params, 'cws_domain', mode, flat_target_list)
 
@@ -339,8 +339,8 @@ def cityu_domain(params, mode):
 
     inputs, target = _process_text_files(file_list)
 
-    target_list = ['cityucws' for _ in target]
-    flat_target_list = ['ascws', 'pkucws', 'cityucws', 'msrcws']
+    target_list = ['city_cws' for _ in target]
+    flat_target_list = ['as_cws', 'pku_cws', 'city_cws', 'msr_cws']
     label_encoder = get_or_make_label_encoder(
         params, 'cws_domain', mode, flat_target_list)
 

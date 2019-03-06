@@ -11,7 +11,7 @@ from ..create_generators import create_pretraining_generator, create_single_prob
 from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
 
 
-def WeiboFakeCLS(params, mode):
+def weibo_fake_cls(params, mode):
     """Just a test problem to test multiproblem support
 
     Arguments:
@@ -19,7 +19,7 @@ def WeiboFakeCLS(params, mode):
         mode {mode} -- mode
     """
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -31,9 +31,9 @@ def WeiboFakeCLS(params, mode):
     new_target_list = ['1' if len(set(t)) > 1 else '0' for t in target_list]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'WeiboFakeCLS', mode, new_target_list, '0')
+        params, 'weibo_fake_cls', mode, new_target_list, '0')
 
-    return create_single_problem_generator('WeiboFakeCLS',
+    return create_single_problem_generator('weibo_fake_cls',
                                            inputs_list,
                                            new_target_list,
                                            label_encoder,
@@ -45,7 +45,7 @@ def WeiboFakeCLS(params, mode):
 def weibo_fake_seq2seq_tag(params, mode: str):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -71,12 +71,12 @@ def weibo_fake_seq2seq_tag(params, mode: str):
         mode)
 
 
-def WeiboPretrain(params, mode):
+def weibo_pretrain(params, mode):
 
     sentence_split = r'[.!?。？！]'
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -94,7 +94,7 @@ def WeiboPretrain(params, mode):
                 segmented_list[-1].append(list(sentence))
     segmented_list = [doc for doc in segmented_list if doc]
 
-    return create_pretraining_generator('WeiboPretrain',
+    return create_pretraining_generator('weibo_pretrain',
                                         segmented_list,
                                         None,
                                         None,
@@ -105,7 +105,7 @@ def WeiboPretrain(params, mode):
 
 def weibo_fake_seq_tag(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']

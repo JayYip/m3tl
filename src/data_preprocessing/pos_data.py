@@ -4,13 +4,13 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder
 from ..create_generators import create_single_problem_generator
-from .ctb_data import read_ctbpos
+from .ctb_data import read_ctb_pos
 
 
 def POS(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
-    input_list, target_list = read_ctbpos()
+    input_list, target_list = read_ctb_pos()
 
     if mode == 'train':
         input_list, _, target_list, _ = train_test_split(

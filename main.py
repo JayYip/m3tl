@@ -14,8 +14,8 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("problem", "WeiboNER",
-                    "Problems to run, for multiproblem, use & to seperate, e.g. WeiboNER&WeiboSegment")
+flags.DEFINE_string("problem", "weibo_ner",
+                    "Problems to run, for multiproblem, use & to seperate, e.g. weibo_ner&weibo_cws")
 
 flags.DEFINE_string("schedule", "train",
                     "The vocabulary file that the BERT model was trained on.")

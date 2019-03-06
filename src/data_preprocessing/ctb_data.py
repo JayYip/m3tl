@@ -11,7 +11,7 @@ from ..utils import get_or_make_label_encoder
 from ..create_generators import create_single_problem_generator
 
 
-def read_ctbpos():
+def read_ctb_pos():
     file_list = glob.glob('data/ctb8.0/data/postagged/*')
 
     input_list = []
@@ -44,10 +44,10 @@ def read_ctbpos():
     return input_list, target_list
 
 
-def CTBPOS(params, mode):
+def ctb_pos(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
-    input_list, target_list = read_ctbpos()
+    input_list, target_list = read_ctb_pos()
 
     if mode == 'train':
         input_list, _, target_list, _ = train_test_split(
@@ -59,8 +59,8 @@ def CTBPOS(params, mode):
     flat_target_list = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'CTBPOS', mode, flat_target_list, zero_class='[PAD]')
-    return create_single_problem_generator('CTBPOS',
+        params, 'ctb_pos', mode, flat_target_list, zero_class='[PAD]')
+    return create_single_problem_generator('ctb_pos',
                                            input_list,
                                            target_list,
                                            label_encoder,
@@ -69,7 +69,7 @@ def CTBPOS(params, mode):
                                            mode)
 
 
-def CTBCWS(params, mode):
+def ctb_cws(params, mode):
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     file_list = glob.glob('data/ctb8.0/data/segmented/*')
 
@@ -114,8 +114,8 @@ def CTBCWS(params, mode):
     flat_target_list = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'CTBCWS', mode, flat_target_list, zero_class='[PAD]')
-    return create_single_problem_generator('CTBCWS',
+        params, 'ctb_cws', mode, flat_target_list, zero_class='[PAD]')
+    return create_single_problem_generator('ctb_cws',
                                            input_list,
                                            target_list,
                                            label_encoder,

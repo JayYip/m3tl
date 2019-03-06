@@ -1,6 +1,6 @@
 # Predefined Problems
 
-## WeiboNER/WeiboSegment/WeiboFakeCLS
+## weibo_ner/weibo_cws/weibo_fake_cls
 
 A small dataset that is good for debug and demo.
 
@@ -16,6 +16,6 @@ Chinese Named Entity Recognition. Trained using following dataset:
 - MSRA
 - Weibo
 
-## CTBCWS/CTBPOS
+## ctb_cws/ctb_pos
 
 Chinese Treebank 8.0. Data source: <https://wakespace.lib.wfu.edu/handle/10339/39379>

@@ -15,20 +15,20 @@ class Params():
         self.run_problem_list = []
 
         self.problem_type = {
-            'WeiboNER': 'seq_tag',
-            'WeiboFakeCLS': 'cls',
-            'WeiboSegment': 'seq_tag',
-            'WeiboPretrain': 'pretrain',
+            'weibo_ner': 'seq_tag',
+            'weibo_fake_cls': 'cls',
+            'weibo_cws': 'seq_tag',
+            'weibo_pretrain': 'pretrain',
             'CWS': 'seq_tag',
             'NER': 'seq_tag',
-            'CTBPOS': 'seq_tag',
-            'CTBCWS': 'seq_tag',
-            'ascws': 'seq_tag',
-            'msrcws': 'seq_tag',
-            'pkucws': 'seq_tag',
-            'cityucws': 'seq_tag',
-            'bosonner': 'seq_tag',
-            'msraner': 'seq_tag',
+            'ctb_pos': 'seq_tag',
+            'ctb_cws': 'seq_tag',
+            'as_cws': 'seq_tag',
+            'msr_cws': 'seq_tag',
+            'pku_cws': 'seq_tag',
+            'city_cws': 'seq_tag',
+            'boson_ner': 'seq_tag',
+            'msra_ner': 'seq_tag',
             'POS': 'seq_tag',
             'weibo_fake_seq2seq_tag': 'seq2seq_tag',
             'weibo_fake_seq_tag': 'seq_tag',
@@ -46,14 +46,14 @@ class Params():
         }
 
         # specify this will make key reuse values top
-        # that it, WeiboNER problem will use NER's top
+        # that it, weibo_ner problem will use NER's top
         self.share_top = {
-            'CTBCWS': 'CWS',
-            'ascws': 'CWS',
-            'msrcws': 'CWS',
-            'pkucws': 'CWS',
-            'cityucws': 'CWS',
-            'CTBPOS': 'POS',
+            'ctb_cws': 'CWS',
+            'as_cws': 'CWS',
+            'msr_cws': 'CWS',
+            'pku_cws': 'CWS',
+            'city_cws': 'CWS',
+            'ctb_pos': 'POS',
             'boson_domain': 'ner_domain',
             'Weibo_domain': 'ner_domain',
             'msra_domain': 'ner_domain',
@@ -149,7 +149,7 @@ class Params():
 
         Arguments:
             flag_string {str} -- run problem string
-            example: CWS|POS|WeiboNER&WeiboSegment
+            example: CWS|POS|weibo_ner&weibo_cws
 
         Keyword Arguments:
             gpu {int} -- number of gpu use for training, this
@@ -285,10 +285,10 @@ class Params():
     def parse_problem_string(self, flag_string):
         '''Parse problem string
         Example:
-            CWS|POS|WeiboNER&WeiboSegment
+            CWS|POS|weibo_ner&weibo_cws
 
-            self.run_problem_list = [{CWS:seq_tag}, {POS:seq_tag}, {WeiboNER:seq_tag, WeiboSegment:seq_tag}]
-            problem_list = [CWS, POS, WeiboNER, WeiboSegment]
+            self.run_problem_list = [{CWS:seq_tag}, {POS:seq_tag}, {weibo_ner:seq_tag, weibo_cws:seq_tag}]
+            problem_list = [CWS, POS, weibo_ner, weibo_cws]
 
         Arguments:
             flag_string {str} -- problem string

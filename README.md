@@ -1,6 +1,6 @@
 # Bert for Multi-task Learning
 
-*Update:* Download trained checkpoint for Chinese NLP problems [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw)(Problem: "CWS|POS|WeiboNER|bosonner|msraner").
+*Update:* Download trained checkpoint for Chinese NLP problems [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw)(Problem: "CWS|POS|weibo_ner|boson_ner|msra_ner").
 
 ## What is it
 
@@ -27,12 +27,12 @@ There are two types of chaining operations can be used to chain problems.
 - `&`. If two problems have the same inputs, they can be chained using `&`. Problems chained by `&` will be trained at the same time.
 - `|`. If two problems don't have the same inputs, they need to be chained using `|`. Problems chained by `|` will be sampled to train at every instance.
 
-For example, `CWS|NER|WeiboNER&WeiboSegment`, one problem will be sampled at each turn, say `WeiboNER&WeiboSegment`, then `WeiboNER` and `WeiboSegment` will trained for this turn together.
+For example, `CWS|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together.
 
 You can train using the following command.
 
 ```bash
-python main.py --problem "CWS|NER|WeiboNER&WeiboSegment" --schedule train --model_dir "tmp/multitask"
+python main.py --problem "CWS|NER|weibo_ner&weibo_cws" --schedule train --model_dir "tmp/multitask"
 ```
 
 For evaluation, you need to separate the problems.
@@ -40,7 +40,7 @@ For evaluation, you need to separate the problems.
 ```bash
 python main.py --problem "CWS" --schedule eval --model_dir "tmp/multitask"
 python main.py --problem "NER" --schedule eval --model_dir "tmp/multitask"
-python main.py --problem "WeiboNER&WeiboSegment" --schedule eval --model_dir "tmp/multitask"
+python main.py --problem "weibo_ner&weibo_cws" --schedule eval --model_dir "tmp/multitask"
 ```
 
 ### How to use trained model
@@ -48,8 +48,8 @@ python main.py --problem "WeiboNER&WeiboSegment" --schedule eval --model_dir "tm
 *It is recommended to use [this](https://github.com/JayYip/bert-as-service) repo to serve model.*
 
 ```bash
-python main.py --problem "CWS|NER|WeiboNER&WeiboSegment" --schedule train --model_dir "tmp/multitask"
-python export_model.py --problem "CWS|NER|WeiboNER&WeiboSegment" --model_dir "tmp/multitask"
+python main.py --problem "CWS|NER|weibo_ner&weibo_cws" --schedule train --model_dir "tmp/multitask"
+python export_model.py --problem "CWS|NER|weibo_ner&weibo_cws" --model_dir "tmp/multitask"
 ```
 
 The above command will train the model and export to the path `tmp/multitask` and create two files: `export_model` and `params.json`.
@@ -57,7 +57,7 @@ The above command will train the model and export to the path `tmp/multitask` an
 Then you can start the service with command below. You need to make sure `export_model` and `params.json` and corresponding label encoders are located in the folder you specified below.
 
 ```bash
-bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -problem "CWS|NER|WeiboNER&WeiboSegment" -model_dir tmp/multitask
+bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -problem "CWS|NER|weibo_ner&weibo_cws" -model_dir tmp/multitask
 ```
 
 ## How to add problems
@@ -68,7 +68,7 @@ bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -prob
 2. Add problem config to `self.problem_type` and `self.num_classes` in `src/params.py`
 
 ```python
-def WeiboFakeCLS(params, mode):
+def weibo_fake_cls(params, mode):
     """Just a test problem to test multiproblem support
 
     Arguments:
@@ -82,9 +82,9 @@ def WeiboFakeCLS(params, mode):
     target_list = [0, 1]
 
     label_encoder = get_or_make_label_encoder(
-        'WeiboFakeCLS', mode, target_list, 0)
+        'weibo_fake_cls', mode, target_list, 0)
 
-    return create_single_problem_generator('WeiboFakeCLS',
+    return create_single_problem_generator('weibo_fake_cls',
                                            inputs_list,
                                            new_target_list,
                                            label_encoder,

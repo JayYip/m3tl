@@ -11,8 +11,8 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("problem", "WeiboNER",
-                    "Problems to run, for multiproblem, use & to seperate, e.g. WeiboNER&WeiboSegment")
+flags.DEFINE_string("problem", "weibo_ner",
+                    "Problems to run, for multiproblem, use & to seperate, e.g. weibo_ner&weibo_cws")
 flags.DEFINE_string("model_dir", "",
                     "Model dir. If not specified, will use problem_name + _ckpt")
 

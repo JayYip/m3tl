@@ -66,7 +66,7 @@ def chinese_literature_ent_type_process_fn(d):
     return ent_type
 
 
-def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
+def read_ner_data(file_pattern='data/ner/weibo_ner*', proc_fn=None):
     """Read data from golden horse data
 
 
@@ -76,7 +76,7 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     Returns:
         dict -- dict, key: 'train', 'eval', value: dict {'inputs', 'target'}
     """
-    # if 'weiboNER' in file_pattern:
+    # if 'weibo_ner' in file_pattern:
     #     proc_fn = gold_horse_ent_type_process_fn
     # elif 'Chinese-Literature' in file_pattern:
     #     proc_fn = chinese_literature_ent_type_process_fn
@@ -130,10 +130,10 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     return result_dict
 
 
-def WeiboNER(params, mode):
+def weibo_ner(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -145,9 +145,9 @@ def WeiboNER(params, mode):
     flat_label = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'WeiboNER', mode, flat_label)
+        params, 'weibo_ner', mode, flat_label)
 
-    return create_single_problem_generator('WeiboNER',
+    return create_single_problem_generator('weibo_ner',
                                            inputs_list,
                                            target_list,
                                            label_encoder,
@@ -163,10 +163,10 @@ def gold_horse_segment_process_fn(d):
     return ent_type
 
 
-def WeiboSegment(params, mode):
+def weibo_cws(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -178,9 +178,9 @@ def WeiboSegment(params, mode):
     flat_label = [item for sublist in target_list for item in sublist]
 
     label_encoder = get_or_make_label_encoder(
-        params, 'WeiboSegment', mode, flat_label, '0')
+        params, 'weibo_cws', mode, flat_label, '0')
 
-    return create_single_problem_generator('WeiboSegment',
+    return create_single_problem_generator('weibo_cws',
                                            inputs_list,
                                            target_list,
                                            label_encoder,
@@ -345,7 +345,7 @@ def read_msra(file_pattern, eval_size):
 def NER(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    weibo_data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                                proc_fn=gold_horse_ent_type_process_fn)
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -383,7 +383,7 @@ def NER(params, mode):
                                            mode)
 
 
-def msraner(params, mode):
+def msra_ner(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
 
@@ -410,8 +410,8 @@ def msraner(params, mode):
     #                     'I-ORG',
     #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
-        params, 'msraner', mode, flat_target_list, zero_class='O')
-    return create_single_problem_generator('msraner',
+        params, 'msra_ner', mode, flat_target_list, zero_class='O')
+    return create_single_problem_generator('msra_ner',
                                            inputs_list,
                                            target_list,
                                            label_encoder,
@@ -420,7 +420,7 @@ def msraner(params, mode):
                                            mode)
 
 
-def bosonner(params, mode):
+def boson_ner(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
 
@@ -448,8 +448,8 @@ def bosonner(params, mode):
     #                     'I-ORG',
     #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
-        params, 'bosonner', mode, flat_target_list, zero_class='O')
-    return create_single_problem_generator('bosonner',
+        params, 'boson_ner', mode, flat_target_list, zero_class='O')
+    return create_single_problem_generator('boson_ner',
                                            inputs_list,
                                            target_list,
                                            label_encoder,
@@ -475,8 +475,8 @@ def boson_domain(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-    target_list = ['bosonner' for _ in target_list]
-    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    target_list = ['boson_ner' for _ in target_list]
+    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
     return create_single_problem_generator('boson_domain',
@@ -491,7 +491,7 @@ def boson_domain(params, mode):
 def Weibo_domain(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -500,8 +500,8 @@ def Weibo_domain(params, mode):
     inputs_list = data['inputs']
     target_list = data['target']
 
-    target_list = ['WeiboNER' for _ in target_list]
-    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    target_list = ['weibo_ner' for _ in target_list]
+    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
     return create_single_problem_generator('Weibo_domain',
@@ -530,8 +530,8 @@ def msra_domain(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
 
-    target_list = ['msraner' for _ in target_list]
-    flat_target_list = ['bosonner', 'WeiboNER', 'msraner']
+    target_list = ['msra_ner' for _ in target_list]
+    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
     return create_single_problem_generator('msra_domain',
