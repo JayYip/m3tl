@@ -66,7 +66,7 @@ def chinese_literature_ent_type_process_fn(d):
     return ent_type
 
 
-def read_ner_data(file_pattern='data/ner/weibo_ner*', proc_fn=None):
+def read_ner_data(file_pattern='data/ner/WeiboNER*', proc_fn=None):
     """Read data from golden horse data
 
 

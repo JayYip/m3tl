@@ -153,7 +153,7 @@ class BertMultiTask():
 
                 if problem_type == 'pretrain':
                     pretrain = PreTrain(self.config)
-                    return_dict[problem] = pretrain(
+                    return_dict[scope_name] = pretrain(
                         features, hidden_feature, mode, problem)
                     return return_dict
 
@@ -197,13 +197,13 @@ class BertMultiTask():
                     layer = problem_type_layer[
                         problem_type](
                         self.config)
-                    return_dict[problem] = layer(
+                    return_dict[scope_name] = layer(
                         feature_this_round,
                         hidden_feature_this_round, mode, problem)
 
                     if mode == tf.estimator.ModeKeys.TRAIN:
-                        return_dict[problem] = filter_loss(
-                            return_dict[problem], feature_this_round, problem)
+                        return_dict[scope_name] = filter_loss(
+                            return_dict[scope_name], feature_this_round, problem)
 
         if self.config.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             try:

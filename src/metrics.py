@@ -178,10 +178,12 @@ def ner_evaluate(problem, estimator, params):
     decode_pred_list = []
     decode_label_list = []
 
+    scope_name = params.share_top[problem]
+
     for p, label, t in zip(pred_list, label_data, text):
         true_seq_length = len(t) - 1
 
-        pred_prob = p[problem]
+        pred_prob = p[scope_name]
 
         pred_prob = pred_prob[1:true_seq_length]
 
@@ -223,10 +225,7 @@ def acc_evaluate(problem, estimator, params):
     decode_pred_list = []
     decode_label_list = []
 
-    if problem in params.share_top:
-        top_problem_name = params.share_top[problem]
-    else:
-        top_problem_name = problem
+    top_problem_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
 
@@ -287,11 +286,12 @@ def cws_evaluate(problem, estimator, params):
 
     decode_pred_list = []
     decode_label_list = []
+    scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
         true_seq_length = len(t) - 1
 
-        pred_prob = p[problem]
+        pred_prob = p[scope_name]
 
         pred_prob = pred_prob[1:true_seq_length]
 
@@ -395,12 +395,12 @@ def getChunks(tagList):
         tagAry = tmp
         chunks = ""
         for i in range(len(tagAry)):
-            if tagAry[i].startswith("B"):
+            if tagAry[i].upper().startswith("B"):
                 pos = i
                 length = 1
                 ty = tagAry[i]
                 for j in range(i + 1, len(tagAry)):
-                    if tagAry[j] in ["M", "E"]:
+                    if tagAry[j].upper() in ["M", "E"]:
                         length += 1
                     else:
                         break
@@ -427,9 +427,11 @@ def seq2seq_evaluate(problem, estimator, params):
     decode_pred_list = []
     decode_label_list = []
 
+    scope_name = params.share_top[problem]
+
     for p, label, t in zip(pred_list, label_data, text):
 
-        pred_prob = p[problem]
+        pred_prob = p[scope_name]
 
         # crf returns tags
         predict = pred_prob

@@ -52,6 +52,7 @@ class SequenceLabel(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['seq']
+        scope_name = self.params.share_top[problem_name]
         if mode == tf.estimator.ModeKeys.TRAIN:
             hidden_feature = tf.nn.dropout(
                 hidden_feature,
@@ -102,10 +103,10 @@ class SequenceLabel(TopLayer):
                 viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
                     logits, crf_transition_param, seq_length)
                 self.prob = tf.identity(
-                    viterbi_sequence, name='%s_predict' % problem_name)
+                    viterbi_sequence, name='%s_predict' % scope_name)
             else:
                 self.prob = tf.nn.softmax(
-                    logits, name='%s_predict' % problem_name)
+                    logits, name='%s_predict' % scope_name)
 
             return self.prob
 
@@ -128,6 +129,7 @@ class Classification(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['pooled']
+        scope_name = self.params.share_top[problem_name]
         if mode == tf.estimator.ModeKeys.TRAIN:
             hidden_feature = tf.nn.dropout(
                 hidden_feature,
@@ -158,7 +160,7 @@ class Classification(TopLayer):
                 features, logits, loss, problem_name)
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.softmax(logits)
-            self.prob = tf.identity(prob, name='%s_predict' % problem_name)
+            self.prob = tf.identity(prob, name='%s_predict' % scope_name)
             return self.prob
 
 
@@ -478,6 +480,7 @@ class Seq2Seq(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name):
         self.decoder = TransformerDecoder(self.params)
+        scope_name = self.params.share_top[problem_name]
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = features['%s_label_ids' % problem_name]
@@ -504,7 +507,7 @@ class Seq2Seq(TopLayer):
         else:
             self.pred = tf.identity(self.beam_search_decode(
                 features, hidden_feature, mode, problem_name),
-                name='%s_predict' % problem_name)
+                name='%s_predict' % scope_name)
             return self.pred
 
 
