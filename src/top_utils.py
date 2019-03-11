@@ -63,6 +63,31 @@ class TopLayer():
         tf.summary.scalar('loss', loss)
         return loss
 
+    def make_hidden_model(self, features, hidden_feature, mode, is_seq=False):
+
+        if self.params.hidden_gru and is_seq:
+            with tf.variable_scope('hidden'):
+                new_hidden_feature = make_cudnngru(
+                    hidden_feature,
+                    int(self.params.bert_config.hidden_size / 2),
+                    self.params,
+                    mode)
+
+                new_hidden_feature.set_shape(
+                    [None, self.params.max_seq_len, self.params.bert_config.hidden_size])
+
+                return new_hidden_feature
+        elif self.params.hidden_dense:
+            with tf.variable_scope('hidden'):
+                hidden_feature = dense_layer(
+                    self.params.bert_config.hidden_size,
+                    hidden_feature, mode,
+                    self.params.dropout_keep_prob,
+                    tf.nn.relu)
+            return hidden_feature
+        else:
+            return hidden_feature
+
     def __call__(self, features, hidden_feature, mode, problem_name):
         raise NotImplementedError
 

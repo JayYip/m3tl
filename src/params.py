@@ -87,6 +87,7 @@ class Params():
         self.label_smoothing = 0.0
         self.crf = True
         self.bert_num_hidden_layer = 12
+        self.hidden_dense = False
 
         # seq2seq
         self.decoder_num_hidden_layers = 3
@@ -226,7 +227,8 @@ class Params():
                 'label_transfer_gru',
                 'label_transfer_gru_hidden_size',
                 # 'mutual_prediction',
-                'grid_transformer']
+                'grid_transformer',
+                'hidden_dense']
 
     def to_json(self):
         dump_dict = {}
