@@ -160,14 +160,14 @@ class Params():
                 will be created automatically (default: {None})
         """
 
-        problem_list = self.parse_problem_string(flag_string)
+        self.problem_list = self.parse_problem_string(flag_string)
         # create dir and get vocab, config
-        self.prepare_dir(base_dir, dir_name, problem_list)
+        self.prepare_dir(base_dir, dir_name, self.problem_list)
 
-        self.get_data_info(problem_list, 'tmp')
+        self.get_data_info(self.problem_list, self.ckpt_dir)
 
         self.shuffle_buffer = min([200000, self.data_num])
-        for problem in problem_list:
+        for problem in self.problem_list:
             if self.problem_type[problem] == 'pretrain':
                 dup_fac = self.dupe_factor
                 break
@@ -281,6 +281,7 @@ class Params():
         }
 
         json.dump(data_info, open(json_path, 'w', encoding='utf8'))
+        return json_path
 
     def parse_problem_string(self, flag_string):
         '''Parse problem string

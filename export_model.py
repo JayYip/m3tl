@@ -1,4 +1,5 @@
 import os
+from shutil import copy2
 
 import tensorflow as tf
 
@@ -70,6 +71,20 @@ def optimize_graph(params: Params):
     return tmp_file
 
 
+def make_serve_dir(params: Params):
+
+    server_dir = os.path.join(params.ckpt_dir, 'serve_model')
+    os.mkdir(server_dir)
+    file_list = [
+        'data_info.json', 'vocab.txt',
+        'bert_config.json', 'export_model',
+        'params.json']
+    file_list += ['%s_label_encoder.pkl' % p for p in params.problem_list]
+    for f in file_list:
+        ori_path = os.path.join(params.ckpt_dir, f)
+        copy2(ori_path, server_dir)
+
+
 if __name__ == "__main__":
     if FLAGS.model_dir:
         base_dir, dir_name = os.path.split(FLAGS.model_dir)
@@ -80,3 +95,4 @@ if __name__ == "__main__":
                           base_dir=base_dir, dir_name=dir_name)
     optimize_graph(params)
     params.to_json()
+    make_serve_dir(params)
