@@ -133,7 +133,7 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
 def weibo_ner(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -166,7 +166,7 @@ def gold_horse_segment_process_fn(d):
 def weibo_cws(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -345,7 +345,7 @@ def read_msra(file_pattern, eval_size):
 def NER(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    weibo_data = read_ner_data(file_pattern='data/ner/weibo_ner*',
+    weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
                                proc_fn=gold_horse_ent_type_process_fn)
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -491,7 +491,7 @@ def boson_domain(params, mode):
 def Weibo_domain(params, mode):
     tokenizer = FullTokenizer(
         vocab_file=params.vocab_file, do_lower_case=False)
-    data = read_ner_data(file_pattern='data/ner/weibo_ner*',
+    data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
