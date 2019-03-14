@@ -184,13 +184,14 @@ class BertMultiTask():
                     )
 
                 if self.config.grid_transformer:
-                    grid_scope_name = top_scope_name + '_grid'
-                    with tf.variable_scope(grid_scope_name):
+                    with tf.variable_scope(top_scope_name):
                         grid_layer = GridTransformer(self.config)
+
                         hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
 
                         hidden_feature_this_round[hidden_feature_key] = grid_layer(
                             feature_this_round, hidden_feature_this_round, mode, problem)
+                    self.config.hidden_dense = False
 
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
 
