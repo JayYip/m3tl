@@ -2,6 +2,7 @@ import os
 from shutil import copy2
 
 import tensorflow as tf
+from tensorflow.tools.graph_transforms import TransformGraph
 
 from src.bert import modeling
 
@@ -58,12 +59,33 @@ def optimize_graph(params: Params):
 
         tmp_g = tf.get_default_graph().as_graph_def()
 
+    input_node_names = ['input_ids', 'input_mask', 'segment_ids']
+    output_node_names = ['%s_top/%s_predict' %
+                         (problem, problem) for problem in params.problem_list]
+
+    transforms = [
+        'remove_nodes(op=Identity)',
+        'fold_constants(ignore_errors=true)',
+        'fold_batch_norms',
+        # 'quantize_weights',
+        # 'quantize_nodes',
+        'merge_duplicate_nodes',
+        'strip_unused_nodes',
+        'sort_by_execution_order'
+    ]
+
     with tf.Session(config=config) as sess:
         tf.logging.info('load parameters from checkpoint...')
         sess.run(tf.global_variables_initializer())
         tf.logging.info('freeze...')
         tmp_g = tf.graph_util.convert_variables_to_constants(
             sess, tmp_g, [n.name[:-2] for n in output_tensors])
+        tmp_g = TransformGraph(
+            tmp_g,
+            input_node_names,
+            output_node_names,
+            transforms
+        )
     tmp_file = os.path.join(params.ckpt_dir, 'export_model')
     tf.logging.info('write graph to a tmp file: %s' % tmp_file)
     with tf.gfile.GFile(tmp_file, 'wb') as f:
@@ -74,7 +96,8 @@ def optimize_graph(params: Params):
 def make_serve_dir(params: Params):
 
     server_dir = os.path.join(params.ckpt_dir, 'serve_model')
-    os.mkdir(server_dir)
+    if not os.path.exists(server_dir):
+        os.mkdir(server_dir)
     file_list = [
         'data_info.json', 'vocab.txt',
         'bert_config.json', 'export_model',
