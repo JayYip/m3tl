@@ -104,6 +104,7 @@ class Params():
         # dep since not good
         # self.mutual_prediction = False
         self.grid_transformer = False
+        self.task_transformer = False
 
         # random replace punctuation by some prob to
         # ease the punctuation sensitive problem
@@ -228,7 +229,8 @@ class Params():
                 'label_transfer_gru_hidden_size',
                 # 'mutual_prediction',
                 'grid_transformer',
-                'hidden_dense']
+                'hidden_dense',
+                'task_transformer']
 
     def to_json(self):
         dump_dict = {}
@@ -315,7 +317,7 @@ class Params():
                     problem_type[problem] = self.problem_type[problem]
                 self.run_problem_list.append(problem_type)
         # if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
-        if self.label_transfer and self.label_transfer_problem is None:
+        if (self.label_transfer or self.task_transformer) and self.label_transfer_problem is None:
             self.label_transfer_problem = [p for p in self.run_problem_list]
 
         problem_list = sorted(re.split(r'[&|]', flag_string))

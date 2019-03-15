@@ -76,6 +76,8 @@ class TopLayer():
                 new_hidden_feature.set_shape(
                     [None, self.params.max_seq_len, self.params.bert_config.hidden_size])
 
+                self.hidden_model_logit = new_hidden_feature
+
                 return new_hidden_feature
         elif self.params.hidden_dense:
             with tf.variable_scope('hidden'):
@@ -84,6 +86,7 @@ class TopLayer():
                     hidden_feature, mode,
                     self.params.dropout_keep_prob,
                     tf.nn.relu)
+                self.hidden_model_logit = hidden_feature
             return hidden_feature
         else:
             return hidden_feature

@@ -496,6 +496,50 @@ class Seq2Seq(TopLayer):
             return self.pred
 
 
+def create_multiself_attention_mask(
+        problem_type,
+        query_hidden_feature,
+        input_mask,
+        input_ids,
+        duplicate_factor):
+    '''A simple function to create multiself attention mask.
+
+    This is kinda a kinda combination of self attention mask and
+    encoder decoder attention mask. 
+
+    Like self attention mask, it can 'see' all words. Unlike self
+    attention, it has encoder decoder mask which is just a stack 
+    of self attention.
+
+    Arguments:
+        problem_type {str} -- problem type
+        query_hidden_feature {tensor} -- query
+        input_mask {tensor} -- input mask
+        input_ids {tensor} -- input ids
+        duplicate_factor {int} -- number of self attention to stack
+
+    Returns:
+        tuple -- self_attention_mask, enc_dec_attention_mask, self_attention
+    '''
+
+    if problem_type == 'cls':
+        self_attention_mask = modeling.create_attention_mask_from_input_mask(
+            query_hidden_feature, input_mask)
+        enc_dec_attention_mask = tf.concat(
+            [self_attention_mask]*duplicate_factor, axis=-1)
+        self_attention_mask = self_attention_mask[:, :, 0]
+        # For cls, no need to add self attention
+        self_attention = False
+    else:
+        self_attention_mask = modeling.create_attention_mask_from_input_mask(
+            input_ids, input_mask)
+        enc_dec_attention_mask = tf.concat(
+            [self_attention_mask]*duplicate_factor, axis=-1)
+        self_attention = True
+
+    return (self_attention_mask, enc_dec_attention_mask, self_attention)
+
+
 class GridTransformer(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name):
@@ -525,23 +569,13 @@ class GridTransformer(TopLayer):
         decoder_inputs = query_hidden_feature
         input_mask = features['input_mask']
 
-        if problem_type == 'cls':
-            self_attention_mask = modeling.create_attention_mask_from_input_mask(
-                query_hidden_feature, input_mask)
-            enc_dec_attention_mask = tf.concat(
-                [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
-            self_attention_mask = self_attention_mask[:, :, 0]
-            # For cls, no need to add self attention
-            self_attention = False
-        else:
-            self_attention_mask = modeling.create_attention_mask_from_input_mask(
-                features['input_ids'], input_mask)
-            enc_dec_attention_mask = tf.concat(
-                [self_attention_mask]*grid_transformer_params.bert_num_hidden_layer, axis=-1)
-            self_attention = True
-
-        # For cls, no need to add self attention
-        self_attention = False
+        self_attention_mask, enc_dec_attention_mask, self_attention = create_multiself_attention_mask(
+            problem_type,
+            query_hidden_feature,
+            input_mask,
+            features['input_ids'],
+            grid_transformer_params.bert_num_hidden_layer
+        )
 
         decode_output = self.decoder.decode(
             decoder_inputs=decoder_inputs,
@@ -560,86 +594,91 @@ class GridTransformer(TopLayer):
         return decode_output
 
 
-# class TaskTransformer(TopLayer):
-#     '''Top model for label transfer, specific for multitask.
-#     It's a dense net with body output features as input.
+class TaskTransformer(TopLayer):
+    '''Top model for label transfer, specific for multitask.
+    It's a dense net with body output features as input.
 
-#     This layer will apply SequenceLabel or Classification for each problem
-#     and then concat each problems' logits together as new hidden feature.
+    This layer will apply SequenceLabel or Classification for each problem
+    and then concat each problems' logits together as new hidden feature.
 
-#     '''
+    '''
 
-#     def __call__(self, features, hidden_feature, mode):
-#         new_hidden_feature = {}
-#         seq_hidden_state = []
-#         pooled_hidden_state = []
-#         hidden_size = self.params.bert_config.hidden_size
+    def __call__(self, features, hidden_feature, mode):
 
-#         self.params.hidden_gru = False
+        self.params.hidden_gru = False
 
-#         # intermedian dense
-#         intermedian_logits = {}
-#         for problem_dict in self.params.label_transfer_problem:
-#             for problem in problem_dict:
-#                 scope_name = self.params.share_top[problem]
+        # intermedian dense
+        hidden_logits = {}
+        for problem_dict in self.params.label_transfer_problem:
+            for problem in problem_dict:
+                scope_name = self.params.share_top[problem]
+                q_key = 'pooled' if self.params.problem_type[problem] == 'cls' else 'seq'
 
-#                 top_scope_name = '%s_top' % scope_name
-#                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-#                     with tf.variable_scope('intermedian'):
-#                         if self.params.problem_type[problem] == 'seq_tag':
-#                             intermedian_logits[scope_name] = dense_layer(
-#                                 hidden_size, hidden_feature['seq'], mode, self.params.dropout_keep_prob, tf.nn.relu)
-#                         elif self.params.problem_type[problem] == 'cls':
-#                             intermedian_logits[scope_name] = dense_layer(
-#                                 hidden_size, hidden_feature['pooled'], mode, self.params.dropout_keep_prob, tf.nn.relu)
+                top_scope_name = '%s_top' % scope_name
+                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
 
-#         # task attention
-#         transformer_params = copy(self.params)
-#         transformer_params.decoder_num_hidden_layers = 1
-#         transformer_params.decode_max_seq_len = self.params.max_seq_len
-#         for problem_dict in self.params.label_transfer_problem:
-#             for problem in problem_dict:
-#                 scope_name = self.params.share_top[problem]
+                    if self.params.problem_type[problem] == 'seq_tag':
+                        seq_tag = SequenceLabel(self.params)
+                        seq_tag(features,
+                                hidden_feature,
+                                tf.estimator.ModeKeys.PREDICT,
+                                problem)
+                    elif self.params.problem_type[problem] == 'cls':
+                        cls = Classification(self.params)
 
-#                 top_scope_name = '%s_top' % scope_name
-#                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-#                     with tf.variable_scope('task_attention'):
-#                         encoder_output = key_hidden_feature
-#                         decoder_inputs = hidden_logits
-#                         input_mask = features['input_mask']
-#                         decoder = TransformerDecoder(transformer_params)
+                        cls(features,
+                            hidden_feature,
+                            tf.estimator.ModeKeys.PREDICT,
+                            problem)
+                    hidden_logits[problem] = seq_tag.hidden_model_logit
 
-#         self.params.hidden_gru = hidden_gru
+                        # hidden_logits[problem] = self.make_hidden_model(
+                        #     features, hidden_feature[q_key], mode, q_key == 'seq')
 
-#         if len(seq_hidden_state) >= 2:
-#             new_hidden_feature['seq'] = tf.concat(seq_hidden_state, axis=-1)
-#         if len(pooled_hidden_state) >= 2:
-#             new_hidden_feature['pooled'] = tf.concat(
-#                 pooled_hidden_state, axis=-1)
-#         hidden_feature.update(new_hidden_feature)
+        # task attention
+        task_attention_logits = {}
+        transformer_params = copy(self.params)
+        transformer_params.decoder_num_hidden_layers = 1
+        transformer_params.decode_max_seq_len = self.params.max_seq_len
+        for problem_dict in self.params.label_transfer_problem:
+            for problem in problem_dict:
+                scope_name = self.params.share_top[problem]
+                problem_type = self.params.problem_type[problem]
 
-#         if self.params.label_transfer_gru:
+                top_scope_name = '%s_top_task_attention' % scope_name
+                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                    with tf.variable_scope('task_attention'):
+                        other_task_logits = tf.concat([
+                            v for k, v in hidden_logits.items() if k != problem],
+                            axis=1)
+                        encoder_output = other_task_logits
+                        decoder_inputs = hidden_logits[problem]
+                        input_mask = features['input_mask']
+                        self_attention_mask, enc_dec_attention_mask, self_attention = create_multiself_attention_mask(
+                            problem_type,
+                            decoder_inputs,
+                            input_mask,
+                            features['input_ids'],
+                            len(self.params.problem_list) - 1
+                        )
+                        decoder = TransformerDecoder(transformer_params)
+                        decode_output = decoder.decode(
+                            decoder_inputs=decoder_inputs,
+                            encoder_output=encoder_output,
+                            input_mask=input_mask,
+                            decoder_self_attention_mask=self_attention_mask,
+                            cache=None,
+                            num_classes=None,
+                            do_return_all_layers=False,
+                            enc_dec_attention_mask=enc_dec_attention_mask,
+                            add_self_attention=self_attention
+                        )
+                        if problem_type == 'cls':
+                            task_attention_logits[problem] = {
+                                'pooled': decode_output}
+                        else:
+                            task_attention_logits[problem] = {
+                                'seq': decode_output
+                            }
 
-#             lt_hidden_size = 0
-#             for problem_dict in self.params.label_transfer_problem:
-#                 for p in problem_dict:
-#                     lt_hidden_size += self.params.num_classes[p]
-
-#             seq_features = hidden_feature['seq']
-#             if self.params.label_transfer_gru_hidden_size is not None:
-#                 lt_hidden_size = self.params.label_transfer_gru_hidden_size
-
-#             input_hidden_size = seq_features.get_shape().as_list()[-1]
-#             with tf.variable_scope('label_transfer_rnn'):
-#                 rnn_output = make_cudnngru(
-#                     seq_features,
-#                     lt_hidden_size,
-#                     self.params,
-#                     mode,
-#                     True,
-#                     'ave')
-#                 rnn_output.set_shape(
-#                     [None, self.params.max_seq_len, input_hidden_size])
-#             hidden_feature['seq'] = rnn_output
-
-#         return hidden_feature
+        return task_attention_logits

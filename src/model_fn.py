@@ -7,7 +7,7 @@ from .bert.modeling import BertModel
 from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
-    Seq2Seq, SequenceLabel, Classification, LabelTransferHidden, MaskLM, PreTrain, GridTransformer)
+    Seq2Seq, SequenceLabel, Classification, LabelTransferHidden, MaskLM, PreTrain, GridTransformer, TaskTransformer)
 
 
 @autograph.convert()
@@ -143,10 +143,18 @@ class BertMultiTask():
         hidden_feature['seq'] = stop_grad(
             global_step, hidden_feature['seq'], self.config.freeze_step)
 
+        if self.config.task_transformer:
+            task_tranformer_layer = TaskTransformer(self.config)
+            task_tranformer_hidden_feature = task_tranformer_layer(
+                features, hidden_feature, mode)
+            self.config.hidden_dense = False
+
         return_dict = {}
 
         for problem_dict in self.config.run_problem_list:
             for problem in problem_dict:
+                if self.config.task_transformer:
+                    hidden_feature = task_tranformer_hidden_feature[problem]
                 problem_type = self.config.problem_type[problem]
 
                 scope_name = self.config.share_top[problem]
@@ -194,7 +202,6 @@ class BertMultiTask():
                     self.config.hidden_dense = False
 
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-
                     layer = problem_type_layer[
                         problem_type](
                         self.config)
@@ -214,6 +221,7 @@ class BertMultiTask():
                                 hidden_feature, mode, 'dummy')
             except ValueError:
                 pass
+
         return return_dict
 
     def create_optimizer(self, init_lr, num_train_steps, num_warmup_steps):
