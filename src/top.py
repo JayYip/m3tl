@@ -606,13 +606,13 @@ class TaskTransformer(TopLayer):
     def __call__(self, features, hidden_feature, mode):
 
         self.params.hidden_gru = False
+        self.params.hidden_dense = True
 
         # intermedian dense
         hidden_logits = {}
         for problem_dict in self.params.label_transfer_problem:
             for problem in problem_dict:
                 scope_name = self.params.share_top[problem]
-                q_key = 'pooled' if self.params.problem_type[problem] == 'cls' else 'seq'
 
                 top_scope_name = '%s_top' % scope_name
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
