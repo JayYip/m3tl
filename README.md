@@ -1,6 +1,6 @@
 # Bert for Multi-task Learning
 
-*Update:* Download trained checkpoint for Chinese NLP problems [here](https://1drv.ms/f/s!An_n1-LB8-2dge5yixHNdtYbvZpiGw)(Problem: "CWS|POS|weibo_ner|boson_ner|msra_ner").
+*Update:* Download trained checkpoint for Chinese NLP problems. (release later)
 
 ## What is it
 
