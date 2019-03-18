@@ -166,7 +166,10 @@ class BertMultiTask():
                     return return_dict
 
                 # get features with ind == 1
-                if mode == tf.estimator.ModeKeys.TRAIN:
+                if mode == tf.estimator.ModeKeys.PREDICT:
+                    feature_this_round = features
+                    hidden_feature_this_round = hidden_feature
+                else:
                     record_ind = tf.cast(
                         features['%s_loss_multiplier' % problem], tf.bool)
                     feature_this_round = {
@@ -175,9 +178,6 @@ class BertMultiTask():
                     hidden_feature_this_round = {
                         k: tf.boolean_mask(v, record_ind)
                         for k, v in hidden_feature.items()}
-                else:
-                    feature_this_round = features
-                    hidden_feature_this_round = hidden_feature
 
                 top_scope_name = '%s_top' % scope_name
 
