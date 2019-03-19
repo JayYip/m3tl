@@ -153,7 +153,7 @@ def predict_input_fn(input_file_or_list, config: Params, mode='predict'):
     return dataset
 
 
-def to_serving_input(input_file_or_list, config: Params, mode='predict'):
+def to_serving_input(input_file_or_list, config: Params, mode='predict', tokenizer=None):
         # if is string, treat it as path to file
     if isinstance(input_file_or_list, str):
         inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
@@ -162,8 +162,8 @@ def to_serving_input(input_file_or_list, config: Params, mode='predict'):
 
     # max_len = np.max([len(i) for i in inputs])
     # config.max_seq_len = max_len
-
-    tokenizer = FullTokenizer(config.vocab_file)
+    if tokenizer is None:
+        tokenizer = FullTokenizer(config.vocab_file)
 
     # data_dict = {}
     # data_dict['input_ids'] = []
