@@ -10,11 +10,11 @@ This a project that uses [BERT](https://github.com/google-research/bert) to do *
 
 In the original BERT code, neither multi-task learning or multiple GPU training is possible. Plus, the original purpose of this project is NER which dose not have a working script in the original BERT code.
 
-To sum up, you can use this project if you:
+To sum up, compared to the original bert repo, this repo has the following features:
 
-1. Need multi-task learning
-2. Need multiple GPU training
-3. Need Sequence labeling
+1. Multi-task learning(major reason of re-writing the majority of code).
+2. Multiple GPU training
+3. Support sequence labeling (for example, NER) and Encoder-Decoder Seq2Seq(with transformer decoder).
 
 ## How to run pre-defined problems
 
@@ -52,20 +52,19 @@ python main.py --problem "CWS|NER|weibo_ner&weibo_cws" --schedule train --model_
 python export_model.py --problem "CWS|NER|weibo_ner&weibo_cws" --model_dir "tmp/multitask"
 ```
 
-The above command will train the model and export to the path `tmp/multitask` and create two files: `export_model` and `params.json`.
+The above command will train the model and export to the path `tmp/multitask/serve_model`.
 
-Then you can start the service with command below. You need to make sure `export_model` and `params.json` and corresponding label encoders are located in the folder you specified below.
+Then you can start the service with command below. Please make sure the server is installed.
 
 ```bash
-bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -problem "CWS|NER|weibo_ner&weibo_cws" -model_dir tmp/multitask
+bert-serving-start -num_worker 2 -gpu_memory_fraction 0.95 -device_map 0 1 -problem "CWS|NER|weibo_ner&weibo_cws" -model_dir tmp/multitask/serve_model
 ```
 
 ## How to add problems
 
 1. Implement data preprocessing function and import it into `src/data_preprocessing/__init__.py`. One example can be found below.
 
-
-2. Add problem config to `self.problem_type` and `self.num_classes` in `src/params.py`
+2. Add problem config to `self.problem_type`.
 
 ```python
 def weibo_fake_cls(params, mode):
@@ -77,9 +76,13 @@ def weibo_fake_cls(params, mode):
     """
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
-    inputs_list = [['科','技','全','方','位','资','讯','智','能','，','快','捷','的','汽','车','生','活','需','要','有','三','屏','一','云','爱','你'],
- ['对', '，', '输', '给', '一', '个', '女', '人', '，', '的', '成', '绩', '。', '失', '望']]
-    target_list = [0, 1]
+    # Note: split the inputs to training set and eval set
+    if mode == 'train':
+        inputs_list = [['科','技','全','方','位','资','讯','智','能','，','快','捷','的','汽','车','生','活','需','要','有','三','屏','一','云','爱','你']]
+        target_list = [0]
+    else:
+        inputs_list = [['对', '，', '输', '给', '一', '个', '女', '人', '，', '的', '成', '绩', '。', '失', '望']]
+        target_list = [0]
 
     label_encoder = get_or_make_label_encoder(
         'weibo_fake_cls', mode, target_list, 0)
