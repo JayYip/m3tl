@@ -72,7 +72,7 @@ class AdamWeightDecayOptimizer(optimizer.Optimizer):
 
         update = next_m / (tf.sqrt(next_v) + epsilon_t)
 
-        if self._do_use_weight_decay(self._get_variable_name(var)):
+        if self._do_use_weight_decay(var.name):
             update += weight_decay_rate_t * var
 
         update_with_lr = learning_rate_t * update
