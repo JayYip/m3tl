@@ -36,7 +36,8 @@ class TransformerDecoder(object):
             num_classes,
             do_return_all_layers,
             enc_dec_attention_mask=None,
-            add_self_attention=True):
+            add_self_attention=True,
+            add_enc_dec_attention=True):
         input_tensor = decoder_inputs
         num_hidden_layers = self.params.decoder_num_hidden_layers
         hidden_size = self.params.bert_config.hidden_size
@@ -136,34 +137,38 @@ class TransformerDecoder(object):
                         self_attention_output = tf.reshape(
                             layer_input, [batch_size, -1, hidden_size])
 
-                    with tf.variable_scope('enc_dec_attention'):
-                        attention_heads = []
-                        attention_head = attention_layer_with_cache(
-                            from_tensor=self_attention_output,
-                            to_tensor=encoder_output,
-                            attention_mask=attention_mask,
-                            num_attention_heads=num_attention_heads,
-                            size_per_head=attention_head_size,
-                            attention_probs_dropout_prob=attention_probs_dropout_prob,
-                            initializer_range=initializer_range,
-                            do_return_2d_tensor=True,
-                            batch_size=batch_size,
-                            from_seq_length=decode_seq_length,
-                            to_seq_length=encode_seq_length,
-                            cache=None)
-                        attention_heads.append(attention_head)
+                    if add_enc_dec_attention:
+                        with tf.variable_scope('enc_dec_attention'):
+                            attention_heads = []
+                            attention_head = attention_layer_with_cache(
+                                from_tensor=self_attention_output,
+                                to_tensor=encoder_output,
+                                attention_mask=attention_mask,
+                                num_attention_heads=num_attention_heads,
+                                size_per_head=attention_head_size,
+                                attention_probs_dropout_prob=attention_probs_dropout_prob,
+                                initializer_range=initializer_range,
+                                do_return_2d_tensor=True,
+                                batch_size=batch_size,
+                                from_seq_length=decode_seq_length,
+                                to_seq_length=encode_seq_length,
+                                cache=None)
+                            attention_heads.append(attention_head)
 
-                        attention_output = None
-                        if len(attention_heads) == 1:
-                            attention_output = attention_heads[0]
-                        else:
-                            # In the case where we have other sequences, we just concatenate
-                            # them to the self-attention head before the projection.
-                            attention_output = tf.concat(
-                                attention_heads, axis=-1)
-                    if cache is not None:
+                            attention_output = None
+                            if len(attention_heads) == 1:
+                                attention_output = attention_heads[0]
+                            else:
+                                # In the case where we have other sequences, we just concatenate
+                                # them to the self-attention head before the projection.
+                                attention_output = tf.concat(
+                                    attention_heads, axis=-1)
+                        if cache is not None:
+                            attention_output = tf.reshape(
+                                attention_output, [batch_size, -1, hidden_size])
+                    else:
                         attention_output = tf.reshape(
-                            attention_output, [batch_size, -1, hidden_size])
+                            self_attention_output, [-1, hidden_size])
 
                     # Run a linear projection of `hidden_size` then add a residual
                     # with `layer_input`.
