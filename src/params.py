@@ -247,6 +247,7 @@ class Params():
             dump_dict = json.load(f)
         for att in dump_dict:
             setattr(self, att, dump_dict[att])
+        self.bert_config.num_hidden_layers = dump_dict['bert_num_hidden_layer']
 
     def get_data_info(self, problem_list, base):
         '''Get number of data, number of classes of data and eos_id of data.

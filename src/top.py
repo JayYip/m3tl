@@ -659,7 +659,7 @@ class TaskTransformer(TopLayer):
                             decoder_inputs,
                             input_mask,
                             features['input_ids'],
-                            len(self.params.problem_list) - 1
+                            len(hidden_logits) - 1
                         )
                         decoder = TransformerDecoder(transformer_params)
                         decode_output = decoder.decode(
