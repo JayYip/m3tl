@@ -299,7 +299,7 @@ class LabelTransferHidden(TopLayer):
 
         self.params.hidden_gru = False
 
-        for problem_dict in self.params.label_transfer_problem:
+        for problem_dict in self.params.train_problem:
             for problem in problem_dict:
                 scope_name = self.params.share_top[problem]
 
@@ -335,7 +335,7 @@ class LabelTransferHidden(TopLayer):
         if self.params.label_transfer_gru:
 
             lt_hidden_size = 0
-            for problem_dict in self.params.label_transfer_problem:
+            for problem_dict in self.params.train_problem:
                 for p in problem_dict:
                     lt_hidden_size += self.params.num_classes[p]
 
@@ -610,7 +610,7 @@ class TaskTransformer(TopLayer):
 
         # intermedian dense
         hidden_logits = {}
-        for problem_dict in self.params.label_transfer_problem:
+        for problem_dict in self.params.train_problem:
             for problem in problem_dict:
                 scope_name = self.params.share_top[problem]
 
@@ -640,7 +640,7 @@ class TaskTransformer(TopLayer):
         transformer_params = copy(self.params)
         transformer_params.decoder_num_hidden_layers = 1
         transformer_params.decode_max_seq_len = self.params.max_seq_len
-        for problem_dict in self.params.label_transfer_problem:
+        for problem_dict in self.params.train_problem:
             for problem in problem_dict:
                 scope_name = self.params.share_top[problem]
                 problem_type = self.params.problem_type[problem]

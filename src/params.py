@@ -128,7 +128,7 @@ class Params():
         self.mask_lm_hidden_act = 'gelu'
         self.mask_lm_initializer_range = 0.02
 
-        self.label_transfer_problem = None
+        self.train_problem = None
 
         # get generator function for each problem
         self.read_data_fn = {}
@@ -182,7 +182,6 @@ class Params():
         # linear scale learing rate
         self.lr = self.init_lr * gpu
 
-        self.to_json()
 
     @property
     def features_to_dump(self):
@@ -230,7 +229,8 @@ class Params():
                 # 'mutual_prediction',
                 'grid_transformer',
                 'hidden_dense',
-                'task_transformer']
+                'task_transformer',
+                'train_problem']
 
     def to_json(self):
         dump_dict = {}
@@ -316,9 +316,9 @@ class Params():
                 for problem in flag_chunk.split('&'):
                     problem_type[problem] = self.problem_type[problem]
                 self.run_problem_list.append(problem_type)
-        # if (self.label_transfer or self.mutual_prediction) and self.label_transfer_problem is None:
-        if (self.label_transfer or self.task_transformer) and self.label_transfer_problem is None:
-            self.label_transfer_problem = [p for p in self.run_problem_list]
+        # if (self.label_transfer or self.mutual_prediction) and self.train_problem is None:
+        if self.train_problem is None:
+            self.train_problem = [p for p in self.run_problem_list]
 
         problem_list = sorted(re.split(r'[&|]', flag_string))
         return problem_list
