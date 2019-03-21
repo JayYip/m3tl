@@ -310,9 +310,6 @@ class BertMultiTask():
                         variable_summaries(g, v.name.replace(':0', '-grad'))
                         variable_summaries(v, v.name.replace(':0', ''))
 
-        # grads = make_grad(global_step, loss_eval_pred,
-        #                   hidden_features, tvars, self.config.freeze_step)
-
         # This is how the model was pre-trained.
         (grads, _) = tf.clip_by_global_norm(grads, clip_norm=1.0)
 
@@ -361,8 +358,6 @@ class BertMultiTask():
                 else:
                     train_scaffold = scaffold()
 
-                # tf.train.init_from_checkpoint(
-                #     self.config.init_checkpoint, assignment_map)
             return self.create_train_spec(features,
                                           hidden_features,
                                           loss_eval_pred,

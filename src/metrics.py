@@ -4,7 +4,8 @@ from copy import copy
 from nltk.translate import bleu_score
 
 from .input_fn import predict_input_fn
-from .utils import get_text_and_label, get_or_make_label_encoder
+from .utils import (get_text_and_label, get_or_make_label_encoder,
+                    EVAL, PREDICT)
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -165,13 +166,13 @@ def ner_evaluate(problem, estimator, params):
     estimator_problem = copy(params.problem_str)
     base_dir = os.path.split(params.ckpt_dir)[0]
     params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, 'eval')
+    text, label_data = get_text_and_label(params, problem, EVAL)
 
-    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
     params.assign_problem(estimator_problem, base_dir=base_dir)
 
-    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
@@ -212,13 +213,13 @@ def acc_evaluate(problem, estimator, params):
     estimator_problem = copy(params.problem_str)
     base_dir = os.path.split(params.ckpt_dir)[0]
     params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, 'eval')
+    text, label_data = get_text_and_label(params, problem, EVAL)
 
-    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
     params.assign_problem(estimator_problem, base_dir=base_dir)
 
-    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
@@ -274,13 +275,13 @@ def cws_evaluate(problem, estimator, params):
     estimator_problem = copy(params.problem_str)
     base_dir = os.path.split(params.ckpt_dir)[0]
     params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, 'eval')
+    text, label_data = get_text_and_label(params, problem, EVAL)
 
-    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
     params.assign_problem(estimator_problem, base_dir=base_dir)
 
-    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
@@ -414,13 +415,13 @@ def seq2seq_evaluate(problem, estimator, params):
     estimator_problem = copy(params.problem_str)
     base_dir = os.path.split(params.ckpt_dir)[0]
     params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, 'eval')
+    text, label_data = get_text_and_label(params, problem, EVAL)
 
-    def pred_input_fn(): return predict_input_fn(text, params, mode='predict')
+    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
     params.assign_problem(estimator_problem, base_dir=base_dir)
 
-    label_encoder = get_or_make_label_encoder(params, problem, mode='eval')
+    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 

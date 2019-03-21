@@ -48,7 +48,6 @@ def gold_horse_ent_type_process_fn(d):
     # keep nam only
     ent_type = ent_type if 'NAM' in ent_type else 'O'
     ent_type = ent_type.replace('.NAM', '')
-    # ent_type = ent_type.replace('GPE', 'LOC')
     return ent_type
 
 
@@ -76,10 +75,6 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     Returns:
         dict -- dict, key: 'train', 'eval', value: dict {'inputs', 'target'}
     """
-    # if 'weibo_ner' in file_pattern:
-    #     proc_fn = gold_horse_ent_type_process_fn
-    # elif 'Chinese-Literature' in file_pattern:
-    #     proc_fn = chinese_literature_ent_type_process_fn
 
     result_dict = {
         'train': {
@@ -306,20 +301,8 @@ def read_msra(file_pattern, eval_size):
                             else:
                                 loc_char = 'I'
 
-                            # ###################################
-                            # if ent_type == 'ns':
-                            #     if random.uniform(0, 1) <= 0.1:
-                            #         target_list[-1].append(loc_char +
-                            #                                '-'+'LOC')
-                            #     else:
-                            #         target_list[-1].append(loc_char +
-                            #                                '-'+'GPE')
-                            # else:
-                            #     target_list[-1].append(loc_char +
-                            #                            '-'+project_table[ent_type])
                             target_list[-1].append(loc_char +
                                                    '-'+project_table[ent_type])
-                            # ###################################
                             input_list[-1].append(ent_char)
 
     return_input, return_target = [], []
@@ -363,15 +346,7 @@ def NER(params, mode):
             target_list += data['eval']['target']
 
     flat_target_list = [t for sublist in target_list for t in sublist]
-    # flat_target_list = ['O',
-    #                     'B-LOC',
-    #                     'B-PER',
-    #                     'B-ORG',
-    #                     'B-PRD',
-    #                     'I-LOC',
-    #                     'I-PER',
-    #                     'I-ORG',
-    #                     'I-PRD', ]
+
     label_encoder = get_or_make_label_encoder(
         params, 'NER', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('NER',
@@ -400,15 +375,7 @@ def msra_ner(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
     flat_target_list = [t for sublist in target_list for t in sublist]
-    # flat_target_list = ['O',
-    #                     'B-LOC',
-    #                     'B-PER',
-    #                     'B-ORG',
-    #                     'B-PRD',
-    #                     'I-LOC',
-    #                     'I-PER',
-    #                     'I-ORG',
-    #                     'I-PRD', ]
+
     label_encoder = get_or_make_label_encoder(
         params, 'msra_ner', mode, flat_target_list, zero_class='O')
     return create_single_problem_generator('msra_ner',
@@ -438,17 +405,9 @@ def boson_ner(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
     flat_target_list = [t for sublist in target_list for t in sublist]
-    # flat_target_list = ['O',
-    #                     'B-LOC',
-    #                     'B-PER',
-    #                     'B-ORG',
-    #                     'B-PRD',
-    #                     'I-LOC',
-    #                     'I-PER',
-    #                     'I-ORG',
-    #                     'I-PRD', ]
     label_encoder = get_or_make_label_encoder(
         params, 'boson_ner', mode, flat_target_list, zero_class='O')
+
     return create_single_problem_generator('boson_ner',
                                            inputs_list,
                                            target_list,

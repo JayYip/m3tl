@@ -8,11 +8,27 @@ from .tokenization import FullTokenizer
 
 from .params import Params
 from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
-                    add_special_tokens_with_seqs, create_mask_and_padding)
+                    add_special_tokens_with_seqs, create_mask_and_padding,
+                    TRAIN, EVAL, PREDICT)
 from .create_generators import create_generator
 
 
 def train_eval_input_fn(config: Params, mode='train', epoch=None):
+    '''Train and eval input function of estimator.
+    This function will create as tf dataset from generator. 
+    Training data and eval data will be processed based on processing
+    fn defined in data_preprocessing.
+
+    Arguments:
+        config {Params} -- Params objects
+
+    Keyword Arguments:
+        mode {str} -- ModeKeys (default: {'train'})
+        epoch {int} -- Number of epochs to train (default: {None})
+
+    Returns:
+        tf Dataset -- Tensorflow dataset
+    '''
 
     def gen():
         if mode == 'train':
@@ -99,7 +115,20 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
     return dataset
 
 
-def predict_input_fn(input_file_or_list, config: Params, mode='predict'):
+def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
+    '''Input function that takes a file path or list of string and 
+    convert it to tf.dataset
+
+    Arguments:
+        input_file_or_list {str or list} -- file path or list of string
+        config {Params} -- Params object
+
+    Keyword Arguments:
+        mode {str} -- ModeKeys (default: {PREDICT})
+
+    Returns:
+        tf dataset -- tf dataset
+    '''
 
     # if is string, treat it as path to file
     if isinstance(input_file_or_list, str):
@@ -108,11 +137,6 @@ def predict_input_fn(input_file_or_list, config: Params, mode='predict'):
         inputs = input_file_or_list
 
     tokenizer = FullTokenizer(config.vocab_file)
-
-    # data_dict = {}
-    # data_dict['input_ids'] = []
-    # data_dict['input_mask'] = []
-    # data_dict['segment_ids'] = []
 
     def gen():
         data_dict = {}
@@ -153,22 +177,28 @@ def predict_input_fn(input_file_or_list, config: Params, mode='predict'):
     return dataset
 
 
-def to_serving_input(input_file_or_list, config: Params, mode='predict', tokenizer=None):
-        # if is string, treat it as path to file
+def to_serving_input(input_file_or_list, config: Params, mode=PREDICT, tokenizer=None):
+    '''A serving input function that takes input file path or
+    list of string and apply BERT preprocessing. This fn will
+    return a data dict instead of tf dataset. Used in serving.
+
+    Arguments:
+        input_file_or_list {str or list} -- file path of list of str
+        config {Params} -- Params
+
+    Keyword Arguments:
+        mode {str} -- ModeKeys (default: {PREDICT})
+        tokenizer {tokenizer} -- Tokenizer (default: {None})
+    '''
+
+    # if is string, treat it as path to file
     if isinstance(input_file_or_list, str):
         inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
     else:
         inputs = input_file_or_list
 
-    # max_len = np.max([len(i) for i in inputs])
-    # config.max_seq_len = max_len
     if tokenizer is None:
         tokenizer = FullTokenizer(config.vocab_file)
-
-    # data_dict = {}
-    # data_dict['input_ids'] = []
-    # data_dict['input_mask'] = []
-    # data_dict['segment_ids'] = []
 
     data_dict = {}
     for doc in tqdm(inputs, desc='Processing Inputs'):

@@ -9,6 +9,7 @@ from src.params import Params
 from src.estimator import Estimator
 from src.ckpt_restore_hook import RestoreCheckpointHook
 from src import metrics
+from src.utils import TRAIN, EVAL, PREDICT
 
 flags = tf.flags
 
@@ -91,7 +92,7 @@ def main(_):
             海比较喜欢的一条街啦，这家餐厅就开在这条路上。已经开了三十多年的老餐厅了，地
             方很小，就五六张桌子。但是翻桌率比较快。二楼之前的居民间也改成了餐厅，但是在
             上海的名气却非常大。烧的就是家常菜，普通到和家里烧的一样，生意非常好，外面排
-            队的比里面吃的人还要多。'''], params, mode='predict')
+            队的比里面吃的人还要多。'''], params, mode=PREDICT)
         pred = estimator.predict(input_fn=input_fn)
         for p in pred:
             print(p)
