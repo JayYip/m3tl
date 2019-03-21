@@ -110,20 +110,6 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
         self.encode_dict = {v: k for k, v in self.decode_dict.items()}
 
 
-def get_text_and_label(params, problem, mode, label_id=True):
-    data = list(params.read_data_fn[problem](params, mode))
-    data_input_ids = [d['input_ids'] for d in data]
-    tokenizer = FullTokenizer(params.vocab_file, True)
-    texts = [tokenizer.convert_ids_to_tokens(ids) for ids in data_input_ids]
-    text_without_special_token = []
-    for text in texts:
-        text_without_special_token.append([])
-        for t in text:
-            if t not in ['[SEP]', '[CLS]', '[PAD]']:
-                text_without_special_token[-1].append(t)
-    return text_without_special_token, [d['%s_label_ids' % problem] for d in data]
-
-
 def create_path(path):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)

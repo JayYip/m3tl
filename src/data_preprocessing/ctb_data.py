@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator
 
 
@@ -60,6 +60,8 @@ def ctb_pos(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'ctb_pos', mode, flat_target_list, zero_class='[PAD]')
+    if mode == PREDICT:
+        return input_list, target_list, label_encoder
     return create_single_problem_generator('ctb_pos',
                                            input_list,
                                            target_list,
@@ -115,6 +117,8 @@ def ctb_cws(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'ctb_cws', mode, flat_target_list, zero_class='[PAD]')
+    if mode == PREDICT:
+        return input_list, target_list, label_encoder
     return create_single_problem_generator('ctb_cws',
                                            input_list,
                                            target_list,

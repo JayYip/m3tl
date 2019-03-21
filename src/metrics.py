@@ -4,8 +4,7 @@ from copy import copy
 from nltk.translate import bleu_score
 
 from .input_fn import predict_input_fn
-from .utils import (get_text_and_label, get_or_make_label_encoder,
-                    EVAL, PREDICT)
+from .utils import PREDICT
 
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
@@ -163,16 +162,10 @@ def get_ner_BIO(label_list):
 
 
 def ner_evaluate(problem, estimator, params):
-    estimator_problem = copy(params.problem_str)
-    base_dir = os.path.split(params.ckpt_dir)[0]
-    params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, EVAL)
+    text, label_data, label_encoder = params.read_data_fn[problem](
+        params, PREDICT)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    params.assign_problem(estimator_problem, base_dir=base_dir)
-
-    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
@@ -190,13 +183,13 @@ def ner_evaluate(problem, estimator, params):
 
         # crf returns tags
         predict = pred_prob
-        label = label[1:true_seq_length]
+        label = label[:len(predict)]
+        assert len(pred_prob) == len(label), print(len(pred_prob), len(label))
 
         decode_pred = label_encoder.inverse_transform(predict)
-        decode_label = label_encoder.inverse_transform(label)
 
         decode_pred_list.append(decode_pred)
-        decode_label_list.append(decode_label)
+        decode_label_list.append(label)
 
     result_dict = {}
 
@@ -210,42 +203,41 @@ def ner_evaluate(problem, estimator, params):
 
 
 def acc_evaluate(problem, estimator, params):
-    estimator_problem = copy(params.problem_str)
-    base_dir = os.path.split(params.ckpt_dir)[0]
-    params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, EVAL)
+    text, label_data, label_encoder = params.read_data_fn[problem](
+        params, PREDICT)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    params.assign_problem(estimator_problem, base_dir=base_dir)
-
-    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
     decode_pred_list = []
     decode_label_list = []
 
-    top_problem_name = params.share_top[problem]
+    scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
 
-        pred_prob = p[top_problem_name]
+        pred_prob = p[scope_name]
 
-        if params.problem_type[problem] in ['seq_tag', 'seq2seq_tag', 'seq2seq_text']:
+        if params.problem_type[problem] in ['seq_tag']:
             true_seq_length = len(t) - 1
             pred_prob = pred_prob[1:true_seq_length]
 
             # crf returns tags
             predict = pred_prob
-            label = label[1:true_seq_length]
+            label = label[:len(predict)]
+            assert len(pred_prob) == len(label), print(
+                len(pred_prob), len(label))
             decode_pred = label_encoder.inverse_transform(predict)
-            decode_label = label_encoder.inverse_transform(label)
-        else:
+            decode_label = label
+        elif params.problem_type in ['cls']:
             predict = np.argmax(pred_prob)
 
             decode_pred = label_encoder.inverse_transform([predict])
-            decode_label = label_encoder.inverse_transform([label])
+            decode_label = [label]
+        else:
+            raise ValueError(
+                'Acc evaluation dose not support problem type %s' % params.problem_type[problem])
 
         decode_pred_list.append(decode_pred)
         decode_label_list.append(decode_label)
@@ -272,21 +264,16 @@ def acc_evaluate(problem, estimator, params):
 
 
 def cws_evaluate(problem, estimator, params):
-    estimator_problem = copy(params.problem_str)
-    base_dir = os.path.split(params.ckpt_dir)[0]
-    params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, EVAL)
+    text, label_data, label_encoder = params.read_data_fn[problem](
+        params, PREDICT)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    params.assign_problem(estimator_problem, base_dir=base_dir)
-
-    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
     decode_pred_list = []
     decode_label_list = []
+
     scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
@@ -298,13 +285,13 @@ def cws_evaluate(problem, estimator, params):
 
         # crf returns tags
         predict = pred_prob
-        label = label[1:true_seq_length]
+        label = label[:len(predict)]
+        assert len(pred_prob) == len(label), print(len(pred_prob), len(label))
 
         decode_pred = label_encoder.inverse_transform(predict)
-        decode_label = label_encoder.inverse_transform(label)
 
         decode_pred_list.append(decode_pred)
-        decode_label_list.append(decode_label)
+        decode_label_list.append(label)
 
     result_dict = {}
 
@@ -412,16 +399,10 @@ def getChunks(tagList):
 
 
 def seq2seq_evaluate(problem, estimator, params):
-    estimator_problem = copy(params.problem_str)
-    base_dir = os.path.split(params.ckpt_dir)[0]
-    params.assign_problem(problem, base_dir=base_dir)
-    text, label_data = get_text_and_label(params, problem, EVAL)
+    text, label_data, label_encoder = params.read_data_fn[problem](
+        params, PREDICT)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    params.assign_problem(estimator_problem, base_dir=base_dir)
-
-    label_encoder = get_or_make_label_encoder(params, problem, mode=EVAL)
 
     pred_list = estimator.predict(pred_input_fn)
 
@@ -439,8 +420,7 @@ def seq2seq_evaluate(problem, estimator, params):
 
         decode_pred = [t for t in label_encoder.inverse_transform(
             predict) if t != '[PAD]']
-        decode_label = [t for t in label_encoder.inverse_transform(
-            label) if t != '[PAD]']
+        decode_label = [t for t in label if t != '[PAD]']
 
         decode_pred_list.append(decode_pred)
         decode_label_list.append([decode_label])

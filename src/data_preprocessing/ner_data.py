@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
 
 NER_TYPE = ['LOC',  # location
@@ -141,6 +141,8 @@ def weibo_ner(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'weibo_ner', mode, flat_label)
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
 
     return create_single_problem_generator('weibo_ner',
                                            inputs_list,
@@ -174,6 +176,8 @@ def weibo_cws(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'weibo_cws', mode, flat_label, '0')
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
 
     return create_single_problem_generator('weibo_cws',
                                            inputs_list,
@@ -349,6 +353,8 @@ def NER(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'NER', mode, flat_target_list, zero_class='O')
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
     return create_single_problem_generator('NER',
                                            inputs_list,
                                            target_list,
@@ -378,6 +384,9 @@ def msra_ner(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'msra_ner', mode, flat_target_list, zero_class='O')
+
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
     return create_single_problem_generator('msra_ner',
                                            inputs_list,
                                            target_list,
@@ -407,6 +416,8 @@ def boson_ner(params, mode):
     flat_target_list = [t for sublist in target_list for t in sublist]
     label_encoder = get_or_make_label_encoder(
         params, 'boson_ner', mode, flat_target_list, zero_class='O')
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
 
     return create_single_problem_generator('boson_ner',
                                            inputs_list,
@@ -438,6 +449,8 @@ def boson_domain(params, mode):
     flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
     return create_single_problem_generator('boson_domain',
                                            inputs_list,
                                            target_list,
@@ -463,6 +476,8 @@ def Weibo_domain(params, mode):
     flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
     return create_single_problem_generator('Weibo_domain',
                                            inputs_list,
                                            target_list,
@@ -493,6 +508,8 @@ def msra_domain(params, mode):
     flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
     label_encoder = get_or_make_label_encoder(
         params, 'ner_domain', mode, flat_target_list)
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
     return create_single_problem_generator('msra_domain',
                                            inputs_list,
                                            target_list,

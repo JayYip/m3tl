@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator
 from .ctb_data import read_ctb_pos
 
@@ -23,6 +23,8 @@ def POS(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'POS', mode, flat_target_list, zero_class='[PAD]')
+    if mode == PREDICT:
+        return input_list, target_list, label_encoder
     return create_single_problem_generator('POS',
                                            input_list,
                                            target_list,

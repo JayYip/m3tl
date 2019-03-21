@@ -5,7 +5,8 @@ from ..tokenization import FullTokenizer
 from ..utils import (
     get_or_make_label_encoder,
     BOS_TOKEN,
-    EOS_TOKEN)
+    EOS_TOKEN,
+    PREDICT)
 from ..create_generators import create_single_problem_generator
 
 
@@ -68,7 +69,8 @@ def ontonotes_ner(params, mode):
     flat_target_list = [t for sublist in target for t in sublist]
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_ner', mode, flat_target_list)
-
+    if mode == PREDICT:
+        return inputs_list, target, label_encoder
     return create_single_problem_generator('ontonotes_ner',
                                            inputs_list,
                                            target,
@@ -92,7 +94,8 @@ def ontonotes_cws(params, mode):
     flat_target_list = [t for sublist in target for t in sublist]
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_cws', mode, flat_target_list)
-
+    if mode == PREDICT:
+        return inputs_list, target, label_encoder
     return create_single_problem_generator('ontonotes_cws',
                                            inputs_list,
                                            target,
@@ -126,7 +129,8 @@ def ontonotes_chunk(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_chunk', mode, flat_target_list)
-
+    if mode == PREDICT:
+        return inputs_list, target, label_encoder
     return create_single_problem_generator(
         'ontonotes_chunk',
         inputs_list,

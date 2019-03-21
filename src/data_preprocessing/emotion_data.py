@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
 
 
@@ -37,6 +37,8 @@ def emotion_analysis(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'emotion_analysis', mode, ['0', '1'], zero_class='0')
+    if mode == PREDICT:
+        return inputs_list, target_list, label_encoder
 
     return create_single_problem_generator(
         'emotion_analysis',
