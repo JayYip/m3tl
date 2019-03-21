@@ -32,17 +32,12 @@ class TopLayer():
 
         def metric_fn(label_ids, logits):
             predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
-            prob = tf.nn.softmax(logits)
 
             accuracy = tf.metrics.accuracy(
                 label_ids, predictions, weights=weights)
-            acc_per_seq = get_t2t_metric_op(metrics.METRICS_FNS[
-                metrics.Metrics.ACC_PER_SEQ],
-                prob, features, label_ids)
 
             return {
-                "Accuracy": accuracy,
-                'Accuracy Per Sequence': acc_per_seq
+                "Accuracy": accuracy
             }
         eval_metrics = (metric_fn(label_ids, logits), loss)
         self.eval_metrics = eval_metrics
