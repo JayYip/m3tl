@@ -42,7 +42,8 @@ class Params():
             'msr_domain': 'cls',
             'pku_domain': 'cls',
             'cityu_domain': 'cls',
-            'emotion_analysis': 'cls'
+            'emotion_analysis': 'cls',
+            'ontonotes_pos': 'seq_tag'
         }
 
         # specify this will make key reuse values top
