@@ -61,7 +61,7 @@ def optimize_graph(params: Params):
 
     input_node_names = ['input_ids', 'input_mask', 'segment_ids']
     output_node_names = ['%s_top/%s_predict' %
-                         (problem, problem) for problem in params.problem_list]
+                         (params.share_top[problem], params.share_top[problem]) for problem in params.problem_list]
 
     transforms = [
         'remove_nodes(op=Identity)',

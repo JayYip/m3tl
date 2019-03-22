@@ -219,8 +219,6 @@ def to_serving_input(input_file_or_list, config: Params, mode=PREDICT, tokenizer
         data_dict['input_ids'] = input_ids
         data_dict['input_mask'] = input_mask
         data_dict['segment_ids'] = segment_ids
-        for k in data_dict:
-            data_dict[k] = np.expand_dims(data_dict[k], axis=0)
         yield data_dict
 
 
