@@ -71,7 +71,7 @@ def ontonotes_ner(params, mode):
         with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
             raw_data = f.readlines()
 
-    _, target, _, inputs_list = zip(*[parse_one(s) for s in raw_data])
+    _, target, _, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
     flat_target_list = [t for sublist in target for t in sublist]
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_ner', mode, flat_target_list)
@@ -96,7 +96,7 @@ def ontonotes_cws(params, mode):
         with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
             raw_data = f.readlines()
 
-    target, _, _, inputs_list = zip(*[parse_one(s) for s in raw_data])
+    target, _, _, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
     flat_target_list = [t for sublist in target for t in sublist]
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_cws', mode, flat_target_list)
@@ -123,7 +123,7 @@ def ontonotes_chunk(params, mode):
         with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
             test_raw_data = f.readlines()
         all_raw_data = raw_data + test_raw_data
-        _, _, target, inputs_list = zip(*[parse_one(s) for s in raw_data])
+        _, _, target, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
         _, _, all_target, _ = zip(*[parse_one(s) for s in all_raw_data])
         flat_target_list = [t for sublist in all_target for t in sublist]
         flat_target_list.extend([BOS_TOKEN, EOS_TOKEN])
@@ -131,7 +131,7 @@ def ontonotes_chunk(params, mode):
         with open('data/ontonote/test.fuse.parse', 'r', encoding='utf8') as f:
             raw_data = f.readlines()
         flat_target_list = None
-        _, _, target, inputs_list = zip(*[parse_one(s) for s in raw_data])
+        _, _, target, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
 
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_chunk', mode, flat_target_list)
