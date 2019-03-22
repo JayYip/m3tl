@@ -175,6 +175,8 @@ def ner_evaluate(problem, estimator, params):
     scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
+        if not t:
+            continue
         true_seq_length = len(t) - 1
 
         pred_prob = p[scope_name]
@@ -216,6 +218,8 @@ def acc_evaluate(problem, estimator, params):
     scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
+        if not t:
+            continue
 
         pred_prob = p[scope_name]
 
@@ -277,6 +281,8 @@ def cws_evaluate(problem, estimator, params):
     scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
+        if not t:
+            continue
         true_seq_length = len(t) - 1
 
         pred_prob = p[scope_name]
@@ -412,6 +418,8 @@ def seq2seq_evaluate(problem, estimator, params):
     scope_name = params.share_top[problem]
 
     for p, label, t in zip(pred_list, label_data, text):
+        if not t:
+            continue
 
         pred_prob = p[scope_name]
 
