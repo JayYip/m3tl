@@ -621,14 +621,14 @@ class TaskTransformer(TopLayer):
                         seq_tag = SequenceLabel(self.params)
                         seq_tag(features,
                                 hidden_feature,
-                                tf.estimator.ModeKeys.PREDICT,
+                                mode,
                                 problem)
                     elif self.params.problem_type[problem] == 'cls':
                         cls = Classification(self.params)
 
                         cls(features,
                             hidden_feature,
-                            tf.estimator.ModeKeys.PREDICT,
+                            mode,
                             problem)
                     hidden_logits[problem] = seq_tag.hidden_model_logit
 
@@ -649,7 +649,7 @@ class TaskTransformer(TopLayer):
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                     with tf.variable_scope('task_attention'):
                         other_task_logits = tf.concat([
-                            v for k, v in hidden_logits.items() if k != problem],
+                            v for k, v in hidden_logits.items()],
                             axis=1)
                         encoder_output = other_task_logits
                         decoder_inputs = hidden_logits[problem]
@@ -659,7 +659,7 @@ class TaskTransformer(TopLayer):
                             decoder_inputs,
                             input_mask,
                             features['input_ids'],
-                            len(hidden_logits) - 1
+                            len(hidden_logits)
                         )
                         decoder = TransformerDecoder(transformer_params)
                         decode_output = decoder.decode(
