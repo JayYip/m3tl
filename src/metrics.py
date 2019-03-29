@@ -188,6 +188,8 @@ def ner_evaluate(problem, estimator, params):
         label = label[:len(predict)]
         assert len(pred_prob) == len(label), print(len(pred_prob), len(label))
 
+        if not params.crf:
+            predict = np.argmax(predict, axis=-1)
         decode_pred = label_encoder.inverse_transform(predict)
 
         decode_pred_list.append(decode_pred)
@@ -232,6 +234,8 @@ def acc_evaluate(problem, estimator, params):
             label = label[:len(predict)]
             assert len(pred_prob) == len(label), print(
                 len(pred_prob), len(label))
+            if not params.crf:
+                predict = np.argmax(predict, axis=-1)
             decode_pred = label_encoder.inverse_transform(predict)
             decode_label = label
         elif params.problem_type in ['cls']:
@@ -294,6 +298,8 @@ def cws_evaluate(problem, estimator, params):
         label = label[:len(predict)]
         assert len(pred_prob) == len(label), print(len(pred_prob), len(label))
 
+        if not params.crf:
+            predict = np.argmax(predict, axis=-1)
         decode_pred = label_encoder.inverse_transform(predict)
 
         decode_pred_list.append(decode_pred)
