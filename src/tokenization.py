@@ -177,6 +177,7 @@ class BasicTokenizer(object):
         for char in text:
             cat = unicodedata.category(char)
             if cat == "Mn":
+                output.append('[UNK]')
                 continue
             output.append(char)
         return "".join(output)
@@ -239,10 +240,13 @@ class BasicTokenizer(object):
     def _clean_text(self, text):
         """Performs invalid character removal and whitespace cleanup on text."""
         output = []
+
         for char in text.split('\t'):
             try:
                 cp = ord(char)
             except:
+                for _ in char:
+                    output.append('[UNK]')
                 continue
             if cp == 0 or cp == 0xfffd or _is_control(char):
                 output.append('[UNK]')
