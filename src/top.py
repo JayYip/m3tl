@@ -675,10 +675,10 @@ class TaskTransformer(TopLayer):
                         )
                         if problem_type == 'cls':
                             task_attention_logits[problem] = {
-                                'pooled': decode_output}
+                                'pooled': tf.concat([decode_output, hidden_feature['pooled']], axis=-1)}
                         else:
                             task_attention_logits[problem] = {
-                                'seq': decode_output
+                                'seq': tf.concat([decode_output, hidden_feature['seq']], axis=-1)
                             }
 
         return task_attention_logits

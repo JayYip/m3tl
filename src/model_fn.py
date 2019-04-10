@@ -302,6 +302,11 @@ class BertMultiTask():
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
 
+        if self.config.mean_gradients:
+            for v_idx, v in enumerate(tvars):
+                if v.name.startwith('bert/'):
+                    g[v_idx] = g[v_idx] / len(self.config.run_problem_list)
+
         if self.config.detail_log:
             # add grad summary
             with tf.name_scope('var_and_grads'):
