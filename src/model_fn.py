@@ -180,6 +180,8 @@ class BertMultiTask():
                         for k, v in hidden_feature.items()}
 
                 top_scope_name = '%s_top' % scope_name
+                if self.config.task_transformer:
+                    top_scope_name = top_scope_name + '_after_tr'
 
                 if self.config.label_transfer:
                     top_scope_name = top_scope_name + '_lt'
