@@ -180,6 +180,8 @@ class BertMultiTask():
                         for k, v in hidden_feature.items()}
 
                 top_scope_name = '%s_top' % scope_name
+                if self.config.task_transformer:
+                    top_scope_name = top_scope_name + '_after_tr'
 
                 if self.config.label_transfer:
                     top_scope_name = top_scope_name + '_lt'
@@ -301,6 +303,11 @@ class BertMultiTask():
         grads = tf.gradients(
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
+
+        if self.config.mean_gradients:
+            for v_idx, v in enumerate(tvars):
+                if v.name.startwith('bert/'):
+                    g[v_idx] = g[v_idx] / len(self.config.run_problem_list)
 
         if self.config.detail_log:
             # add grad summary

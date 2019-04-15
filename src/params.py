@@ -86,7 +86,7 @@ class Params():
         self.max_seq_len = 128
         self.use_one_hot_embeddings = True
         self.label_smoothing = 0.0
-        self.crf = True
+        self.crf = False
         self.bert_num_hidden_layer = 12
         self.hidden_dense = False
 
@@ -106,6 +106,7 @@ class Params():
         # self.mutual_prediction = False
         self.grid_transformer = False
         self.task_transformer = False
+        self.mean_gradients = False
 
         # random replace punctuation by some prob to
         # ease the punctuation sensitive problem
@@ -231,7 +232,8 @@ class Params():
                 'grid_transformer',
                 'hidden_dense',
                 'task_transformer',
-                'train_problem']
+                'train_problem',
+                'mean_gradients']
 
     def to_json(self):
         dump_dict = {}
