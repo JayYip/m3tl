@@ -127,11 +127,12 @@ def create_single_problem_generator(problem,
             label_id = label_encoder.transform([target]).tolist()[0]
             label_id = np.int32(label_id)
 
-        assert len(input_ids) == params.max_seq_len
-        assert len(input_mask) == params.max_seq_len
-        assert len(segment_ids) == params.max_seq_len, segment_ids
-        if is_seq:
-            assert len(label_id) == params.max_seq_len
+        if not params.dynamic_padding:
+            assert len(input_ids) == params.max_seq_len
+            assert len(input_mask) == params.max_seq_len
+            assert len(segment_ids) == params.max_seq_len, segment_ids
+            if is_seq:
+                assert len(label_id) == params.max_seq_len
 
         # logging in debug mode
         if ex_index < 5:
@@ -379,7 +380,11 @@ def create_generator(params, mode, epoch):
         # add dummpy labels
         for dummy_problem in dummy_label_dict:
             if dummy_problem not in base_dict:
-                base_dict[dummy_problem] = dummy_label_dict[dummy_problem]
+                if isinstance(dummy_label_dict[dummy_problem], list):
+                    base_dict[dummy_problem] = dummy_label_dict[dummy_problem][:len(
+                        base_dict['input_ids'])]
+                else:
+                    base_dict[dummy_problem] = 0
         # add loss multipliers
         base_dict.update(loss_multiplier)
         yield base_dict

@@ -81,12 +81,12 @@ class Params():
         self.freeze_step = 0
         self.prefetch = 5000
         self.dynamic_padding=True
-        self.bucket_batch_sizes = [128, 64, 32, 16]
+        self.bucket_batch_sizes = [32, 32, 32, 16]
         self.bucket_boundaries = [30, 64, 128]
 
         # hparm
         self.dropout_keep_prob = 0.9
-        self.max_seq_len = 128
+        self.max_seq_len = 256
         self.use_one_hot_embeddings = True
         self.label_smoothing = 0.0
         self.crf = False
