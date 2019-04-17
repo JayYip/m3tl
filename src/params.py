@@ -80,6 +80,9 @@ class Params():
         self.train_epoch = 15
         self.freeze_step = 0
         self.prefetch = 5000
+        self.dynamic_padding=True
+        self.bucket_batch_sizes = [128, 64, 32, 16]
+        self.bucket_boundaries = [30, 64, 128]
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -233,7 +236,8 @@ class Params():
                 'hidden_dense',
                 'task_transformer',
                 'train_problem',
-                'mean_gradients']
+                'mean_gradients',
+                'dynamic_padding']
 
     def to_json(self):
         dump_dict = {}

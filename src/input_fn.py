@@ -13,6 +13,10 @@ from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
 from .create_generators import create_generator
 
 
+def element_length_func(yield_dict):
+    return tf.shape(yield_dict['input_ids'])[0]
+
+
 def train_eval_input_fn(config: Params, mode='train', epoch=None):
     '''Train and eval input function of estimator.
     This function will create as tf dataset from generator. 
@@ -45,11 +49,18 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
         'input_mask': tf.int32,
         'segment_ids': tf.int32
     }
-    output_shapes = {
-        'input_ids': [config.max_seq_len],
-        'input_mask': [config.max_seq_len],
-        'segment_ids': [config.max_seq_len]
-    }
+    if config.dynamic_padding:
+        output_shapes = {
+            'input_ids': [None],
+            'input_mask': [None],
+            'segment_ids': [None]
+        }
+    else:
+        output_shapes = {
+            'input_ids': [config.max_seq_len],
+            'input_mask': [config.max_seq_len],
+            'segment_ids': [config.max_seq_len]
+        }
     if config.augument_mask_lm:
         output_type.update({
             "masked_lm_positions": tf.int32,
@@ -70,7 +81,7 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
             if problem_type in ['seq_tag']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update(
-                    {'%s_label_ids' % problem: [config.max_seq_len]})
+                    {'%s_label_ids' % problem: [None]})
             elif problem_type in ['cls']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update({'%s_label_ids' % problem: []})
@@ -108,10 +119,18 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
         dataset = dataset.shuffle(config.shuffle_buffer)
 
     dataset = dataset.prefetch(config.prefetch)
-    if mode == 'train':
-        dataset = dataset.batch(config.batch_size)
+    if config.dynamic_padding:
+        dataset = dataset.apply(
+            tf.data.experimental.bucket_by_sequence_length(
+                element_length_func=element_length_func,
+                bucket_batch_sizes=config.bucket_batch_sizes,
+                bucket_boundaries=config.bucket_boundaries,
+            ))
     else:
-        dataset = dataset.batch(config.batch_size*2)
+        if mode == 'train':
+            dataset = dataset.batch(config.batch_size)
+        else:
+            dataset = dataset.batch(config.batch_size*2)
     return dataset
 
 
@@ -152,7 +171,7 @@ def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
                 tokens_a, tokens_b, target)
 
             input_mask, tokens, segment_ids, target = create_mask_and_padding(
-                tokens, segment_ids, target, config.max_seq_len)
+                tokens, segment_ids, target, config.max_seq_len, config.dynamic_padding)
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
             data_dict['input_ids'] = input_ids
@@ -165,14 +184,22 @@ def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
         'segment_ids': tf.int32
     }
     output_shapes = {
-        'input_ids': [config.max_seq_len],
-        'input_mask': [config.max_seq_len],
-        'segment_ids': [config.max_seq_len]
+        'input_ids': [None],
+        'input_mask': [None],
+        'segment_ids': [None]
     }
     # dataset = tf.data.Dataset.from_tensor_slices(data_dict)
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
-    dataset = dataset.batch(config.batch_size*2)
+    if config.dynamic_padding:
+        dataset = dataset.apply(
+            tf.data.experimental.bucket_by_sequence_length(
+                element_length_func=element_length_func,
+                bucket_batch_sizes=config.bucket_batch_sizes,
+                bucket_boundaries=config.bucket_boundaries,
+            ))
+    else:
+        dataset = dataset.batch(config.batch_size*2)
 
     return dataset
 

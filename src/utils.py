@@ -273,17 +273,19 @@ def add_special_tokens_with_seqs(
     return (tokens, segment_ids, target)
 
 
-def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=False):
+def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=False, dynamic_padding=False):
 
     input_mask = [1]*len(tokens)
-    pad_list = ['[PAD]'] * (max_length - len(input_mask))
 
-    input_mask += [0]*len(pad_list)
-    segment_ids += [0]*len(pad_list)
-    tokens += pad_list
+    if not dynamic_padding:
+        pad_list = ['[PAD]'] * (max_length - len(input_mask))
 
-    if is_seq:
-        target += pad_list
+        input_mask += [0]*len(pad_list)
+        segment_ids += [0]*len(pad_list)
+        tokens += pad_list
+
+        if is_seq:
+            target += pad_list
 
     return input_mask, tokens, segment_ids, target
 

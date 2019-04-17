@@ -105,7 +105,7 @@ def create_single_problem_generator(problem,
             masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
 
         input_mask, tokens, segment_ids, target = create_mask_and_padding(
-            tokens, segment_ids, target, params.max_seq_len, is_seq)
+            tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
 
         # create mask and padding for labels of seq2seq problem
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
