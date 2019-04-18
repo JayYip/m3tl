@@ -171,7 +171,7 @@ def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
                 tokens_a, tokens_b, target)
 
             input_mask, tokens, segment_ids, target = create_mask_and_padding(
-                tokens, segment_ids, target, config.max_seq_len, config.dynamic_padding)
+                tokens, segment_ids, target, config.max_seq_len, dynamic_padding=config.dynamic_padding)
 
             input_ids = tokenizer.convert_tokens_to_ids(tokens)
             data_dict['input_ids'] = input_ids
@@ -191,15 +191,12 @@ def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
     # dataset = tf.data.Dataset.from_tensor_slices(data_dict)
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
-    if config.dynamic_padding:
-        dataset = dataset.apply(
-            tf.data.experimental.bucket_by_sequence_length(
-                element_length_func=element_length_func,
-                bucket_batch_sizes=config.bucket_batch_sizes,
-                bucket_boundaries=config.bucket_boundaries,
-            ))
-    else:
-        dataset = dataset.batch(config.batch_size*2)
+
+    dataset = dataset.padded_batch(
+        config.batch_size,
+        output_shapes
+    )
+    # dataset = dataset.batch(config.batch_size*2)
 
     return dataset
 

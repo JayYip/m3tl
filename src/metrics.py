@@ -165,6 +165,10 @@ def ner_evaluate(problem, estimator, params):
     text, label_data, label_encoder = params.read_data_fn[problem](
         params, PREDICT)
 
+    t_l_tuple_list = list(zip(text, label_data))
+    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
+    text, label_data = zip(*t_l_tuple_list)
+
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
     pred_list = estimator.predict(pred_input_fn)
@@ -178,7 +182,6 @@ def ner_evaluate(problem, estimator, params):
         if not t:
             continue
         true_seq_length = len(t) - 1
-
         pred_prob = p[scope_name]
 
         pred_prob = pred_prob[1:true_seq_length]
@@ -209,6 +212,9 @@ def ner_evaluate(problem, estimator, params):
 def acc_evaluate(problem, estimator, params):
     text, label_data, label_encoder = params.read_data_fn[problem](
         params, PREDICT)
+    t_l_tuple_list = list(zip(text, label_data))
+    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
+    text, label_data = zip(*t_l_tuple_list)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
@@ -274,6 +280,9 @@ def acc_evaluate(problem, estimator, params):
 def cws_evaluate(problem, estimator, params):
     text, label_data, label_encoder = params.read_data_fn[problem](
         params, PREDICT)
+    t_l_tuple_list = list(zip(text, label_data))
+    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
+    text, label_data = zip(*t_l_tuple_list)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
@@ -413,6 +422,9 @@ def getChunks(tagList):
 def seq2seq_evaluate(problem, estimator, params):
     text, label_data, label_encoder = params.read_data_fn[problem](
         params, PREDICT)
+    t_l_tuple_list = list(zip(text, label_data))
+    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
+    text, label_data = zip(*t_l_tuple_list)
 
     def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
 
