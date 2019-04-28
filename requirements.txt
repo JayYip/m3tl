@@ -1,6 +1,8 @@
-tensorflow_gpu==1.12.0
-six==1.11.0
 numpy==1.15.4
+tqdm==4.31.1
+tensorflow_gpu==1.12.0
+nltk==3.4
+six==1.11.0
 tensor2tensor==1.11.0
-protobuf==3.6.1
-scikit_learn==0.20.1
+protobuf==3.7.1
+scikit_learn==0.20.3
