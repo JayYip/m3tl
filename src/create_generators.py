@@ -97,7 +97,12 @@ def create_single_problem_generator(problem,
                     params.max_predictions_per_seq,
                     list(tokenizer.vocab.keys()), rng)
             _, mask_lm_tokens, _, _ = create_mask_and_padding(
-                mask_lm_tokens, copy(segment_ids), copy(target), params.max_seq_len, is_seq)
+                mask_lm_tokens,
+                copy(segment_ids),
+                copy(target),
+                params.max_seq_len,
+                is_seq,
+                dynamic_padding=params.dynamic_padding)
             masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
                 masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
             mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
