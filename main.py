@@ -3,10 +3,11 @@ import os
 
 import tensorflow as tf
 
+from tensorflow.estimator import Estimator
+
 from src.input_fn import train_eval_input_fn, predict_input_fn
 from src.model_fn import BertMultiTask
 from src.params import Params
-from src.estimator import Estimator
 from src.ckpt_restore_hook import RestoreCheckpointHook
 from src import metrics
 from src.utils import TRAIN, EVAL, PREDICT
@@ -52,7 +53,7 @@ def main(_):
 
     dist_trategy = tf.contrib.distribute.MirroredStrategy(
         num_gpus=int(FLAGS.gpu),
-        cross_tower_ops=tf.contrib.distribute.AllReduceCrossTowerOps(
+        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
             'nccl', num_packs=int(FLAGS.gpu)))
 
     run_config = tf.estimator.RunConfig(
