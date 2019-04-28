@@ -78,6 +78,7 @@ def main(_):
 
         def input_fn(): return train_eval_input_fn(params, mode='eval')
         estimator.evaluate(input_fn=input_fn)
+        params.to_json()
 
     elif FLAGS.schedule == 'eval':
 
