@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
 
 NER_TYPE = ['LOC',  # location
@@ -236,6 +236,7 @@ def read_bosonnlp_data(file_pattern, eval_size=0.2):
                         ent_type = ent_chunk[:punc_ind]
                         ent = ent_chunk[punc_ind+1:]
                         if ent_type in project_table:
+                            ent = cluster_alphnum(ent)
                             for char_ind, ent_char in enumerate(ent):
                                 if char_ind == 0:
                                     loc_char = 'B'
@@ -295,6 +296,7 @@ def read_msra(file_pattern, eval_size):
             for word in sentence_word_list:
                 if word:
                     ent, ent_type = word.split('/')
+                    ent = cluster_alphnum(ent)
                     if ent_type not in project_table:
                         input_list[-1] += list(ent)
                         target_list[-1] += ['O'] * len(ent)

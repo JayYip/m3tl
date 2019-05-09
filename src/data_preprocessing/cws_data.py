@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 from tqdm import tqdm
+import re
 
 from sklearn.model_selection import train_test_split
 
@@ -63,15 +64,31 @@ def _process_text_files(path_list):
             process_fn = get_process_fn(os.path.split(filename)[-1])
 
             for l in tqdm(input_list):
-                pos_tag = []
-                final_line = []
 
                 decoded_line = process_fn(l)
 
+                last_isalpha_num = False
+                pos_tag = []
+                final_line = []
+
                 for w in decoded_line:
-                    if w and len(w) <= 299:
-                        final_line.append(w)
-                        pos_tag.append(possible_tags[len(w) - 1])
+                    is_alphanum = bool(re.match('^[a-zA-Z0-9]+$', w))
+
+                    if not is_alphanum:
+                        # if this round is chinese and last round is alphanum,
+                        # append the last alphanum's target: s and continue
+                        if last_isalpha_num:
+                            pos_tag.append('s')
+
+                        if w and len(w) <= 299:
+                            final_line.append(w)
+                            pos_tag.append(possible_tags[len(w) - 1])
+                    else:
+                        if last_isalpha_num:
+                            final_line[-1] += w
+                        else:
+                            final_line.append(w)
+                            last_isalpha_num = True
 
                 decode_str = ''.join(final_line)
 

@@ -3,6 +3,7 @@ import os
 import unicodedata
 import random
 import collections
+import re
 from sklearn.base import BaseEstimator, TransformerMixin
 
 import numpy as np
@@ -483,3 +484,29 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
         masked_lm_labels.append(p.label)
 
     return (output_tokens, masked_lm_positions, masked_lm_labels)
+
+
+def cluster_alphnum(text: str) -> list:
+    """Simple funtions to aggregate eng and number
+
+    Arguments:
+        text {str} -- input text
+
+    Returns:
+        list -- list of string with chinese char or eng word as element
+    """
+    return_list = []
+    last_is_alphnum = False
+
+    for char in text:
+        is_alphnum = bool(re.match('^[a-zA-Z0-9]+$', char))
+        if is_alphnum:
+            if last_is_alphnum:
+                return_list[-1] += char
+            else:
+                return_list.append(char)
+                last_is_alphnum = True
+        else:
+            return_list.append(char)
+            last_is_alphnum = False
+    return return_list
