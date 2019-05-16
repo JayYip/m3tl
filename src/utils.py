@@ -175,8 +175,10 @@ def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
         inputs_a_str = '\t'.join([t if t != '\t' else ' ' for t in inputs_a])
     else:
         inputs_a_str = inputs_a
-
-    tokenized_inputs = tokenizer.tokenize(inputs_a_str)
+    if is_seq:
+        tokenized_inputs, target = tokenizer.tokenize(inputs_a_str, target)
+    else:
+        tokenized_inputs = tokenizer.tokenize(inputs_a_str)
 
     return (tokenized_inputs, target)
 
@@ -510,3 +512,56 @@ def cluster_alphnum(text: str) -> list:
             return_list.append(char)
             last_is_alphnum = False
     return return_list
+
+
+def split_label_fix(label_list: list, label_encoder: LabelEncoder) -> list:
+    """A function to fix splitted label. 
+    Example:
+        Apple -> App# $le
+        splited label_list: B-ORG -> B-ORG, B-ORG
+        Fixed: B-ORG, B-ORG -> B-ORG, I-ORG
+
+    Arguments:
+        label_list {list} -- label list
+        label_encoder {LabelEncoder} -- label encoder
+
+    Returns:
+        list -- fixed label list
+    """
+    bio_set = set(['B', 'I', 'O'])
+    bmes_set = set(['B', 'M', 'E', 'S'])
+
+    keys = list(label_encoder.encode_dict.keys())
+    keys = [k.upper() for k in keys]
+
+    def _get_position_key(k):
+        if '-' in k:
+            return k.split('-')[0], '-'+k.split('-')[1]
+        else:
+            return k, ''
+
+    position_keys = []
+    for k in keys:
+        position_keys.append(_get_position_key(k)[0])
+    last_label = None
+    position_keys = set(position_keys)
+    fixed_label_list = []
+    if position_keys == bio_set:
+        for l in label_list:
+            if _get_position_key(l)[0].upper() == 'B' and l == last_label:
+                fixed_label_list.append('I' + _get_position_key(l)[1])
+            else:
+                last_label = l
+                fixed_label_list.append(l)
+        return fixed_label_list
+
+    elif position_keys == bmes_set:
+        for l in label_list:
+            if _get_position_key(l)[0].upper() == 'B' and l == last_label:
+                fixed_label_list.append('M' + _get_position_key(l)[1])
+            else:
+                last_label = l
+                fixed_label_list.append(l)
+        return fixed_label_list
+    else:
+        return label_list

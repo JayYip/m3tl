@@ -81,8 +81,9 @@ def _process_text_files(path_list):
                             pos_tag.append('s')
 
                         if w and len(w) <= 299:
-                            final_line.append(w)
-                            pos_tag.append(possible_tags[len(w) - 1])
+                            final_line.extend(list(w))
+                            pos_tag.extend(list(possible_tags[len(w) - 1]))
+                        last_isalpha_num = False
                     else:
                         if last_isalpha_num:
                             final_line[-1] += w
@@ -90,16 +91,20 @@ def _process_text_files(path_list):
                             final_line.append(w)
                             last_isalpha_num = True
 
-                decode_str = ''.join(final_line)
+                if last_isalpha_num:
+                    pos_tag.append('s')
 
-                pos_tag_str = ''.join(pos_tag)
+                # decode_str = ''.join(final_line)
 
-                if len(pos_tag_str) != len(decode_str):
-                    print('Skip one row. ' + pos_tag_str + ';' + decode_str)
+                # pos_tag_str = ''.join(pos_tag)
+
+                if len(pos_tag) != len(final_line):
+                    print(filename)
+                    print('Skip one row. ' + pos_tag + ';' + final_line)
                     continue
 
-                inputs.append(list(decode_str))
-                target.append(list(pos_tag_str))
+                inputs.append(final_line)
+                target.append(pos_tag)
 
     return inputs, target
 
@@ -150,7 +155,9 @@ def CWS(params, mode):
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
-        file_list = glob.glob('data/cws/training/*.utf8')
+        file_list = [  # 'as_testing_gold.utf8',
+            'cityu_training.utf8', 'msr_training.utf8', 'pku_training.utf8']
+        file_list = [os.path.join('data/cws/training', f) for f in file_list]
     else:
         file_list = [  # 'as_testing_gold.utf8',
             'cityu_test_gold.utf8', 'msr_test_gold.utf8', 'pku_test_gold.utf8']

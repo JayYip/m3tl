@@ -127,7 +127,7 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
 
 def weibo_ner(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
@@ -162,7 +162,7 @@ def gold_horse_segment_process_fn(d):
 
 def weibo_cws(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
@@ -333,7 +333,7 @@ def read_msra(file_pattern, eval_size):
 
 def NER(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
     weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
                                proc_fn=gold_horse_ent_type_process_fn)
     boson_data = read_bosonnlp_data(
@@ -368,7 +368,7 @@ def NER(params, mode):
 
 def msra_ner(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 
@@ -400,7 +400,7 @@ def msra_ner(params, mode):
 
 def boson_ner(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
 
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -432,7 +432,7 @@ def boson_ner(params, mode):
 
 def boson_domain(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
 
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -464,7 +464,7 @@ def boson_domain(params, mode):
 
 def Weibo_domain(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
@@ -491,7 +491,7 @@ def Weibo_domain(params, mode):
 
 def msra_domain(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 

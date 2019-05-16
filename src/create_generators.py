@@ -75,7 +75,7 @@ def create_single_problem_generator(problem,
         if not tokens_a:
             continue
         # check whether tokenization changed the length
-        if len(raw_inputs) != len(tokens_a):
+        if len(target) != len(tokens_a) and is_seq:
             tf.logging.warning('Data %d broken' % ex_index)
             continue
 

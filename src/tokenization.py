@@ -119,13 +119,23 @@ class FullTokenizer(object):
         self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
-    def tokenize(self, text):
+    def tokenize(self, text, label=None):
         split_tokens = []
-        for token in self.basic_tokenizer.tokenize(text):
-            # for sub_token in self.wordpiece_tokenizer.tokenize(token):
-            split_tokens.append(token)
+        split_labels = []
+        for token_ind, token in enumerate(self.basic_tokenizer.tokenize(text)):
+            if label is not None:
+                token_label = label[token_ind]
+            sub_token_list = self.wordpiece_tokenizer.tokenize(token)
 
-        return split_tokens
+            for sub_token in sub_token_list:
+                split_tokens.append(sub_token)
+                if label is not None:
+                    split_labels.append(token_label)
+        if label is not None:
+            assert len(split_tokens) == len(split_labels)
+            return split_tokens, split_labels
+        else:
+            return split_tokens
 
     def convert_tokens_to_ids(self, tokens):
         return convert_by_vocab(self.vocab, tokens)
@@ -244,9 +254,11 @@ class BasicTokenizer(object):
         for char in text.split('\t'):
             try:
                 cp = ord(char)
+            except TypeError:
+                output.append(char)
+                continue
             except:
-                for _ in char:
-                    output.append('[UNK]')
+                output.append('[UNK]')
                 continue
             if cp == 0 or cp == 0xfffd or _is_control(char):
                 output.append('[UNK]')
@@ -288,6 +300,9 @@ class WordpieceTokenizer(object):
 
         output_tokens = []
         for token in whitespace_tokenize(text):
+            if token == '[UNK]':
+                output_tokens.append(token)
+                continue
             chars = list(token)
             if len(chars) > self.max_input_chars_per_word:
                 output_tokens.append(self.unk_token)

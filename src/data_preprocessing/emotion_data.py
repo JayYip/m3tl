@@ -12,7 +12,7 @@ from ..create_generators import create_single_problem_generator, create_pretrain
 
 def emotion_analysis(params, mode):
     tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=False)
+        vocab_file=params.vocab_file, do_lower_case=True)
     with open('data/emotion_analysis/mer.negative.courpus_and_tag2.txt') as f:
         neg_data = [list(t.replace(' ', '')) for t in f.readlines()]
 
