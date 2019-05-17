@@ -6,7 +6,6 @@ import tensorflow as tf
 
 from .tokenization import FullTokenizer
 
-from .params import Params
 from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
                     add_special_tokens_with_seqs, create_mask_and_padding,
                     TRAIN, EVAL, PREDICT)
@@ -17,7 +16,7 @@ def element_length_func(yield_dict):
     return tf.shape(yield_dict['input_ids'])[0]
 
 
-def train_eval_input_fn(config: Params, mode='train', epoch=None):
+def train_eval_input_fn(config, mode='train', epoch=None):
     '''Train and eval input function of estimator.
     This function will create as tf dataset from generator. 
     Training data and eval data will be processed based on processing
@@ -134,7 +133,7 @@ def train_eval_input_fn(config: Params, mode='train', epoch=None):
     return dataset
 
 
-def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
+def predict_input_fn(input_file_or_list, config, mode=PREDICT):
     '''Input function that takes a file path or list of string and 
     convert it to tf.dataset
 
@@ -201,7 +200,7 @@ def predict_input_fn(input_file_or_list, config: Params, mode=PREDICT):
     return dataset
 
 
-def to_serving_input(input_file_or_list, config: Params, mode=PREDICT, tokenizer=None):
+def to_serving_input(input_file_or_list, config, mode=PREDICT, tokenizer=None):
     '''A serving input function that takes input file path or
     list of string and apply BERT preprocessing. This fn will
     return a data dict instead of tf dataset. Used in serving.

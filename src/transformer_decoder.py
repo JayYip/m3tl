@@ -4,11 +4,9 @@ from tensor2tensor.utils import beam_search
 
 from .bert import modeling
 
-from .params import Params
-
 
 class TransformerDecoder(object):
-    def __init__(self, params: Params):
+    def __init__(self, params):
         self.params = params
 
     def get_decoder_self_attention_mask(self, length):

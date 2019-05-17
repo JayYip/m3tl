@@ -7,7 +7,7 @@ from tensorflow.estimator import Estimator
 
 from src.input_fn import train_eval_input_fn, predict_input_fn
 from src.model_fn import BertMultiTask
-from src.params import Params
+from src.params import BaseParams
 from src.ckpt_restore_hook import RestoreCheckpointHook
 from src import metrics
 from src.utils import TRAIN, EVAL, PREDICT
@@ -41,7 +41,7 @@ def main(_):
     else:
         base_dir, dir_name = None, None
 
-    params = Params()
+    params = BaseParams()
     params.assign_problem(FLAGS.problem, gpu=int(FLAGS.gpu),
                           base_dir=base_dir, dir_name=dir_name)
 

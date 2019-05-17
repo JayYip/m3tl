@@ -4,7 +4,6 @@ from tensorflow.contrib import autograph
 from .bert import modeling
 from .bert.modeling import BertModel
 
-from .params import Params
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
     Seq2Seq, SequenceLabel, Classification, LabelTransferHidden, MaskLM, PreTrain, GridTransformer, TaskTransformer)
@@ -45,7 +44,7 @@ def filter_loss(loss, features, problem):
 
 
 class BertMultiTask():
-    def __init__(self, params: Params):
+    def __init__(self, params):
         self.config = params
 
     def body(self, features, mode):
@@ -394,7 +393,7 @@ class BertMultiTask():
             return output_spec
 
     def get_model_fn(self, warm_start=True):
-        def model_fn(features, labels, mode, params: Params):
+        def model_fn(features, labels, mode, params):
 
             hidden_feature = self.body(
                 features, mode)

@@ -9,9 +9,8 @@ from . import data_preprocessing
 from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
 
 
-class Params():
+class BaseParams():
     def __init__(self):
-
         self.run_problem_list = []
 
         self.problem_type = {
@@ -134,7 +133,6 @@ class Params():
         self.mask_lm_initializer_range = 0.02
 
         self.train_problem = None
-
         # get generator function for each problem
         self.read_data_fn = {}
         for problem in self.problem_type:
@@ -144,6 +142,17 @@ class Params():
             except AttributeError:
                 raise AttributeError(
                     '%s function not implemented in data_preprocessing.py' % problem)
+
+    def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
+        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text']:
+            raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format((['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text'], problem_type)))
+
+        self.problem_type[problem_name] = problem_type
+        self.read_data_fn[problem_name] = processing_fn
+        if share_top is not None:
+            self.share_top[problem_name] = share_top
+        else:
+            self.share_top[problem_name] = problem_name
 
     def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None):
         """Assign the actual run problem to param. This function will
@@ -353,3 +362,18 @@ class Params():
         self.bert_config_dict = self.bert_config.__dict__
         with open(self.vocab_file, 'r', encoding='utf8') as vf:
             self.vocab_size = len(vf.readlines())
+
+class CRFParams(BaseParams):
+    def __init__(self):
+        super(CRFParams, self).__init__()
+        self.crf = True
+
+class StaticBatchParams(BaseParams):
+    def __init__(self):
+        super(StaticBatchParams, self).__init__()
+        self.dynamic_padding=False
+
+class DynamicBatchSizeParams(BaseParams):
+    def __init__(self):
+        super(DynamicBatchSizeParams, self).__init__()
+        self.bucket_batch_sizes = [128, 64, 32, 16]

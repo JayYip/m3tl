@@ -7,7 +7,7 @@ from tensorflow.tools.graph_transforms import TransformGraph
 from src.bert import modeling
 
 from src.model_fn import BertMultiTask
-from src.params import Params
+from src.params import BaseParams
 
 flags = tf.flags
 
@@ -19,7 +19,7 @@ flags.DEFINE_string("model_dir", "",
                     "Model dir. If not specified, will use problem_name + _ckpt")
 
 
-def optimize_graph(params: Params):
+def optimize_graph(params):
 
     config = tf.ConfigProto(
         device_count={'GPU': 0}, allow_soft_placement=True)
@@ -93,7 +93,7 @@ def optimize_graph(params: Params):
     return tmp_file
 
 
-def make_serve_dir(params: Params):
+def make_serve_dir(params):
 
     server_dir = os.path.join(params.ckpt_dir, 'serve_model')
     if not os.path.exists(server_dir):
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         base_dir, dir_name = os.path.split(FLAGS.model_dir)
     else:
         base_dir, dir_name = None, None
-    params = Params()
+    params = BaseParams()
     params.assign_problem(FLAGS.problem,
                           base_dir=base_dir, dir_name=dir_name)
     optimize_graph(params)
