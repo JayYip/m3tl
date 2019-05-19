@@ -171,7 +171,7 @@ class BaseParams():
             gpu {int} -- number of gpu use for training, this
                 will affect the training steps and learning rate (default: {2})
             base_dir {str} -- base dir for ckpt, if None,
-                then "tmp" is assigned (default: {None})
+                then "models" is assigned (default: {None})
             dir_name {str} -- dir name for ckpt, if None,
                 will be created automatically (default: {None})
         """
@@ -341,7 +341,7 @@ class BaseParams():
         return problem_list
 
     def prepare_dir(self, base_dir, dir_name, problem_list):
-        base = base_dir if base_dir is not None else 'tmp'
+        base = base_dir if base_dir is not None else 'models'
 
         dir_name = dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
