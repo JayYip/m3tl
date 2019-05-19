@@ -282,7 +282,7 @@ def create_pretraining_generator(problem,
                 yield yield_dict
 
 
-def create_generator(params, mode, epoch):
+def create_generator(params, mode):
     """Function to create iterator for multiple problem
 
     This function dose the following things:
@@ -304,7 +304,6 @@ def create_generator(params, mode, epoch):
     Arguments:
         params {Params} -- params
         mode {mode} -- mode
-        epoch {int} -- epochs to run
     """
     # example
     # problem_list: ['NER', 'CWS', 'weibo_ner', 'weibo_cws']
@@ -325,8 +324,14 @@ def create_generator(params, mode, epoch):
         params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] != 'pretrain'}
 
     # init gen
-    gen_dict = {problem: params.read_data_fn[problem](params, mode)
-                for problem in problem_list}
+    try:
+        gen_dict = {problem: params.read_data_fn[problem](params, mode)
+                    for problem in problem_list}
+    except KeyError:
+        not_exist_problem = [
+            p for p in problem_list if p not in params.read_data_fn]
+        raise KeyError(
+            'The preprocessing function of {0} not found, make sure you called params.add_problem. If you\'re using train_bert_multitask, please make sure you provided problem_type_dict and processing_fn_dict.'.format(not_exist_problem))
 
     while gen_dict:
         # sample problem to train
