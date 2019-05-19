@@ -1,22 +1,14 @@
 import os
 from shutil import copy2
+import argparse
 
 import tensorflow as tf
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from src.bert import modeling
+from .bert import modeling
 
-from src.model_fn import BertMultiTask
-from src.params import BaseParams
-
-flags = tf.flags
-
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string("problem", "weibo_ner",
-                    "Problems to run, for multiproblem, use & to seperate, e.g. weibo_ner&weibo_cws")
-flags.DEFINE_string("model_dir", "",
-                    "Model dir. If not specified, will use problem_name + _ckpt")
+from .model_fn import BertMultiTask
+from .params import BaseParams
 
 
 def optimize_graph(params):
@@ -108,14 +100,25 @@ def make_serve_dir(params):
         copy2(ori_path, server_dir)
 
 
-if __name__ == "__main__":
-    if FLAGS.model_dir:
-        base_dir, dir_name = os.path.split(FLAGS.model_dir)
-    else:
-        base_dir, dir_name = None, None
-    params = BaseParams()
-    params.assign_problem(FLAGS.problem,
-                          base_dir=base_dir, dir_name=dir_name)
+def export_model(params):
     optimize_graph(params)
     params.to_json()
     make_serve_dir(params)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--problem', type=str,
+                        default='weibo_ner&weibo_cws', help='Problems to run')
+    parser.add_argument('--model_dir', type=str,
+                        default='', help='path for saving trained models')
+
+    args = parser.parse_args()
+    if args.model_dir:
+        base_dir, dir_name = os.path.split(args.model_dir)
+    else:
+        base_dir, dir_name = None, None
+    params = BaseParams()
+    params.assign_problem(args.problem,
+                          base_dir=base_dir, dir_name=dir_name)
+    export_model(params)
