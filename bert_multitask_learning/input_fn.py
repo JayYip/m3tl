@@ -16,32 +16,27 @@ def element_length_func(yield_dict):
     return tf.shape(yield_dict['input_ids'])[0]
 
 
-def train_eval_input_fn(config, mode='train', epoch=None):
+def train_eval_input_fn(config, mode='train'):
     '''Train and eval input function of estimator.
     This function will create as tf dataset from generator. 
-    Training data and eval data will be processed based on processing
-    fn defined in data_preprocessing.
+
+    Usage:
+        def train_input_fn(): return train_eval_input_fn(params)
+        estimator.train(
+            train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
 
     Arguments:
         config {Params} -- Params objects
 
     Keyword Arguments:
         mode {str} -- ModeKeys (default: {'train'})
-        epoch {int} -- Number of epochs to train (default: {None})
 
     Returns:
         tf Dataset -- Tensorflow dataset
     '''
 
     def gen():
-        if mode == 'train':
-            epoch = config.train_epoch
-        else:
-            epoch = 1
-
-        g = create_generator(params=config, mode=mode, epoch=epoch)
-        for example in g:
-            yield example
+        return create_generator(params=config, mode=mode)
 
     output_type = {
         'input_ids': tf.int32,
@@ -136,6 +131,10 @@ def train_eval_input_fn(config, mode='train', epoch=None):
 def predict_input_fn(input_file_or_list, config, mode=PREDICT):
     '''Input function that takes a file path or list of string and 
     convert it to tf.dataset
+
+    Example:
+        predict_fn = lambda: predict_input_fn('test.txt', params)
+        pred = estimator.predict(predict_fn)
 
     Arguments:
         input_file_or_list {str or list} -- file path or list of string
