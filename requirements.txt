@@ -1,8 +1,10 @@
-numpy==1.15.4
-tqdm==4.31.1
+pandas
+tqdm
+pytablewriter
+nltk
+six
+tensor2tensor
+numpy
+scikit_learn
+atlas
 tensorflow_gpu==1.13.1
-nltk==3.4
-six==1.11.0
-tensor2tensor==1.11.0
-protobuf==3.7.1
-scikit_learn==0.20.3
