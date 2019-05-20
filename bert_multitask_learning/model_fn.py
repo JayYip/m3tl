@@ -44,8 +44,17 @@ def filter_loss(loss, features, problem):
 
 
 class BertMultiTask():
+    """Main model class for creating Bert multi-task model
+
+    Method:
+        body: takes input_ids, segment_ids, input_mask and pass through bert model
+        top: takes the logit output from body and apply classification top layer
+        create_spec: create train, eval and predict EstimatorSpec
+        get_model_fn: get bert multi-task model function
+    """
+
     def __init__(self, params):
-        self.config = params
+        self.params = params
 
     def body(self, features, mode):
         """Body of the model, aka Bert
@@ -69,7 +78,7 @@ class BertMultiTask():
             tensor, [batch_size, seq_length, hidden_size]
         """
 
-        config = self.config
+        config = self.params
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
         segment_ids = features["segment_ids"]
@@ -100,7 +109,7 @@ class BertMultiTask():
                 feature_dict[logit_type] = model.get_embedding_table()
 
         # add summary
-        if self.config.detail_log:
+        if self.params.detail_log:
             with tf.name_scope('bert_feature_summary'):
                 for layer_ind, layer_output in enumerate(feature_dict['all']):
                     variable_summaries(
@@ -109,6 +118,87 @@ class BertMultiTask():
         feature_dict['all'] = tf.concat(feature_dict['all'], axis=1)
 
         return feature_dict
+
+    def hidden(self, features, hidden_feature, mode):
+        """Hidden of model, will be called between body and top
+
+        This is majorly for all the crazy stuff.
+
+        Arguments:
+            features {dict of tensor} -- feature dict
+            hidden_feature {dict of tensor} -- hidden feature dict output by body
+            mode {mode} -- ModeKey
+
+        Raises:
+            ValueError: Incompatible submodels
+
+        Returns:
+            return_feature
+            return_hidden_feature
+        """
+
+        if self.params.label_transfer:
+            ori_hidden_feature = {
+                'ori_'+k: v for k,
+                v in hidden_feature.items()}
+            label_transfer_layer = LabelTransferHidden(self.params)
+            hidden_feature = label_transfer_layer(
+                features, hidden_feature, mode)
+            hidden_feature.update(ori_hidden_feature)
+
+        global_step = tf.train.get_or_create_global_step()
+
+        hidden_feature['seq'] = stop_grad(
+            global_step, hidden_feature['seq'], self.params.freeze_step)
+
+        if self.params.task_transformer:
+            task_tranformer_layer = TaskTransformer(self.params)
+            task_tranformer_hidden_feature = task_tranformer_layer(
+                features, hidden_feature, mode)
+            self.params.hidden_dense = False
+
+        return_feature = {}
+        return_hidden_feature = {}
+
+        for problem_dict in self.params.run_problem_list:
+            for problem in problem_dict:
+                if self.params.task_transformer:
+                    hidden_feature = task_tranformer_hidden_feature[problem]
+                problem_type = self.params.problem_type[problem]
+
+                top_scope_name = self.get_scope_name(problem)
+
+                # get features with ind == 1
+                if mode == tf.estimator.ModeKeys.PREDICT:
+                    feature_this_round = features
+                    hidden_feature_this_round = hidden_feature
+                else:
+                    record_ind = tf.cast(
+                        features['%s_loss_multiplier' % problem], tf.bool)
+                    feature_this_round = {
+                        k: tf.boolean_mask(v, record_ind)
+                        for k, v in features.items()}
+                    hidden_feature_this_round = {
+                        k: tf.boolean_mask(v, record_ind)
+                        for k, v in hidden_feature.items()}
+
+                if self.params.label_transfer and self.params.grid_transformer:
+                    raise ValueError(
+                        'Label Transfer and grid transformer cannot be enabled in the same time.'
+                    )
+
+                if self.params.grid_transformer:
+                    with tf.variable_scope(top_scope_name):
+                        grid_layer = GridTransformer(self.params)
+
+                        hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
+
+                        hidden_feature_this_round[hidden_feature_key] = grid_layer(
+                            feature_this_round, hidden_feature_this_round, mode, problem)
+                    self.params.hidden_dense = False
+                return_hidden_feature[problem] = hidden_feature_this_round
+                return_feature[problem] = feature_this_round
+        return return_feature, return_hidden_feature
 
     def top(self, features, hidden_feature, mode):
         """Top model. This fn will return:
@@ -128,84 +218,34 @@ class BertMultiTask():
             'seq2seq_tag': Seq2Seq,
             'seq2seq_text': Seq2Seq
         }
-        if self.config.label_transfer:
-            ori_hidden_feature = {
-                'ori_'+k: v for k,
-                v in hidden_feature.items()}
-            label_transfer_layer = LabelTransferHidden(self.config)
-            hidden_feature = label_transfer_layer(
-                features, hidden_feature, mode)
-            hidden_feature.update(ori_hidden_feature)
-
-        global_step = tf.train.get_or_create_global_step()
-
-        hidden_feature['seq'] = stop_grad(
-            global_step, hidden_feature['seq'], self.config.freeze_step)
-
-        if self.config.task_transformer:
-            task_tranformer_layer = TaskTransformer(self.config)
-            task_tranformer_hidden_feature = task_tranformer_layer(
-                features, hidden_feature, mode)
-            self.config.hidden_dense = False
 
         return_dict = {}
 
-        for problem_dict in self.config.run_problem_list:
+        for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:
-                if self.config.task_transformer:
-                    hidden_feature = task_tranformer_hidden_feature[problem]
-                problem_type = self.config.problem_type[problem]
+                feature_this_round = features[problem]
+                hidden_feature_this_round = hidden_feature[problem]
+                problem_type = self.params.problem_type[problem]
+                scope_name = self.params.share_top[problem]
 
-                scope_name = self.config.share_top[problem]
+                top_scope_name = self.get_scope_name(problem)
 
+                # if pretrain, return pretrain logit
                 if problem_type == 'pretrain':
-                    pretrain = PreTrain(self.config)
+                    pretrain = PreTrain(self.params)
                     return_dict[scope_name] = pretrain(
-                        features, hidden_feature, mode, problem)
+                        feature_this_round, hidden_feature_this_round, mode, problem)
                     return return_dict
 
-                # get features with ind == 1
-                if mode == tf.estimator.ModeKeys.PREDICT:
-                    feature_this_round = features
-                    hidden_feature_this_round = hidden_feature
-                else:
-                    record_ind = tf.cast(
-                        features['%s_loss_multiplier' % problem], tf.bool)
-                    feature_this_round = {
-                        k: tf.boolean_mask(v, record_ind)
-                        for k, v in features.items()}
-                    hidden_feature_this_round = {
-                        k: tf.boolean_mask(v, record_ind)
-                        for k, v in hidden_feature.items()}
-
-                top_scope_name = '%s_top' % scope_name
-                if self.config.task_transformer:
-                    top_scope_name = top_scope_name + '_after_tr'
-
-                if self.config.label_transfer:
-                    top_scope_name = top_scope_name + '_lt'
-                    if self.config.hidden_gru:
-                        top_scope_name += '_gru'
-
-                if self.config.label_transfer and self.config.grid_transformer:
+                if self.params.label_transfer and self.params.grid_transformer:
                     raise ValueError(
                         'Label Transfer and grid transformer cannot be enabled in the same time.'
                     )
 
-                if self.config.grid_transformer:
-                    with tf.variable_scope(top_scope_name):
-                        grid_layer = GridTransformer(self.config)
-
-                        hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
-
-                        hidden_feature_this_round[hidden_feature_key] = grid_layer(
-                            feature_this_round, hidden_feature_this_round, mode, problem)
-                    self.config.hidden_dense = False
-
                 with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
                     layer = problem_type_layer[
                         problem_type](
-                        self.config)
+                        self.params)
                     return_dict[scope_name] = layer(
                         feature_this_round,
                         hidden_feature_this_round, mode, problem)
@@ -214,9 +254,9 @@ class BertMultiTask():
                         return_dict[scope_name] = filter_loss(
                             return_dict[scope_name], feature_this_round, problem)
 
-        if self.config.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
+        if self.params.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             try:
-                mask_lm_top = MaskLM(self.config)
+                mask_lm_top = MaskLM(self.params)
                 return_dict['augument_mask_lm'] = \
                     mask_lm_top(features,
                                 hidden_feature, mode, 'dummy')
@@ -224,6 +264,18 @@ class BertMultiTask():
                 pass
 
         return return_dict
+
+    def get_scope_name(self, problem):
+        scope_name = self.params.share_top[problem]
+        top_scope_name = '%s_top' % scope_name
+        if self.params.task_transformer:
+            top_scope_name = top_scope_name + '_after_tr'
+
+        if self.params.label_transfer:
+            top_scope_name = top_scope_name + '_lt'
+            if self.params.hidden_gru:
+                top_scope_name += '_gru'
+        return top_scope_name
 
     def create_optimizer(self, init_lr, num_train_steps, num_warmup_steps):
         """Creates an optimizer training op."""
@@ -278,9 +330,9 @@ class BertMultiTask():
 
     def create_train_spec(self, features, hidden_features, loss_eval_pred, mode, scaffold_fn):
         optimizer = self.create_optimizer(
-            self.config.lr,
-            self.config.train_steps,
-            self.config.num_warmup_steps)
+            self.params.lr,
+            self.params.train_steps,
+            self.params.num_warmup_steps)
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -294,21 +346,21 @@ class BertMultiTask():
 
         hook_dict['learning_rate'] = self.learning_rate
         hook_dict['total_training_steps'] = tf.constant(
-            self.config.train_steps)
+            self.params.train_steps)
 
         logging_hook = tf.train.LoggingTensorHook(
-            hook_dict, every_n_iter=self.config.log_every_n_steps)
+            hook_dict, every_n_iter=self.params.log_every_n_steps)
 
         grads = tf.gradients(
             total_loss, tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
 
-        if self.config.mean_gradients:
+        if self.params.mean_gradients:
             for v_idx, v in enumerate(tvars):
                 if v.name.startwith('bert/'):
-                    g[v_idx] = g[v_idx] / len(self.config.run_problem_list)
+                    g[v_idx] = g[v_idx] / len(self.params.run_problem_list)
 
-        if self.config.detail_log:
+        if self.params.detail_log:
             # add grad summary
             with tf.name_scope('var_and_grads'):
                 for g, v in zip(grads, tvars):
@@ -347,14 +399,14 @@ class BertMultiTask():
         initialized_variable_names = {}
 
         if mode == tf.estimator.ModeKeys.TRAIN:
-            if self.config.init_checkpoint:
+            if self.params.init_checkpoint:
                 (assignment_map, initialized_variable_names
                  ) = modeling.get_assignment_map_from_checkpoint(
-                    tvars, self.config.init_checkpoint)
+                    tvars, self.params.init_checkpoint)
 
                 def scaffold():
                     init_op = tf.train.init_from_checkpoint(
-                        self.config.init_checkpoint, assignment_map)
+                        self.params.init_checkpoint, assignment_map)
                     return tf.train.Scaffold(init_op)
 
                 if not warm_start:
@@ -398,7 +450,11 @@ class BertMultiTask():
             hidden_feature = self.body(
                 features, mode)
 
-            loss_eval_pred = self.top(features, hidden_feature, mode)
+            problem_sep_features, hidden_feature = self.hidden(
+                features, hidden_feature, mode)
+
+            loss_eval_pred = self.top(
+                problem_sep_features, hidden_feature, mode)
 
             spec = self.create_spec(
                 features, hidden_feature, loss_eval_pred, mode, warm_start)
