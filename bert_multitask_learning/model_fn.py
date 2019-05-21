@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib import autograph
+import os
 
 from .bert import modeling
 from .bert.modeling import BertModel
@@ -400,9 +401,17 @@ class BertMultiTask():
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             if self.params.init_checkpoint:
-                (assignment_map, initialized_variable_names
-                 ) = modeling.get_assignment_map_from_checkpoint(
-                    tvars, self.params.init_checkpoint)
+                try:
+                    (assignment_map, initialized_variable_names
+                     ) = modeling.get_assignment_map_from_checkpoint(
+                        tvars, self.params.init_checkpoint)
+                except ValueError:
+
+                    with open(os.path.join(self.params.init_checkpoint, 'checkpoint'), 'w') as f:
+                        f.write('model_checkpoint_path: "bert_model.ckpt"')
+                    (assignment_map, initialized_variable_names
+                     ) = modeling.get_assignment_map_from_checkpoint(
+                        tvars, self.params.init_checkpoint)
 
                 def scaffold():
                     init_op = tf.train.init_from_checkpoint(
