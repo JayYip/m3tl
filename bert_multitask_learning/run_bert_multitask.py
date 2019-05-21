@@ -74,6 +74,7 @@ def train_bert_multitask(
                 problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
     params.assign_problem(problem, gpu=int(num_gpus),
                           base_dir=base_dir, dir_name=dir_name)
+    params.to_json()
 
     tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
@@ -104,6 +105,7 @@ def train_bert_multitask(
     def train_input_fn(): return train_eval_input_fn(params)
     estimator.train(
         train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+    return estimator
 
 
 def eval_bert_multitask(
