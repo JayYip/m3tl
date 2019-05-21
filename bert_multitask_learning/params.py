@@ -142,6 +142,7 @@ class BaseParams():
             except AttributeError:
                 raise AttributeError(
                     '%s function not implemented in data_preprocessing.py' % problem)
+        self.problem_assigned = False
 
     def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
         if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text']:
@@ -175,6 +176,7 @@ class BaseParams():
             dir_name {str} -- dir name for ckpt, if None,
                 will be created automatically (default: {None})
         """
+        self.problem_assigned = True
 
         self.problem_list = self.parse_problem_string(flag_string)
         # create dir and get vocab, config
