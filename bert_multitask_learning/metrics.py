@@ -244,7 +244,7 @@ def acc_evaluate(problem, estimator, params):
                 predict = np.argmax(predict, axis=-1)
             decode_pred = label_encoder.inverse_transform(predict)
             decode_label = label
-        elif params.problem_type in ['cls']:
+        elif params.problem_type[problem] in ['cls']:
             predict = np.argmax(pred_prob)
 
             decode_pred = label_encoder.inverse_transform([predict])
