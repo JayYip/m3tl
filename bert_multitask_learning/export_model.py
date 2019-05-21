@@ -37,7 +37,10 @@ def optimize_graph(params):
         model = BertMultiTask(params)
         hidden_feature = model.body(
             features, tf.estimator.ModeKeys.PREDICT)
-        pred = model.top(features, hidden_feature,
+        problem_sep_features, hidden_feature = model.hidden(
+            features, hidden_feature, tf.estimator.ModeKeys.PREDICT
+        )
+        pred = model.top(problem_sep_features, hidden_feature,
                          tf.estimator.ModeKeys.PREDICT)
 
         output_tensors = [pred[k] for k in pred]
@@ -79,7 +82,7 @@ def optimize_graph(params):
             transforms
         )
     tmp_file = os.path.join(params.ckpt_dir, 'export_model')
-    tf.logging.info('write graph to a tmp file: %s' % tmp_file)
+    tf.logging.info('write graph to: %s' % tmp_file)
     with tf.gfile.GFile(tmp_file, 'wb') as f:
         f.write(tmp_g.SerializeToString())
     return tmp_file

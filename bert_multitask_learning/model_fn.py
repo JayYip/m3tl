@@ -444,7 +444,7 @@ class BertMultiTask():
                 mode=mode, predictions=loss_eval_pred)
             return output_spec
 
-    def get_model_fn(self, warm_start=True):
+    def get_model_fn(self, warm_start=False):
         def model_fn(features, labels, mode, params):
 
             hidden_feature = self.body(
