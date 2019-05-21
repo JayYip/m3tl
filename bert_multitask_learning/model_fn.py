@@ -118,7 +118,28 @@ class BertMultiTask():
 
         feature_dict['all'] = tf.concat(feature_dict['all'], axis=1)
 
+        global_step = tf.train.get_or_create_global_step()
+
+        feature_dict['seq'] = stop_grad(
+            global_step, feature_dict['seq'], self.params.freeze_step)
+
         return feature_dict
+
+    def get_features_for_problem(self, features, hidden_feature, problem, mode):
+        # get features with ind == 1
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            feature_this_round = features
+            hidden_feature_this_round = hidden_feature
+        else:
+            record_ind = tf.cast(
+                features['%s_loss_multiplier' % problem], tf.bool)
+            feature_this_round = {
+                k: tf.boolean_mask(v, record_ind)
+                for k, v in features.items()}
+            hidden_feature_this_round = {
+                k: tf.boolean_mask(v, record_ind)
+                for k, v in hidden_feature.items()}
+        return feature_this_round, hidden_feature_this_round
 
     def hidden(self, features, hidden_feature, mode):
         """Hidden of model, will be called between body and top
@@ -147,11 +168,6 @@ class BertMultiTask():
                 features, hidden_feature, mode)
             hidden_feature.update(ori_hidden_feature)
 
-        global_step = tf.train.get_or_create_global_step()
-
-        hidden_feature['seq'] = stop_grad(
-            global_step, hidden_feature['seq'], self.params.freeze_step)
-
         if self.params.task_transformer:
             task_tranformer_layer = TaskTransformer(self.params)
             task_tranformer_hidden_feature = task_tranformer_layer(
@@ -169,19 +185,8 @@ class BertMultiTask():
 
                 top_scope_name = self.get_scope_name(problem)
 
-                # get features with ind == 1
-                if mode == tf.estimator.ModeKeys.PREDICT:
-                    feature_this_round = features
-                    hidden_feature_this_round = hidden_feature
-                else:
-                    record_ind = tf.cast(
-                        features['%s_loss_multiplier' % problem], tf.bool)
-                    feature_this_round = {
-                        k: tf.boolean_mask(v, record_ind)
-                        for k, v in features.items()}
-                    hidden_feature_this_round = {
-                        k: tf.boolean_mask(v, record_ind)
-                        for k, v in hidden_feature.items()}
+                feature_this_round, hidden_feature_this_round = self.get_features_for_problem(
+                    features, hidden_feature, problem, mode)
 
                 if self.params.label_transfer and self.params.grid_transformer:
                     raise ValueError(

@@ -16,8 +16,10 @@ from .utils import TRAIN, EVAL, PREDICT
 
 def _create_estimator(
         num_gpus=1,
-        params=DynamicBatchSizeParams()):
-    model = BertMultiTask(params=params)
+        params=DynamicBatchSizeParams(),
+        model=None):
+    if model is None:
+        model = BertMultiTask(params=params)
     model_fn = model.get_model_fn(warm_start=False)
 
     dist_trategy = tf.contrib.distribute.MirroredStrategy(
@@ -47,7 +49,8 @@ def train_bert_multitask(
         model_dir='',
         params=None,
         problem_type_dict={},
-        processing_fn_dict={}):
+        processing_fn_dict={},
+        model=None):
     """Train Multi-task Bert model
 
     About problem: 
@@ -104,7 +107,8 @@ def train_bert_multitask(
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
 
-    estimator = _create_estimator(num_gpus=num_gpus, params=params)
+    estimator = _create_estimator(
+        num_gpus=num_gpus, params=params, model=model)
 
     train_hook = RestoreCheckpointHook(params)
 
@@ -121,7 +125,8 @@ def eval_bert_multitask(
         eval_scheme='ner',
         params=None,
         problem_type_dict={},
-        processing_fn_dict={}):
+        processing_fn_dict={},
+        model=None):
     """Evaluate Multi-task Bert model
 
     Available eval_scheme:
@@ -158,7 +163,8 @@ def eval_bert_multitask(
         print('Params problem assigned. Problem list: {0}'.format(
             params.problem_list))
 
-    estimator = _create_estimator(num_gpus=num_gpus, params=params)
+    estimator = _create_estimator(
+        num_gpus=num_gpus, params=params, model=model)
 
     evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
     return evaluate_func(problem, estimator, params)
@@ -170,7 +176,8 @@ def predict_bert_multitask(
         model_dir='',
         params=None,
         problem_type_dict={},
-        processing_fn_dict={}):
+        processing_fn_dict={},
+        model=None):
     """Evaluate Multi-task Bert model
 
     Available eval_scheme:
@@ -210,7 +217,7 @@ def predict_bert_multitask(
     tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
 
-    estimator = _create_estimator(num_gpus=1, params=params)
+    estimator = _create_estimator(num_gpus=1, params=params, model=model)
 
     return estimator.predict(lambda: predict_input_fn(inputs, params))
 
