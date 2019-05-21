@@ -19,14 +19,15 @@ setup(
     author='Jay Yip',
     author_email='junpang.yip@gmail.com',
     description='BERT for Multi-task Learning',
-    long_description='None so far',
+    long_description='Nope',
     long_description_content_taype='text/markdown',
     python_requires='>=3.5.0',
     install_requires=install_requires,
     classifiers=(
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.5",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Intended Audience :: Developers",
     ),
 )

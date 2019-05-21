@@ -4,6 +4,12 @@
 
 *Update:* Download trained checkpoint for Chinese NLP problems. (CWS|ctb_pos|msra_ner|boson_ner|weibo_ner|emotion_analysis|ontonotes_cws&ontonotes_ner, you can drop some problems if you don't need them all while starting the server. [download](https://1drv.ms/f/s!An_n1-LB8-2dgfIae1B_bPehuSpFVQ))
 
+## Install
+
+```
+pip install bert-multitask-learning
+```
+
 ## What is it
 
 This a project that uses [BERT](https://github.com/google-research/bert) to do **multi-task learning** with multiple GPU support.
@@ -32,6 +38,12 @@ Please see the examples in [notebooks](notebooks/) for more details about traini
 # Bert多任务学习
 
 *更新:* 在多个中文NLP任务上训练好的模型 (CWS|ctb_pos|msra_ner|boson_ner|weibo_ner|emotion_analysis|ontonotes_cws&ontonotes_ner, 如果不需要全部结果, 可以在启动服务时自行减去. [下载](https://1drv.ms/f/s!An_n1-LB8-2dgfIae1B_bPehuSpFVQ))
+
+## 安装
+
+```
+pip install bert-multitask-learning
+```
 
 ## 这是什么
 
