@@ -14,12 +14,38 @@ from . import metrics
 from .utils import TRAIN, EVAL, PREDICT
 
 
+def _create_estimator(
+        num_gpus=1,
+        params=DynamicBatchSizeParams()):
+    model = BertMultiTask(params=params)
+    model_fn = model.get_model_fn(warm_start=False)
+
+    dist_trategy = tf.contrib.distribute.MirroredStrategy(
+        num_gpus=int(num_gpus),
+        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
+            'nccl', num_packs=int(num_gpus)))
+
+    run_config = tf.estimator.RunConfig(
+        train_distribute=dist_trategy,
+        eval_distribute=dist_trategy,
+        log_step_count_steps=params.log_every_n_steps)
+
+    # ws = make_warm_start_setting(params)
+
+    estimator = Estimator(
+        model_fn,
+        model_dir=params.ckpt_dir,
+        params=params,
+        config=run_config)
+    return estimator
+
+
 def train_bert_multitask(
         problem='weibo_ner',
         num_gpus=1,
         num_epochs=10,
         model_dir='',
-        params=DynamicBatchSizeParams(),
+        params=None,
         problem_type_dict={},
         processing_fn_dict={}):
     """Train Multi-task Bert model
@@ -56,6 +82,8 @@ def train_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
+    if params is None:
+        params = DynamicBatchSizeParams()
 
     if not os.path.exists('models'):
         os.mkdir('models')
@@ -76,29 +104,7 @@ def train_bert_multitask(
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
 
-    tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
-    time.sleep(3)
-
-    model = BertMultiTask(params=params)
-    model_fn = model.get_model_fn(warm_start=False)
-
-    dist_trategy = tf.contrib.distribute.MirroredStrategy(
-        num_gpus=int(num_gpus),
-        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
-            'nccl', num_packs=int(num_gpus)))
-
-    run_config = tf.estimator.RunConfig(
-        train_distribute=dist_trategy,
-        eval_distribute=dist_trategy,
-        log_step_count_steps=params.log_every_n_steps)
-
-    # ws = make_warm_start_setting(params)
-
-    estimator = Estimator(
-        model_fn,
-        model_dir=params.ckpt_dir,
-        params=params,
-        config=run_config)
+    estimator = _create_estimator(num_gpus=num_gpus, params=params)
 
     train_hook = RestoreCheckpointHook(params)
 
@@ -113,7 +119,56 @@ def eval_bert_multitask(
         num_gpus=1,
         model_dir='',
         eval_scheme='ner',
-        params=DynamicBatchSizeParams(),
+        params=None,
+        problem_type_dict={},
+        processing_fn_dict={}):
+    """Evaluate Multi-task Bert model
+
+    Available eval_scheme:
+        ner, cws, acc
+
+    Keyword Arguments:
+        problem {str} -- problems to evaluate (default: {'weibo_ner'})
+        num_gpus {int} -- number of gpu to use (default: {1})
+        model_dir {str} -- model dir (default: {''})
+        eval_scheme {str} -- Evaluation scheme (default: {'ner'})
+        params {Params} -- params to define model (default: {DynamicBatchSizeParams()})
+        problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
+        processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
+    """
+    if params is None:
+        params = DynamicBatchSizeParams()
+    if not params.problem_assigned:
+
+        if model_dir:
+            base_dir, dir_name = os.path.split(model_dir)
+        else:
+            base_dir, dir_name = None, None
+        # add new problem to params if problem_type_dict and processing_fn_dict provided
+        if processing_fn_dict:
+            for new_problem, new_problem_processing_fn in processing_fn_dict.items():
+                print('Adding new problem {0}, problem type: {1}'.format(
+                    new_problem, problem_type_dict[new_problem]))
+                params.add_problem(
+                    problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
+        params.assign_problem(problem, gpu=int(num_gpus),
+                              base_dir=base_dir, dir_name=dir_name)
+        params.from_json()
+    else:
+        print('Params problem assigned. Problem list: {0}'.format(
+            params.problem_list))
+
+    estimator = _create_estimator(num_gpus=num_gpus, params=params)
+
+    evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
+    return evaluate_func(problem, estimator, params)
+
+
+def predict_bert_multitask(
+        inputs,
+        problem='weibo_ner',
+        model_dir='',
+        params=None,
         problem_type_dict={},
         processing_fn_dict={}):
     """Evaluate Multi-task Bert model
@@ -131,47 +186,33 @@ def eval_bert_multitask(
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
 
-    if model_dir:
-        base_dir, dir_name = os.path.split(model_dir)
+    if params is None:
+        params = DynamicBatchSizeParams()
+    if not params.problem_assigned:
+        if model_dir:
+            base_dir, dir_name = os.path.split(model_dir)
+        else:
+            base_dir, dir_name = None, None
+        # add new problem to params if problem_type_dict and processing_fn_dict provided
+        if processing_fn_dict:
+            for new_problem, new_problem_processing_fn in processing_fn_dict.items():
+                print('Adding new problem {0}, problem type: {1}'.format(
+                    new_problem, problem_type_dict[new_problem]))
+                params.add_problem(
+                    problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
+        params.assign_problem(problem, gpu=1,
+                              base_dir=base_dir, dir_name=dir_name)
+        params.from_json()
     else:
-        base_dir, dir_name = None, None
-    # add new problem to params if problem_type_dict and processing_fn_dict provided
-    if processing_fn_dict:
-        for new_problem, new_problem_processing_fn in processing_fn_dict.items():
-            print('Adding new problem {0}, problem type: {1}'.format(
-                new_problem, problem_type_dict[new_problem]))
-            params.add_problem(
-                problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
-    params.assign_problem(problem, gpu=int(num_gpus),
-                          base_dir=base_dir, dir_name=dir_name)
+        print('Params problem assigned. Problem list: {0}'.format(
+            params.run_problem_list))
 
     tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
 
-    model = BertMultiTask(params=params)
-    model_fn = model.get_model_fn(warm_start=False)
+    estimator = _create_estimator(num_gpus=1, params=params)
 
-    dist_trategy = tf.contrib.distribute.MirroredStrategy(
-        num_gpus=int(num_gpus),
-        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
-            'nccl', num_packs=int(num_gpus)))
-
-    run_config = tf.estimator.RunConfig(
-        train_distribute=dist_trategy,
-        eval_distribute=dist_trategy,
-        log_step_count_steps=params.log_every_n_steps)
-
-    # ws = make_warm_start_setting(params)
-
-    estimator = Estimator(
-        model_fn,
-        model_dir=params.ckpt_dir,
-        params=params,
-        config=run_config)
-
-    params.from_json()
-    evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
-    print(evaluate_func(problem, estimator, params))
+    return estimator.predict(lambda: predict_input_fn(inputs, params))
 
 
 if __name__ == '__main__':
