@@ -75,9 +75,10 @@ def create_single_problem_generator(problem,
         if not tokens_a:
             continue
         # check whether tokenization changed the length
-        if len(target) != len(tokens_a) and is_seq:
-            tf.logging.warning('Data %d broken' % ex_index)
-            continue
+        if is_seq:
+            if len(target) != len(tokens_a):
+                tf.logging.warning('Data %d broken' % ex_index)
+                continue
 
         # truncate tokens and target to max_seq_len
         tokens_a, tokens_b, target = truncate_seq_pair(
