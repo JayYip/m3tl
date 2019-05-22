@@ -1,3 +1,6 @@
+![python](https://img.shields.io/badge/python%20-3.6.0-brightgreen.svg) [![tensorflow](https://img.shields.io/badge/tensorflow-1.13.1-green.svg)](https://www.tensorflow.org/) [![PyPI version fury.io](https://badge.fury.io/py/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/) [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/)
+
+
 # Bert for Multi-task Learning
 
 [中文文档](#Bert多任务学习)
@@ -34,6 +37,7 @@ There are two types of chaining operations can be used to chain problems.
 For example, `CWS|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
 
 Please see the examples in [notebooks](notebooks/) for more details about training, evaluation and export models.
+
 
 # Bert多任务学习
 
