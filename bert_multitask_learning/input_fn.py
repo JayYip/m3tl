@@ -1,6 +1,7 @@
 
 from tqdm import tqdm
 import numpy as np
+from multiprocessing import cpu_count
 
 import tensorflow as tf
 
@@ -108,6 +109,7 @@ def train_eval_input_fn(config, mode='train'):
 
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
+    dataset = dataset.map(lambda x: x, num_parallel_calls=cpu_count())
 
     if mode == 'train':
         dataset = dataset.shuffle(config.shuffle_buffer)

@@ -118,6 +118,10 @@ def create_single_problem_generator(problem,
 
             # tokenize text if target is text
             if problem_type == 'seq2seq_text':
+
+                # assign num_classes for text generation problem
+                params.num_classes[problem] = len(label_encoder.vocab)
+
                 target, _ = tokenize_text_with_seqs(
                     label_encoder, target, None, False)
 
