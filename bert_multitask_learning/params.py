@@ -290,10 +290,10 @@ class BaseParams():
         self.data_num = 0
         for problem in problem_list:
             if problem not in self.data_num_dict:
-                self.data_num += len(
-                    list(self.read_data_fn[problem](self, 'train')))
+
                 self.data_num_dict[problem] = len(
                     list(self.read_data_fn[problem](self, 'train')))
+                self.data_num += self.data_num_dict[problem]
             else:
                 self.data_num += self.data_num_dict[problem]
 
