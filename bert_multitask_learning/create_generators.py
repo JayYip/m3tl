@@ -116,6 +116,11 @@ def create_single_problem_generator(problem,
         # create mask and padding for labels of seq2seq problem
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
 
+            # tokenize text if target is text
+            if problem_type == 'seq2seq_text':
+                target, _ = tokenize_text_with_seqs(
+                    label_encoder, target, None, False)
+
             target, _, _ = truncate_seq_pair(
                 target, None, None, params.decode_max_seq_len, is_seq=is_seq)
             # since we initialize the id to 0 in prediction, we need
@@ -127,8 +132,11 @@ def create_single_problem_generator(problem,
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
         if isinstance(target, list):
-            label_id = label_encoder.transform(target).tolist()
-            label_id = [np.int32(i) for i in label_id]
+            if problem_type == 'seq2seq_text':
+                label_id = label_encoder.convert_tokens_to_ids(target)
+            else:
+                label_id = label_encoder.transform(target).tolist()
+                label_id = [np.int32(i) for i in label_id]
         else:
             label_id = label_encoder.transform([target]).tolist()[0]
             label_id = np.int32(label_id)
