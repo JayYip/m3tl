@@ -37,7 +37,10 @@ def train_eval_input_fn(config, mode='train'):
     '''
 
     def gen():
-        return create_generator(params=config, mode=mode)
+        g = create_generator(params=config, mode=mode)
+        # to avoid nested parallel
+        for instance in g:
+            yield instance
 
     output_type = {
         'input_ids': tf.int32,
@@ -109,7 +112,6 @@ def train_eval_input_fn(config, mode='train'):
 
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
-    dataset = dataset.map(lambda x: x, num_parallel_calls=cpu_count())
 
     if mode == 'train':
         dataset = dataset.shuffle(config.shuffle_buffer)

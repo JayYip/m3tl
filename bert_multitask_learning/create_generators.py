@@ -1,15 +1,20 @@
+import os
 import random
+import tempfile
 from copy import copy
+from functools import partial
+from multiprocessing import cpu_count
+import pickle
+
 import numpy as np
-
 import tensorflow as tf
+from joblib import Parallel, delayed
 
-from .utils import (punc_augument, tokenize_text_with_seqs,
-                    create_mask_and_padding, create_masked_lm_predictions,
-                    truncate_seq_pair, add_special_tokens_with_seqs,
-                    BOS_TOKEN, EOS_TOKEN,
-                    create_instances_from_document)
 from .tokenization import printable_text
+from .utils import (BOS_TOKEN, EOS_TOKEN, add_special_tokens_with_seqs,
+                    create_instances_from_document, create_mask_and_padding,
+                    create_masked_lm_predictions, punc_augument,
+                    tokenize_text_with_seqs, truncate_seq_pair)
 
 
 def create_single_problem_single_instance(problem,
@@ -123,7 +128,7 @@ def create_single_problem_single_instance(problem,
         if is_seq:
             assert len(label_id) == params.max_seq_len
 
-    logging in debug mode
+    # logging in debug mode
     if ex_index < 5:
         tf.logging.debug("*** Example ***")
         tf.logging.debug("tokens: %s" % " ".join(
@@ -266,23 +271,33 @@ def create_single_problem_generator(problem,
             yield return_dict
     else:
         return_dict_list = []
-        from joblib import Parallel, delayed
-        from functools import partial
-        from multiprocessing import cpu_count
+        pickle_file = os.path.join(
+            params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
 
-        partial_fn = partial(_multiprocessing_wrapper, problem=problem, label_encoder=label_encoder,
-                             params=params, tokenizer=tokenizer,
-                             mode=mode, problem_type=problem_type, is_seq=is_seq)
-        example_list = list(zip(inputs_list, target_list))
+        if not os.path.exists(pickle_file):
+            params.tmp_file_dir = tempfile.mkdtemp(dir='.')
+            tf.logging.info(
+                'Saving preprocessing files to {0}'.format(params.tmp_file_dir))
+            partial_fn = partial(_multiprocessing_wrapper, problem=problem, label_encoder=label_encoder,
+                                 params=params, tokenizer=tokenizer,
+                                 mode=mode, problem_type=problem_type, is_seq=is_seq)
+            example_list = list(zip(inputs_list, target_list))
+            num_process = cpu_count()
 
-        def split(a, n):
-            k, m = divmod(len(a), n)
-            return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
-        example_list = split(example_list, int(cpu_count()))
+            def split(a, n):
+                k, m = divmod(len(a), n)
+                return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+            example_list = split(example_list, num_process)
 
-        return_dict_list_list = Parallel(int(cpu_count()))(delayed(partial_fn)(
-            example_list=example) for example in example_list
-        )
+            return_dict_list_list = Parallel(num_process)(delayed(partial_fn)(
+                example_list=example) for example in example_list
+            )
+            pickle_file = os.path.join(
+                params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
+            pickle.dump(return_dict_list_list, open(pickle_file, 'wb'))
+        else:
+            return_dict_list_list = pickle.load(open(pickle_file, 'rb'))
+
         for return_dict_list in return_dict_list_list:
             for return_dict in return_dict_list:
                 yield return_dict

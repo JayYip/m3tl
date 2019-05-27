@@ -134,6 +134,7 @@ class BaseParams():
         self.mask_lm_initializer_range = 0.02
 
         self.train_problem = None
+        self.tmp_file_dir = ''
         # get generator function for each problem
         self.read_data_fn = {}
         for problem in self.problem_type:
@@ -204,6 +205,8 @@ class BaseParams():
     def features_to_dump(self):
         # training
         return [
+                'tmp_file_dir',
+
                 'multitask_balance_type',
                 'init_lr',
                 'batch_size',
@@ -290,11 +293,14 @@ class BaseParams():
         # update data_num and train_steps
         self.data_num = 0
         for problem in problem_list:
-            if problem not in self.data_num_dict:
+            if problem not in self.data_num_dict or self.multiprocess:
 
                 self.data_num_dict[problem] = len(
                     list(self.read_data_fn[problem](self, 'train')))
                 self.data_num += self.data_num_dict[problem]
+                if not self.num_classes[problem] and self.problem_type[problem] == 'seq2seq_text':
+                    raise ValueError('For seq2seq_text problem, you need to specify \n \
+                        num_classes(vocab_size) in preprocessing function using "params.num_classes[problem] = len(tokenizer.vocab)"')
             else:
                 self.data_num += self.data_num_dict[problem]
 
