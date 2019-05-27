@@ -72,6 +72,7 @@ class BaseParams():
         # logging control
         self.log_every_n_steps = 100
         self.detail_log = True
+        self.multiprocess = True
 
         # training
         self.init_lr = 2e-5

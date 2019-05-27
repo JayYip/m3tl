@@ -12,6 +12,208 @@ from .utils import (punc_augument, tokenize_text_with_seqs,
 from .tokenization import printable_text
 
 
+def create_single_problem_single_instance(problem,
+                                          ex_index,
+                                          example,
+                                          label_encoder,
+                                          params,
+                                          tokenizer,
+                                          mode,
+                                          problem_type,
+                                          is_seq):
+
+    raw_inputs, raw_target = example
+
+    # punctuation augumentation
+    if params.punc_replace_prob > 0 and mode == 'train':
+        raw_inputs = punc_augument(raw_inputs, params)
+
+    # tokenize inputs, now the length is fixed, target == raw_target
+    if isinstance(raw_inputs, dict):
+        tokens_a, target = tokenize_text_with_seqs(
+            tokenizer, raw_inputs['a'], raw_target, is_seq)
+        tokens_b, _ = tokenize_text_with_seqs(
+            tokenizer, raw_inputs['b'], raw_target)
+    else:
+        tokens_a, target = tokenize_text_with_seqs(
+            tokenizer, raw_inputs, raw_target, is_seq)
+        tokens_b = None
+
+    if tokens_b is not None and is_seq:
+        raise NotImplementedError(
+            'Sequence Labeling with tokens b is not implemented')
+
+    if not tokens_a:
+        return
+    # check whether tokenization changed the length
+    if is_seq:
+        if len(target) != len(tokens_a):
+            tf.logging.warning('Data %d broken' % ex_index)
+            return
+
+    # truncate tokens and target to max_seq_len
+    tokens_a, tokens_b, target = truncate_seq_pair(
+        tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
+
+    # add [SEP], [CLS] tokens
+    tokens, segment_ids, target = add_special_tokens_with_seqs(
+        tokens_a, tokens_b, target, is_seq)
+
+    # train mask lm as augument task while training
+    if params.augument_mask_lm and mode == 'train':
+        rng = random.Random()
+        (mask_lm_tokens, masked_lm_positions,
+            masked_lm_labels) = create_masked_lm_predictions(
+                tokens,
+                params.masked_lm_prob,
+                params.max_predictions_per_seq,
+                list(tokenizer.vocab.keys()), rng)
+        _, mask_lm_tokens, _, _ = create_mask_and_padding(
+            mask_lm_tokens,
+            copy(segment_ids),
+            copy(target),
+            params.max_seq_len,
+            is_seq,
+            dynamic_padding=params.dynamic_padding)
+        masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
+            masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
+        mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
+            mask_lm_tokens)
+        masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
+
+    input_mask, tokens, segment_ids, target = create_mask_and_padding(
+        tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
+
+    # create mask and padding for labels of seq2seq problem
+    if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+
+        # tokenize text if target is text
+        if problem_type == 'seq2seq_text':
+
+            # assign num_classes for text generation problem
+            params.num_classes[problem] = len(label_encoder.vocab)
+
+            target, _ = tokenize_text_with_seqs(
+                label_encoder, target, None, False)
+
+        target, _, _ = truncate_seq_pair(
+            target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+        # since we initialize the id to 0 in prediction, we need
+        # to make sure that BOS_TOKEN is [PAD]
+        target = [BOS_TOKEN] + target + [EOS_TOKEN]
+        label_mask, target, _, _ = create_mask_and_padding(
+            target, [0] * len(target), None, params.decode_max_seq_len)
+
+    input_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+    if isinstance(target, list):
+        if problem_type == 'seq2seq_text':
+            label_id = label_encoder.convert_tokens_to_ids(target)
+        else:
+            label_id = label_encoder.transform(target).tolist()
+            label_id = [np.int32(i) for i in label_id]
+    else:
+        label_id = label_encoder.transform([target]).tolist()[0]
+        label_id = np.int32(label_id)
+
+    if not params.dynamic_padding:
+        assert len(input_ids) == params.max_seq_len
+        assert len(input_mask) == params.max_seq_len
+        assert len(segment_ids) == params.max_seq_len, segment_ids
+        if is_seq:
+            assert len(label_id) == params.max_seq_len
+
+    logging in debug mode
+    if ex_index < 5:
+        tf.logging.debug("*** Example ***")
+        tf.logging.debug("tokens: %s" % " ".join(
+            [printable_text(x) for x in tokens]))
+        tf.logging.debug("input_ids: %s" %
+                         " ".join([str(x) for x in input_ids]))
+        tf.logging.debug("input_mask: %s" %
+                         " ".join([str(x) for x in input_mask]))
+        tf.logging.debug("segment_ids: %s" %
+                         " ".join([str(x) for x in segment_ids]))
+        if is_seq or problem_type in ['seq2seq_tag', 'seq2seq_text']:
+            tf.logging.debug("%s_label_ids: %s" %
+                             (problem, " ".join([str(x) for x in label_id])))
+            tf.logging.debug("%s_label: %s" %
+                             (problem, " ".join([str(x) for x in target])))
+        else:
+            tf.logging.debug("%s_label_ids: %s" %
+                             (problem, str(label_id)))
+            tf.logging.debug("%s_label: %s" %
+                             (problem, str(target)))
+        if params.augument_mask_lm and mode == 'train':
+            tf.logging.debug("mask lm tokens: %s" % " ".join(
+                [printable_text(x) for x in mask_lm_tokens]))
+            tf.logging.debug("mask lm input_ids: %s" %
+                             " ".join([str(x) for x in mask_lm_input_ids]))
+            tf.logging.debug("mask lm label ids: %s" %
+                             " ".join([str(x) for x in masked_lm_ids]))
+            tf.logging.debug("mask lm position: %s" %
+                             " ".join([str(x) for x in masked_lm_positions]))
+
+    # create return dict
+    if not params.augument_mask_lm:
+        return_dict = {
+            'input_ids': input_ids,
+            'input_mask': input_mask,
+            'segment_ids': segment_ids,
+            '%s_label_ids' % problem: label_id
+        }
+    else:
+        if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
+            return_dict = {
+                'input_ids': mask_lm_input_ids,
+                'input_mask': input_mask,
+                'segment_ids': segment_ids,
+                '%s_label_ids' % problem: label_id,
+                "masked_lm_positions": masked_lm_positions,
+                "masked_lm_ids": masked_lm_ids,
+                "masked_lm_weights": masked_lm_weights,
+            }
+        else:
+            return_dict = {
+                'input_ids': input_ids,
+                'input_mask': input_mask,
+                'segment_ids': segment_ids,
+                '%s_label_ids' % problem: label_id,
+                "masked_lm_positions": np.zeros([params.max_predictions_per_seq]),
+                "masked_lm_ids": np.zeros([params.max_predictions_per_seq]),
+                "masked_lm_weights": np.zeros([params.max_predictions_per_seq]),
+            }
+
+    if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+        return_dict['%s_mask' % problem] = label_mask
+
+    return return_dict
+
+
+def _multiprocessing_wrapper(
+        problem,
+        example_list,
+        label_encoder,
+        params,
+        tokenizer,
+        mode,
+        problem_type,
+        is_seq):
+    return_list = []
+    for ex_index, example in enumerate(example_list):
+        return_list.append(create_single_problem_single_instance(
+            problem,
+            999,
+            example,
+            label_encoder,
+            params,
+            tokenizer,
+            mode,
+            problem_type,
+            is_seq))
+    return return_list
+
+
 def create_single_problem_generator(problem,
                                     inputs_list,
                                     target_list,
@@ -49,174 +251,41 @@ def create_single_problem_generator(problem,
     # for sequential labeling, targets needs to align with any
     # change of inputs
     is_seq = problem_type in ['seq_tag']
+    if not params.multiprocess:
+        for ex_index, example in enumerate(zip(inputs_list, target_list)):
+            return_dict = create_single_problem_single_instance(problem,
+                                                                ex_index,
+                                                                example,
+                                                                label_encoder,
+                                                                params,
+                                                                tokenizer,
+                                                                mode,
+                                                                problem_type,
+                                                                is_seq)
 
-    for ex_index, example in enumerate(zip(inputs_list, target_list)):
-        raw_inputs, raw_target = example
+            yield return_dict
+    else:
+        return_dict_list = []
+        from joblib import Parallel, delayed
+        from functools import partial
+        from multiprocessing import cpu_count
 
-        # punctuation augumentation
-        if params.punc_replace_prob > 0 and mode == 'train':
-            raw_inputs = punc_augument(raw_inputs, params)
+        partial_fn = partial(_multiprocessing_wrapper, problem=problem, label_encoder=label_encoder,
+                             params=params, tokenizer=tokenizer,
+                             mode=mode, problem_type=problem_type, is_seq=is_seq)
+        example_list = list(zip(inputs_list, target_list))
 
-        # tokenize inputs, now the length is fixed, target == raw_target
-        if isinstance(raw_inputs, dict):
-            tokens_a, target = tokenize_text_with_seqs(
-                tokenizer, raw_inputs['a'], raw_target, is_seq)
-            tokens_b, _ = tokenize_text_with_seqs(
-                tokenizer, raw_inputs['b'], raw_target)
-        else:
-            tokens_a, target = tokenize_text_with_seqs(
-                tokenizer, raw_inputs, raw_target, is_seq)
-            tokens_b = None
+        def split(a, n):
+            k, m = divmod(len(a), n)
+            return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+        example_list = split(example_list, int(cpu_count()))
 
-        if tokens_b is not None and is_seq:
-            raise NotImplementedError(
-                'Sequence Labeling with tokens b is not implemented')
-
-        if not tokens_a:
-            continue
-        # check whether tokenization changed the length
-        if is_seq:
-            if len(target) != len(tokens_a):
-                tf.logging.warning('Data %d broken' % ex_index)
-                continue
-
-        # truncate tokens and target to max_seq_len
-        tokens_a, tokens_b, target = truncate_seq_pair(
-            tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
-
-        # add [SEP], [CLS] tokens
-        tokens, segment_ids, target = add_special_tokens_with_seqs(
-            tokens_a, tokens_b, target, is_seq)
-
-        # train mask lm as augument task while training
-        if params.augument_mask_lm and mode == 'train':
-            rng = random.Random()
-            (mask_lm_tokens, masked_lm_positions,
-                masked_lm_labels) = create_masked_lm_predictions(
-                    tokens,
-                    params.masked_lm_prob,
-                    params.max_predictions_per_seq,
-                    list(tokenizer.vocab.keys()), rng)
-            _, mask_lm_tokens, _, _ = create_mask_and_padding(
-                mask_lm_tokens,
-                copy(segment_ids),
-                copy(target),
-                params.max_seq_len,
-                is_seq,
-                dynamic_padding=params.dynamic_padding)
-            masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
-                masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
-            mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
-                mask_lm_tokens)
-            masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
-
-        input_mask, tokens, segment_ids, target = create_mask_and_padding(
-            tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
-
-        # create mask and padding for labels of seq2seq problem
-        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-
-            # tokenize text if target is text
-            if problem_type == 'seq2seq_text':
-
-                # assign num_classes for text generation problem
-                params.num_classes[problem] = len(label_encoder.vocab)
-
-                target, _ = tokenize_text_with_seqs(
-                    label_encoder, target, None, False)
-
-            target, _, _ = truncate_seq_pair(
-                target, None, None, params.decode_max_seq_len, is_seq=is_seq)
-            # since we initialize the id to 0 in prediction, we need
-            # to make sure that BOS_TOKEN is [PAD]
-            target = [BOS_TOKEN] + target + [EOS_TOKEN]
-            label_mask, target, _, _ = create_mask_and_padding(
-                target, [0] * len(target), None, params.decode_max_seq_len)
-
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-        if isinstance(target, list):
-            if problem_type == 'seq2seq_text':
-                label_id = label_encoder.convert_tokens_to_ids(target)
-            else:
-                label_id = label_encoder.transform(target).tolist()
-                label_id = [np.int32(i) for i in label_id]
-        else:
-            label_id = label_encoder.transform([target]).tolist()[0]
-            label_id = np.int32(label_id)
-
-        if not params.dynamic_padding:
-            assert len(input_ids) == params.max_seq_len
-            assert len(input_mask) == params.max_seq_len
-            assert len(segment_ids) == params.max_seq_len, segment_ids
-            if is_seq:
-                assert len(label_id) == params.max_seq_len
-
-        # logging in debug mode
-        if ex_index < 5:
-            tf.logging.debug("*** Example ***")
-            tf.logging.debug("tokens: %s" % " ".join(
-                [printable_text(x) for x in tokens]))
-            tf.logging.debug("input_ids: %s" %
-                             " ".join([str(x) for x in input_ids]))
-            tf.logging.debug("input_mask: %s" %
-                             " ".join([str(x) for x in input_mask]))
-            tf.logging.debug("segment_ids: %s" %
-                             " ".join([str(x) for x in segment_ids]))
-            if is_seq or problem_type in ['seq2seq_tag', 'seq2seq_text']:
-                tf.logging.debug("%s_label_ids: %s" %
-                                 (problem, " ".join([str(x) for x in label_id])))
-                tf.logging.debug("%s_label: %s" %
-                                 (problem, " ".join([str(x) for x in target])))
-            else:
-                tf.logging.debug("%s_label_ids: %s" %
-                                 (problem, str(label_id)))
-                tf.logging.debug("%s_label: %s" %
-                                 (problem, str(target)))
-            if params.augument_mask_lm and mode == 'train':
-                tf.logging.debug("mask lm tokens: %s" % " ".join(
-                    [printable_text(x) for x in mask_lm_tokens]))
-                tf.logging.debug("mask lm input_ids: %s" %
-                                 " ".join([str(x) for x in mask_lm_input_ids]))
-                tf.logging.debug("mask lm label ids: %s" %
-                                 " ".join([str(x) for x in masked_lm_ids]))
-                tf.logging.debug("mask lm position: %s" %
-                                 " ".join([str(x) for x in masked_lm_positions]))
-
-        # create return dict
-        if not params.augument_mask_lm:
-            return_dict = {
-                'input_ids': input_ids,
-                'input_mask': input_mask,
-                'segment_ids': segment_ids,
-                '%s_label_ids' % problem: label_id
-            }
-        else:
-            if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
-                return_dict = {
-                    'input_ids': mask_lm_input_ids,
-                    'input_mask': input_mask,
-                    'segment_ids': segment_ids,
-                    '%s_label_ids' % problem: label_id,
-                    "masked_lm_positions": masked_lm_positions,
-                    "masked_lm_ids": masked_lm_ids,
-                    "masked_lm_weights": masked_lm_weights,
-                }
-            else:
-                return_dict = {
-                    'input_ids': input_ids,
-                    'input_mask': input_mask,
-                    'segment_ids': segment_ids,
-                    '%s_label_ids' % problem: label_id,
-                    "masked_lm_positions": np.zeros([params.max_predictions_per_seq]),
-                    "masked_lm_ids": np.zeros([params.max_predictions_per_seq]),
-                    "masked_lm_weights": np.zeros([params.max_predictions_per_seq]),
-                }
-
-        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-            return_dict['%s_mask' % problem] = label_mask
-
-        yield return_dict
+        return_dict_list_list = Parallel(int(cpu_count()))(delayed(partial_fn)(
+            example_list=example) for example in example_list
+        )
+        for return_dict_list in return_dict_list_list:
+            for return_dict in return_dict_list:
+                yield return_dict
 
 
 def create_pretraining_generator(problem,
