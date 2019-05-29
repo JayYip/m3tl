@@ -134,7 +134,7 @@ class BaseParams():
         self.mask_lm_initializer_range = 0.02
 
         self.train_problem = None
-        self.tmp_file_dir = ''
+        self.tmp_file_dir = 'tmp'
         # get generator function for each problem
         self.read_data_fn = {}
         for problem in self.problem_type:

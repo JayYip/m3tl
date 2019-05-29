@@ -275,7 +275,9 @@ def create_single_problem_generator(problem,
             params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
 
         if not os.path.exists(pickle_file):
-            params.tmp_file_dir = tempfile.mkdtemp(dir='.')
+            # params.tmp_file_dir = tempfile.mkdtemp(dir='.')
+            os.makedirs('tmp', exist_ok=True)
+            params.tmp_file_dir = 'tmp'
             tf.logging.info(
                 'Saving preprocessing files to {0}'.format(params.tmp_file_dir))
             partial_fn = partial(_multiprocessing_wrapper, problem=problem, label_encoder=label_encoder,
