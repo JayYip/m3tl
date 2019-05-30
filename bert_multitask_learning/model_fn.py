@@ -131,14 +131,16 @@ class BertMultiTask():
             feature_this_round = features
             hidden_feature_this_round = hidden_feature
         else:
-            record_ind = tf.cast(
-                features['%s_loss_multiplier' % problem], tf.bool)
+            record_ind = tf.where(tf.cast(
+                features['%s_loss_multiplier' % problem], tf.bool))
             feature_this_round = {
-                k: tf.boolean_mask(v, record_ind)
+                k: tf.gather_nd(v, record_ind)
                 for k, v in features.items()}
+
             hidden_feature_this_round = {
-                k: tf.boolean_mask(v, record_ind)
-                for k, v in hidden_feature.items()}
+                k: tf.gather_nd(v, record_ind)
+                for k, v in hidden_feature.items()
+            }
         return feature_this_round, hidden_feature_this_round
 
     def hidden(self, features, hidden_feature, mode):
