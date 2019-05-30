@@ -187,8 +187,13 @@ class BertMultiTask():
 
                 top_scope_name = self.get_scope_name(problem)
 
-                feature_this_round, hidden_feature_this_round = self.get_features_for_problem(
-                    features, hidden_feature, problem, mode)
+                # WARNING: Potential nan created here!
+                # TODO: Fix this.
+                if len(self.params.run_problem_list) > 1:
+                    feature_this_round, hidden_feature_this_round = self.get_features_for_problem(
+                        features, hidden_feature, problem, mode)
+                else:
+                    feature_this_round, hidden_feature_this_round = features, hidden_feature
 
                 if self.params.label_transfer and self.params.grid_transformer:
                     raise ValueError(
