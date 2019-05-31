@@ -82,7 +82,7 @@ class BaseParams():
         self.train_epoch = 15
         self.freeze_step = 0
         self.prefetch = 5000
-        self.dynamic_padding=True
+        self.dynamic_padding = True
         self.bucket_batch_sizes = [32, 32, 32, 16]
         self.bucket_boundaries = [30, 64, 128]
 
@@ -150,7 +150,8 @@ class BaseParams():
 
     def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
         if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text']:
-            raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format((['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text'], problem_type)))
+            raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
+                (['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text'], problem_type)))
 
         self.problem_type[problem_name] = problem_type
         self.read_data_fn[problem_name] = processing_fn
@@ -159,7 +160,7 @@ class BaseParams():
         else:
             self.share_top[problem_name] = problem_name
 
-    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None):
+    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None, is_serve=False):
         """Assign the actual run problem to param. This function will
         do the following things:
 
@@ -181,86 +182,38 @@ class BaseParams():
                 will be created automatically (default: {None})
         """
         self.problem_assigned = True
+        self.is_serve = is_serve
 
         self.problem_list = self.parse_problem_string(flag_string)
+
         # create dir and get vocab, config
         self.prepare_dir(base_dir, dir_name, self.problem_list)
 
         self.get_data_info(self.problem_list, self.ckpt_dir)
 
-        self.shuffle_buffer = min([200000, self.data_num])
-        for problem in self.problem_list:
-            if self.problem_type[problem] == 'pretrain':
-                dup_fac = self.dupe_factor
-                break
-            else:
-                dup_fac = 1
-        self.train_steps = int((
-            self.data_num * self.train_epoch * dup_fac) / (self.batch_size*gpu))
-        self.num_warmup_steps = int(0.1 * self.train_steps)
+        if not is_serve:
+            self.shuffle_buffer = min([200000, self.data_num])
+            for problem in self.problem_list:
+                if self.problem_type[problem] == 'pretrain':
+                    dup_fac = self.dupe_factor
+                    break
+                else:
+                    dup_fac = 1
+            self.train_steps = int((
+                self.data_num * self.train_epoch * dup_fac) / (self.batch_size*gpu))
+            self.num_warmup_steps = int(0.1 * self.train_steps)
 
-        # linear scale learing rate
-        self.lr = self.init_lr * gpu
-
-
-    @property
-    def features_to_dump(self):
-        # training
-        return [
-                'tmp_file_dir',
-
-                'multitask_balance_type',
-                'init_lr',
-                'batch_size',
-                'train_epoch',
-                'freeze_step',
-                'augument_mask_lm',
-                'augument_rate',
-                'label_transfer',
-
-                # hparm
-                'dropout_keep_prob',
-                'max_seq_len',
-                'use_one_hot_embeddings',
-                'label_smoothing',
-                'crf',
-                'bert_num_hidden_layer',
-
-                'decoder_num_hidden_layers',
-                'beam_size',
-                'init_decoder_from_encoder',
-                'beam_search_alpha',
-                'decode_max_seq_len',
-                'label_transfer',
-                'augument_mask_lm',
-                'augument_rate',
-                'distillation',
-
-                # pretrain hparm
-                'dupe_factor',
-                'short_seq_prob',
-                'masked_lm_prob',
-                'max_predictions_per_seq',
-                'mask_lm_hidden_size',
-                'mask_lm_hidden_act',
-                'mask_lm_initializer_range',
-                'punc_replace_prob',
-                'hidden_gru',
-                'label_transfer_gru',
-                'label_transfer_gru_hidden_size',
-                # 'mutual_prediction',
-                'grid_transformer',
-                'hidden_dense',
-                'task_transformer',
-                'train_problem',
-                'mean_gradients',
-                'dynamic_padding']
+            # linear scale learing rate
+            self.lr = self.init_lr * gpu
 
     def to_json(self):
         dump_dict = {}
-        for att in self.features_to_dump:
-            value = getattr(self, att)
-            dump_dict[att] = value
+        for att_name, att in vars(self).items():
+            try:
+                json.dumps(att)
+                dump_dict[att_name] = att
+            except TypeError:
+                pass
 
         with open(self.params_path, 'w', encoding='utf8') as f:
             json.dump(dump_dict, f)
@@ -271,6 +224,7 @@ class BaseParams():
             dump_dict = json.load(f)
         for att in dump_dict:
             setattr(self, att, dump_dict[att])
+        self.bert_config = BertConfig.from_dict(self.bert_config_dict)
         self.bert_config.num_hidden_layers = dump_dict['bert_num_hidden_layer']
 
     def get_data_info(self, problem_list, base):
@@ -292,27 +246,25 @@ class BaseParams():
             self.num_classes = {}
             self.eos_id = {}
 
-        # update data_num and train_steps
-        self.data_num = 0
-        for problem in problem_list:
-            if problem not in self.data_num_dict or self.multiprocess:
+        if not self.is_serve:
+            # update data_num and train_steps
+            self.data_num = 0
+            for problem in problem_list:
+                if problem not in self.data_num_dict or self.multiprocess:
 
-                self.data_num_dict[problem] = len(
-                    list(self.read_data_fn[problem](self, 'train')))
-                self.data_num += self.data_num_dict[problem]
-                if not self.num_classes[problem] and self.problem_type[problem] == 'seq2seq_text':
-                    raise ValueError('For seq2seq_text problem, you need to specify \n \
-                        num_classes(vocab_size) in preprocessing function using "params.num_classes[problem] = len(tokenizer.vocab)"')
-            else:
-                self.data_num += self.data_num_dict[problem]
+                    self.data_num_dict[problem] = len(
+                        list(self.read_data_fn[problem](self, 'train')))
+                    self.data_num += self.data_num_dict[problem]
+                else:
+                    self.data_num += self.data_num_dict[problem]
 
-        data_info = {
-            'data_num': self.data_num_dict,
-            'num_classes': self.num_classes,
-            'eos_id': self.eos_id
-        }
+            data_info = {
+                'data_num': self.data_num_dict,
+                'num_classes': self.num_classes,
+                'eos_id': self.eos_id
+            }
 
-        json.dump(data_info, open(json_path, 'w', encoding='utf8'))
+            json.dump(data_info, open(json_path, 'w', encoding='utf8'))
         return json_path
 
     def parse_problem_string(self, flag_string):
@@ -357,15 +309,17 @@ class BaseParams():
         dir_name = dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
         self.ckpt_dir = os.path.join(base, dir_name)
-        create_path(self.ckpt_dir)
-        self.params_path = os.path.join(self.ckpt_dir, 'params.json')
-        try:
-            shutil.copy2(os.path.join(self.init_checkpoint,
-                         'vocab.txt'), self.ckpt_dir)
-            shutil.copy2(os.path.join(self.init_checkpoint,
-                                    'bert_config.json'), self.ckpt_dir)
-        except FileNotFoundError:
-            pass
+
+        if not self.is_serve:
+            create_path(self.ckpt_dir)
+            self.params_path = os.path.join(self.ckpt_dir, 'params.json')
+            try:
+                shutil.copy2(os.path.join(self.init_checkpoint,
+                                          'vocab.txt'), self.ckpt_dir)
+                shutil.copy2(os.path.join(self.init_checkpoint,
+                                          'bert_config.json'), self.ckpt_dir)
+            except FileNotFoundError:
+                pass
         self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
         self.bert_config = BertConfig.from_json_file(
             os.path.join(self.ckpt_dir, 'bert_config.json'))
@@ -374,15 +328,18 @@ class BaseParams():
         with open(self.vocab_file, 'r', encoding='utf8') as vf:
             self.vocab_size = len(vf.readlines())
 
+
 class CRFParams(BaseParams):
     def __init__(self):
         super(CRFParams, self).__init__()
         self.crf = True
 
+
 class StaticBatchParams(BaseParams):
     def __init__(self):
         super(StaticBatchParams, self).__init__()
-        self.dynamic_padding=False
+        self.dynamic_padding = False
+
 
 class DynamicBatchSizeParams(BaseParams):
     def __init__(self):
