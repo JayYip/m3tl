@@ -476,6 +476,9 @@ def create_generator(params, mode):
             except KeyError:
                 continue
 
+            if not instance:
+                continue
+
             base_dict.update(instance)
             if base_input is None:
                 base_input = instance['input_ids']
