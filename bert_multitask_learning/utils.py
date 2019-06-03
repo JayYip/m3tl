@@ -578,3 +578,21 @@ def split_label_fix(label_list: list, label_encoder: LabelEncoder) -> list:
         return fixed_label_list
     else:
         return label_list
+
+
+def filter_empty(input_list, target_list):
+    """Filter empty inputs or targets
+
+    Arguments:
+        input_list {list} -- input list
+        target_list {list} -- target list
+
+    Returns:
+        input_list, target_list -- data after filter
+    """
+    return_input, return_target = [], []
+    for inp, tar in zip(input_list, target_list):
+        if inp and tar:
+            return_input.append(inp)
+            return_target.append(tar)
+    return return_input, return_target

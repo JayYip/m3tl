@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 from ..tokenization import FullTokenizer
 
-from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
+from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, filter_empty
 from ..create_generators import create_single_problem_generator
 
 
@@ -168,6 +168,8 @@ def CWS(params, mode):
 
     input_list += icwb_inputs
     target_list += icwb_target
+
+    input_list, target_list = filter_empty(input_list, target_list)
 
     label_encoder = get_or_make_label_encoder(
         params, 'CWS', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')

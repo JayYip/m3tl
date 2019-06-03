@@ -5,6 +5,7 @@ import argparse
 import tensorflow as tf
 
 from tensorflow.estimator import Estimator
+from tensorflow.estimator import train_and_evaluate, TrainSpec, EvalSpec
 
 from .input_fn import train_eval_input_fn, predict_input_fn
 from .model_fn import BertMultiTask
@@ -113,8 +114,16 @@ def train_bert_multitask(
     train_hook = RestoreCheckpointHook(params)
 
     def train_input_fn(): return train_eval_input_fn(params)
-    estimator.train(
-        train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+    def eval_input_fn(): return train_eval_input_fn(params, mode=EVAL)
+
+    train_spec = TrainSpec(
+        input_fn=train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+    eval_spec = EvalSpec(
+        eval_input_fn, throttle_secs=params.eval_throttle_secs)
+
+    # estimator.train(
+    #     train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+    train_and_evaluate(estimator, train_spec, eval_spec)
     return estimator
 
 

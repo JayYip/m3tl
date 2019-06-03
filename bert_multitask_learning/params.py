@@ -75,6 +75,7 @@ class BaseParams():
 
         self.multiprocess = True
         self.decode_vocab_file = None
+        self.eval_throttle_secs = 600
 
         # training
         self.init_lr = 2e-5
