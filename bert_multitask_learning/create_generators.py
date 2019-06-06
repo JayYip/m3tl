@@ -418,10 +418,14 @@ def create_generator(params, mode):
     def _create_dummpy_label(problem_type):
         if problem_type == 'cls':
             return 0
-        else:
+        elif problem_type == 'seq_tag':
             return [0]*params.max_seq_len
+        else:
+            return [0]*params.decode_max_seq_len
     dummy_label_dict = {problem+'_label_ids': _create_dummpy_label(
         params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] != 'pretrain'}
+    dummy_label_dict.update({problem+'_mask': _create_dummpy_label(
+        params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']})
 
     # init gen
     try:
@@ -454,12 +458,10 @@ def create_generator(params, mode):
             current_problem_chunk = problem_chunk[0]
 
         # create loss multiplier
-        loss_multiplier = {}
-        for problem in problem_list:
-            if problem in current_problem_chunk:
-                loss_multiplier[problem+'_loss_multiplier'] = 1
-            else:
-                loss_multiplier[problem+'_loss_multiplier'] = 0
+        loss_multiplier = {
+            problem+'_loss_multiplier': 0 for problem in problem_list}
+        for problem in current_problem_chunk:
+            loss_multiplier[problem+'_loss_multiplier'] = 1
 
         base_dict = {}
         base_input = None
@@ -490,14 +492,21 @@ def create_generator(params, mode):
         if not base_dict:
             continue
 
-        # add dummpy labels
-        for dummy_problem in dummy_label_dict:
-            if dummy_problem not in base_dict:
-                if isinstance(dummy_label_dict[dummy_problem], list):
-                    base_dict[dummy_problem] = dummy_label_dict[dummy_problem][:len(
+        for problem in problem_list:
+            problem_type = params.problem_type[problem]
+            problem_label_name = '{0}_label_ids'.format(problem)
+
+            if problem_label_name not in base_dict:
+                if problem_type == 'seq_tag':
+                    base_dict[problem_label_name] = dummy_label_dict[problem_label_name][:len(
                         base_dict['input_ids'])]
                 else:
-                    base_dict[dummy_problem] = 0
+                    base_dict[problem_label_name] = dummy_label_dict[problem_label_name]
+
+                if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+                    base_dict['{0}_mask'.format(
+                        problem)] = dummy_label_dict['{0}_mask'.format(problem)]
+
         # add loss multipliers
         base_dict.update(loss_multiplier)
         yield base_dict
