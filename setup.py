@@ -12,15 +12,15 @@ with codecs.open('requirements.txt', 'r', 'utf8') as reader:
 
 setup(
     name='bert_multitask_learning',
-    version='0.2.2',
+    version='0.2.3',
     packages=find_packages(),
     url='https://github.com/JayYip/bert-multitask-learning',
     license='MIT',
     author='Jay Yip',
     author_email='junpang.yip@gmail.com',
     description='BERT for Multi-task Learning',
-    long_description='Please see https://github.com/JayYip/bert-multitask-learning',
-    long_description_content_taype='text/markdown',
+    long_description_content_type='text/markdown',
+    long_description=long_description,
     python_requires='>=3.5.0',
     install_requires=install_requires,
     classifiers=(
