@@ -27,6 +27,14 @@ To sum up, compared to the original bert repo, this repo has the following featu
 2. Multiple GPU training
 3. Support sequence labeling (for example, NER) and Encoder-Decoder Seq2Seq(with transformer decoder).
 
+## What type of problems are supported?
+
+- Classification(cls)
+- Sequence Labeling(seq_tag)
+- Seq2seq Labeling(seq2seq_tag)
+- Seq2seq Text Generation(seq2seq_text)
+- (TODO)Multi-Label Classification(multi_cls)
+
 ## How to run pre-defined problems
 
 There are two types of chaining operations can be used to chain problems.
@@ -62,6 +70,14 @@ pip install bert-multitask-learning
 1. 多任务学习
 2. 多GPU训练
 3. 序列标注以及Encoder-decoder seq2seq的支持(用transformer decoder)
+
+## 目前支持的任务类型
+
+- 单标签分类(cls)
+- 序列标注(seq_tag)
+- 序列到序列标签标注(seq2seq_tag)
+- 序列到序列文本生成(seq2seq_text)
+- (TODO)多标签分类(multi_cls)
 
 ## 如何运行预定义任务
 
