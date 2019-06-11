@@ -109,7 +109,7 @@ def _process_text_files(path_list):
     return inputs, target
 
 
-def CWS(params, mode):
+def cws(params, mode):
     # ctb data
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
@@ -172,11 +172,11 @@ def CWS(params, mode):
     input_list, target_list = filter_empty(input_list, target_list)
 
     label_encoder = get_or_make_label_encoder(
-        params, 'CWS', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
+        params, 'cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
     if mode == PREDICT:
         return input_list, target_list, label_encoder
 
-    return create_single_problem_generator('CWS',
+    return create_single_problem_generator('cws',
                                            input_list,
                                            target_list,
                                            label_encoder,

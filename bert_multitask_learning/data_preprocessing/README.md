@@ -4,7 +4,7 @@
 
 A small dataset that is good for debug and demo.
 
-## CWS
+## cws
 
 Chinese word segmentation. Data source: <http://sighan.cs.uchicago.edu/bakeoff2005/>
 

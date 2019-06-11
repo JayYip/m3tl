@@ -5,8 +5,6 @@
 
 [中文文档](#Bert多任务学习)
 
-*Update:* Download trained checkpoint for Chinese NLP problems. (CWS|ctb_pos|msra_ner|boson_ner|weibo_ner|emotion_analysis|ontonotes_cws&ontonotes_ner, you can drop some problems if you don't need them all while starting the server. [download](https://1drv.ms/f/s!An_n1-LB8-2dgfIae1B_bPehuSpFVQ))
-
 ## Install
 
 ```
@@ -42,14 +40,12 @@ There are two types of chaining operations can be used to chain problems.
 - `&`. If two problems have the same inputs, they can be chained using `&`. Problems chained by `&` will be trained at the same time.
 - `|`. If two problems don't have the same inputs, they need to be chained using `|`. Problems chained by `|` will be sampled to train at every instance.
 
-For example, `CWS|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
+For example, `cws|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
 
 Please see the examples in [notebooks](notebooks/) for more details about training, evaluation and export models.
 
 
 # Bert多任务学习
-
-*更新:* 在多个中文NLP任务上训练好的模型 (CWS|ctb_pos|msra_ner|boson_ner|weibo_ner|emotion_analysis|ontonotes_cws&ontonotes_ner, 如果不需要全部结果, 可以在启动服务时自行减去. [下载](https://1drv.ms/f/s!An_n1-LB8-2dgfIae1B_bPehuSpFVQ))
 
 ## 安装
 
@@ -93,6 +89,6 @@ pip install bert-multitask-learning
 - `&`. 如果两个任务有相同的输入, 不同标签的话, 那么他们**可以**用`&`来连接. 被`&`连接起来的任务会被同时训练.
 - `|`. 如果两个任务为不同的输入, 那么他们**必须**用`|`来连接. 被`|`连接起来的任务会被随机抽取来训练.
 
-例如, 我们定义任务`CWS|NER|weibo_ner&weibo_cws`, 那么在生成每一条数据时, 一个任务块会被随机抽取出来, 例如在这一次抽样中, `weibo_ner&weibo_cws`被选中. 那么这次`weibo_ner`和`weibo_cws`会被同时训练. 因此, 在一个batch中, 有可能某些任务没有被抽中, loss为0.
+例如, 我们定义任务`cws|NER|weibo_ner&weibo_cws`, 那么在生成每一条数据时, 一个任务块会被随机抽取出来, 例如在这一次抽样中, `weibo_ner&weibo_cws`被选中. 那么这次`weibo_ner`和`weibo_cws`会被同时训练. 因此, 在一个batch中, 有可能某些任务没有被抽中, loss为0.
 
 训练, eval和导出模型请见[notebooks](notebooks/)

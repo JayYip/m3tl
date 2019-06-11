@@ -394,11 +394,11 @@ def create_generator(params, mode):
     6. Add dummy label to other problems
 
     Example:
-        Problem: CWS|NER|weibo_ner&weibo_cws
-        1. Dummy labels: CWS_label_ids: [0,0,0] ...
+        Problem: cws|NER|weibo_ner&weibo_cws
+        1. Dummy labels: cws_label_ids: [0,0,0] ...
         2. Blablabla
         3. Sample, say (weibo_ner&weibo_cws)
-        4. loss multipliers: {'CWS_loss_multiplier': 0, ..., 'weibo_ner_loss_multiplier': 1, ...}
+        4. loss multipliers: {'cws_loss_multiplier': 0, ..., 'weibo_ner_loss_multiplier': 1, ...}
         ...
 
     Arguments:
@@ -406,8 +406,8 @@ def create_generator(params, mode):
         mode {mode} -- mode
     """
     # example
-    # problem_list: ['NER', 'CWS', 'weibo_ner', 'weibo_cws']
-    # problem_chunk: [['NER'], ['CWS'], ['weibo_ner', 'weibo_cws']]
+    # problem_list: ['NER', 'cws', 'weibo_ner', 'weibo_cws']
+    # problem_chunk: [['NER'], ['cws'], ['weibo_ner', 'weibo_cws']]
     problem_list = []
     problem_chunk = []
     for problem_dict in params.run_problem_list:

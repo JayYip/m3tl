@@ -59,7 +59,7 @@ def train_bert_multitask(
             - `&`. If two problems have the same inputs, they can be chained using `&`. Problems chained by `&` will be trained at the same time.
             - `|`. If two problems don't have the same inputs, they need to be chained using `|`. Problems chained by `|` will be sampled to train at every instance.
 
-        For example, `CWS|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
+        For example, `cws|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
 
     About problem_type_dict and processing_fn_dict:
         If the problem is not predefined, you need to tell the model what's the new problem's problem_type

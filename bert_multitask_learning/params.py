@@ -18,7 +18,7 @@ class BaseParams():
             'weibo_fake_cls': 'cls',
             'weibo_cws': 'seq_tag',
             'weibo_pretrain': 'pretrain',
-            'CWS': 'seq_tag',
+            'cws': 'seq_tag',
             'NER': 'seq_tag',
             'ctb_pos': 'seq_tag',
             'ctb_cws': 'seq_tag',
@@ -48,11 +48,11 @@ class BaseParams():
         # specify this will make key reuse values top
         # that it, weibo_ner problem will use NER's top
         self.share_top = {
-            'ctb_cws': 'CWS',
-            'as_cws': 'CWS',
-            'msr_cws': 'CWS',
-            'pku_cws': 'CWS',
-            'city_cws': 'CWS',
+            'ctb_cws': 'cws',
+            'as_cws': 'cws',
+            'msr_cws': 'cws',
+            'pku_cws': 'cws',
+            'city_cws': 'cws',
             'ctb_pos': 'POS',
             'boson_domain': 'ner_domain',
             'Weibo_domain': 'ner_domain',
@@ -172,7 +172,7 @@ class BaseParams():
 
         Arguments:
             flag_string {str} -- run problem string
-            example: CWS|POS|weibo_ner&weibo_cws
+            example: cws|POS|weibo_ner&weibo_cws
 
         Keyword Arguments:
             gpu {int} -- number of gpu use for training, this
@@ -271,10 +271,10 @@ class BaseParams():
     def parse_problem_string(self, flag_string):
         '''Parse problem string
         Example:
-            CWS|POS|weibo_ner&weibo_cws
+            cws|POS|weibo_ner&weibo_cws
 
-            self.run_problem_list = [{CWS:seq_tag}, {POS:seq_tag}, {weibo_ner:seq_tag, weibo_cws:seq_tag}]
-            problem_list = [CWS, POS, weibo_ner, weibo_cws]
+            self.run_problem_list = [{cws:seq_tag}, {POS:seq_tag}, {weibo_ner:seq_tag, weibo_cws:seq_tag}]
+            problem_list = [cws, POS, weibo_ner, weibo_cws]
 
         Arguments:
             flag_string {str} -- problem string
