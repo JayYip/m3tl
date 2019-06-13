@@ -377,6 +377,17 @@ class Seq2Seq(TopLayer):
         decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
             max_seq_len)
 
+        batch_size = tf.shape(encoder_output)[0]
+        max_seq_len = tf.shape(encoder_output)[1]
+
+        encoder_output = tf.expand_dims(encoder_output, axis=1)
+        tile_dims = [1] * encoder_output.shape.ndims
+        tile_dims[1] = params.beam_size
+
+        encoder_output = tf.tile(encoder_output, tile_dims)
+        encoder_output = tf.reshape(encoder_output, 
+        [-1, max_seq_len, params.bert_config.hidden_size])
+
         def symbols_to_logits_fn(ids, i, cache):
 
             decoder_inputs = tf.nn.embedding_lookup(
@@ -449,7 +460,7 @@ class Seq2Seq(TopLayer):
         # cache['encoder_decoder_attention_mask'] = features['input_mask']
         initial_ids = tf.zeros([batch_size], dtype=tf.int32)
 
-        decode_ids, _ = beam_search.beam_search(
+        decode_ids, _, _ = beam_search.beam_search(
             symbols_to_logits_fn=symbol_to_logit_fn,
             initial_ids=initial_ids,
             states=cache,

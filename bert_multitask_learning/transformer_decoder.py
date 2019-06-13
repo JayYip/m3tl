@@ -89,15 +89,12 @@ class TransformerDecoder(object):
 
                 if cache is not None:
                     layer_cache = cache[str(layer_idx)]
-                    layer_input = tf.reshape(
-                        layer_input, [-1, 1, hidden_size])
-                    # update batch_size to batch_size*beam_size
-                    batch_size = modeling.get_shape_list(
-                        layer_input, expected_rank=3)[0]
-                    # broadcast encoder_output to batch*beam_size
-                    encoder_output = tf.broadcast_to(
-                        encoder_output, [batch_size, encode_seq_length, input_width])
-
+                    if layer_idx == 0:
+                        layer_input = tf.expand_dims(
+                            layer_input, axis=1)
+                        # update batch_size to batch_size*beam_size
+                        batch_size = modeling.get_shape_list(
+                            layer_input, expected_rank=3)[0]
                 else:
                     layer_cache = None
 

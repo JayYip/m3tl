@@ -12,7 +12,7 @@ with codecs.open('requirements.txt', 'r', 'utf8') as reader:
 
 setup(
     name='bert_multitask_learning',
-    version='0.2.3',
+    version='0.2.4',
     packages=find_packages(),
     url='https://github.com/JayYip/bert-multitask-learning',
     license='MIT',
