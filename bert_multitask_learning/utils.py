@@ -10,12 +10,7 @@ import numpy as np
 
 
 from .tokenization import (_is_control, FullTokenizer)
-
-BOS_TOKEN = '[PAD]'
-EOS_TOKEN = '[SEP]'
-TRAIN = 'train'
-EVAL = 'eval'
-PREDICT = 'infer'
+from .special_tokens import *
 
 
 class LabelEncoder(BaseEstimator, TransformerMixin):

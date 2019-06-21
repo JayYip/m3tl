@@ -23,6 +23,8 @@ import unicodedata
 import six
 import tensorflow as tf
 
+from .special_tokens import SPECIAL_TOKENS, UNK_TOKEN, SPACE_TOKEN
+
 
 def convert_to_unicode(text):
     """Converts `text` to Unicode (if it's not already), assuming utf-8 input."""
@@ -89,7 +91,7 @@ def convert_by_vocab(vocab, items):
         try:
             output.append(vocab[item])
         except KeyError:
-            output.append(vocab['[UNK]'])
+            output.append(vocab[UNK_TOKEN])
     return output
 
 
@@ -171,7 +173,7 @@ class BasicTokenizer(object):
         orig_tokens = whitespace_tokenize(text)
         split_tokens = []
         for token in orig_tokens:
-            if self.do_lower_case:
+            if self.do_lower_case and token not in SPECIAL_TOKENS:
                 token = token.lower()
                 token = self._run_strip_accents(token)
             # split_tokens.extend(self._run_split_on_punc(token))
@@ -187,7 +189,7 @@ class BasicTokenizer(object):
         for char in text:
             cat = unicodedata.category(char)
             if cat == "Mn":
-                output.append('[UNK]')
+                output.append(UNK_TOKEN)
                 continue
             output.append(char)
         return "".join(output)
@@ -258,13 +260,13 @@ class BasicTokenizer(object):
                 output.append(char)
                 continue
             except:
-                output.append('[UNK]')
+                output.append(UNK_TOKEN)
                 continue
             if cp == 0 or cp == 0xfffd or _is_control(char):
-                output.append('[UNK]')
+                output.append(UNK_TOKEN)
                 continue
             if _is_whitespace(char):
-                output.append("[unused1]")
+                output.append(SPACE_TOKEN)
             else:
                 output.append(char)
         return " ".join(output)
@@ -300,7 +302,7 @@ class WordpieceTokenizer(object):
 
         output_tokens = []
         for token in whitespace_tokenize(text):
-            if token == '[UNK]':
+            if token in SPECIAL_TOKENS:
                 output_tokens.append(token)
                 continue
             chars = list(token)
