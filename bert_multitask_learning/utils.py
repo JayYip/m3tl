@@ -514,13 +514,17 @@ def cluster_alphnum(text: str) -> list:
     last_is_alphnum = False
 
     for char in text:
-        is_alphnum = bool(re.match('^[a-zA-Z0-9]+$', char))
+        is_alphnum = bool(re.match('^[a-zA-Z0-9\[]+$', char))
+        is_right_brack = char == ']'
         if is_alphnum:
             if last_is_alphnum:
                 return_list[-1] += char
             else:
                 return_list.append(char)
                 last_is_alphnum = True
+        elif is_right_brack:
+            return_list[-1] += char
+            last_is_alphnum = False
         else:
             return_list.append(char)
             last_is_alphnum = False
