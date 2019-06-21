@@ -8,7 +8,7 @@ import tensorflow as tf
 from .tokenization import FullTokenizer
 
 from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
-                    add_special_tokens_with_seqs, create_mask_and_padding,
+                    add_special_tokens_with_seqs, create_mask_and_padding, cluster_alphnum,
                     TRAIN, EVAL, PREDICT)
 from .create_generators import create_generator
 
@@ -161,7 +161,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT):
 
     def gen():
         data_dict = {}
-        for doc in tqdm(inputs, desc='Processing Inputs'):
+        for doc in inputs:
             inputs_a = list(doc)
             tokens, target = tokenize_text_with_seqs(
                 tokenizer, inputs_a, None)
@@ -227,8 +227,8 @@ def to_serving_input(input_file_or_list, config, mode=PREDICT, tokenizer=None):
         tokenizer = FullTokenizer(config.vocab_file)
 
     data_dict = {}
-    for doc in tqdm(inputs, desc='Processing Inputs'):
-        inputs_a = list(doc)
+    for doc in inputs:
+        inputs_a = cluster_alphnum(doc)
         tokens, target = tokenize_text_with_seqs(
             tokenizer, inputs_a, None)
 
