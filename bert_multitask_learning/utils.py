@@ -518,7 +518,10 @@ def cluster_alphnum(text: str) -> list:
                 return_list.append(char)
                 last_is_alphnum = True
         elif is_right_brack:
-            return_list[-1] += char
+            if return_list:
+                return_list[-1] += char
+            else:
+                return_list.append(char)
             last_is_alphnum = False
         else:
             return_list.append(char)
