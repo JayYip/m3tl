@@ -9,7 +9,7 @@ from ..tokenization import FullTokenizer
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
 
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 NER_TYPE = ['LOC',  # location
             'GPE',
@@ -127,7 +127,7 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     return result_dict
 
 
-@proprocessing_fn
+@preprocessing_fn
 def weibo_ner(params, mode):
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
@@ -148,7 +148,7 @@ def gold_horse_segment_process_fn(d):
     return ent_type
 
 
-@proprocessing_fn
+@preprocessing_fn
 def weibo_cws(params, mode):
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
@@ -340,7 +340,7 @@ def NER(params, mode):
                                            mode)
 
 
-@proprocessing_fn
+@preprocessing_fn
 def msra_ner(params, mode):
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
@@ -358,7 +358,7 @@ def msra_ner(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def boson_ner(params, mode):
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -376,7 +376,7 @@ def boson_ner(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def boson_domain(params, mode):
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
@@ -395,7 +395,7 @@ def boson_domain(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def Weibo_domain(params, mode):
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
@@ -410,7 +410,7 @@ def Weibo_domain(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def msra_domain(params, mode):
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)

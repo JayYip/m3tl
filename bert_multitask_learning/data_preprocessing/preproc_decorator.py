@@ -3,7 +3,7 @@ from ..create_generators import create_single_problem_generator, create_pretrain
 from ..tokenization import FullTokenizer
 
 
-def proprocessing_fn(func):
+def preprocessing_fn(func):
     def wrapper(params, mode):
         tokenizer = FullTokenizer(
             vocab_file=params.vocab_file, do_lower_case=True)

@@ -9,10 +9,10 @@ from ..utils import (
 from ..create_generators import create_pretraining_generator, create_single_problem_generator
 
 from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 
-@proprocessing_fn
+@preprocessing_fn
 def weibo_fake_cls(params, mode):
     """Just a test problem to test multiproblem support
 
@@ -34,7 +34,7 @@ def weibo_fake_cls(params, mode):
     return inputs_list, new_target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def weibo_fake_seq2seq_tag(params, mode: str):
 
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
@@ -81,7 +81,7 @@ def weibo_pretrain(params, mode):
                                         mode)
 
 
-@proprocessing_fn
+@preprocessing_fn
 def weibo_fake_seq_tag(params, mode):
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)

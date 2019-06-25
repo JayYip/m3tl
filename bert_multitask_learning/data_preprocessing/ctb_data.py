@@ -9,7 +9,7 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 
 def read_ctb_pos():
@@ -45,7 +45,7 @@ def read_ctb_pos():
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ctb_pos(params, mode):
 
     input_list, target_list = read_ctb_pos()
@@ -60,7 +60,7 @@ def ctb_pos(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ctb_cws(params, mode):
     file_list = glob.glob('data/ctb8.0/data/segmented/*')
 

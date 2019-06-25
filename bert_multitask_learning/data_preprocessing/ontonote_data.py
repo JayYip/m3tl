@@ -8,7 +8,7 @@ from ..utils import (
     EOS_TOKEN,
     PREDICT)
 from ..create_generators import create_single_problem_generator
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 
 def parse_one(s):
@@ -62,7 +62,7 @@ def parse_one(s):
     return seg, ner, full_pos, text, pos_result
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ontonotes_ner(params, mode):
     if mode == 'train':
         with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
@@ -75,7 +75,7 @@ def ontonotes_ner(params, mode):
     return inputs_list, target
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ontonotes_cws(params, mode):
 
     if mode == 'train':
@@ -89,7 +89,7 @@ def ontonotes_cws(params, mode):
     return inputs_list, target
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ontonotes_chunk(params, mode):
 
     if mode == 'train':
@@ -115,7 +115,7 @@ def ontonotes_chunk(params, mode):
     return inputs_list, target
 
 
-@proprocessing_fn
+@preprocessing_fn
 def ontonotes_pos(params, mode):
 
     if mode == 'train':

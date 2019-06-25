@@ -10,7 +10,7 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, filter_empty
 from ..create_generators import create_single_problem_generator
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 
 def process_line_msr_pku(l):
@@ -110,7 +110,7 @@ def _process_text_files(path_list):
     return inputs, target
 
 
-@proprocessing_fn
+@preprocessing_fn
 def cws(params, mode):
     file_list = glob.glob('data/ctb8.0/data/segmented/*')
 
@@ -172,7 +172,7 @@ def cws(params, mode):
     return input_list, target_list
 
 
-@proprocessing_fn
+@preprocessing_fn
 def as_cws(params, mode):
 
     if mode == 'train':

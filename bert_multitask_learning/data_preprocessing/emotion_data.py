@@ -8,10 +8,10 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
-from .preproc_decorator import proprocessing_fn
+from .preproc_decorator import preprocessing_fn
 
 
-@proprocessing_fn
+@preprocessing_fn
 def emotion_analysis(params, mode):
     with open('data/emotion_analysis/mer.negative.courpus_and_tag2.txt') as f:
         neg_data = [list(t.replace(' ', '')) for t in f.readlines()]
