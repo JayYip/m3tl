@@ -11,3 +11,4 @@ from .run_bert_multitask import *
 from .transformer_decoder import *
 from .utils import *
 from .export_model import *
+from .data_preprocessing import proprocessing_fn

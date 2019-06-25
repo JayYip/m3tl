@@ -8,6 +8,7 @@ from ..utils import (
     EOS_TOKEN,
     PREDICT)
 from ..create_generators import create_single_problem_generator
+from .preproc_decorator import proprocessing_fn
 
 
 def parse_one(s):
@@ -61,9 +62,8 @@ def parse_one(s):
     return seg, ner, full_pos, text, pos_result
 
 
+@proprocessing_fn
 def ontonotes_ner(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-
     if mode == 'train':
         with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
             raw_data = f.readlines()
@@ -72,22 +72,11 @@ def ontonotes_ner(params, mode):
             raw_data = f.readlines()
 
     _, target, _, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
-    flat_target_list = [t for sublist in target for t in sublist]
-    label_encoder = get_or_make_label_encoder(
-        params, 'ontonotes_ner', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target, label_encoder
-    return create_single_problem_generator('ontonotes_ner',
-                                           inputs_list,
-                                           target,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return inputs_list, target
 
 
+@proprocessing_fn
 def ontonotes_cws(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
     if mode == 'train':
         with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
@@ -97,23 +86,11 @@ def ontonotes_cws(params, mode):
             raw_data = f.readlines()
 
     target, _, _, inputs_list, _ = zip(*[parse_one(s) for s in raw_data])
-    flat_target_list = [t for sublist in target for t in sublist]
-    label_encoder = get_or_make_label_encoder(
-        params, 'ontonotes_cws', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target, label_encoder
-    return create_single_problem_generator('ontonotes_cws',
-                                           inputs_list,
-                                           target,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return inputs_list, target
 
 
+@proprocessing_fn
 def ontonotes_chunk(params, mode):
-
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
     if mode == 'train':
         with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
@@ -135,21 +112,11 @@ def ontonotes_chunk(params, mode):
 
     label_encoder = get_or_make_label_encoder(
         params, 'ontonotes_chunk', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target, label_encoder
-    return create_single_problem_generator(
-        'ontonotes_chunk',
-        inputs_list,
-        target,
-        label_encoder,
-        params,
-        tokenizer,
-        mode)
+    return inputs_list, target
 
 
+@proprocessing_fn
 def ontonotes_pos(params, mode):
-
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
     if mode == 'train':
         with open('data/ontonote/train.fuse.parse', 'r', encoding='utf8') as f:
@@ -169,15 +136,4 @@ def ontonotes_pos(params, mode):
         flat_target_list = None
         _, _, _, inputs_list, target = zip(*[parse_one(s) for s in raw_data])
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'ontonotes_pos', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target, label_encoder
-    return create_single_problem_generator(
-        'ontonotes_pos',
-        inputs_list,
-        target,
-        label_encoder,
-        params,
-        tokenizer,
-        mode)
+    return inputs_list, target

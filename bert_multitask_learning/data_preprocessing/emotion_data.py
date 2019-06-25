@@ -8,11 +8,11 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
+from .preproc_decorator import proprocessing_fn
 
 
+@proprocessing_fn
 def emotion_analysis(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
     with open('data/emotion_analysis/mer.negative.courpus_and_tag2.txt') as f:
         neg_data = [list(t.replace(' ', '')) for t in f.readlines()]
 
@@ -35,16 +35,4 @@ def emotion_analysis(params, mode):
         inputs_list = eval_input
         target_list = eval_target
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'emotion_analysis', mode, ['0', '1'], zero_class='0')
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-
-    return create_single_problem_generator(
-        'emotion_analysis',
-        inputs_list,
-        target_list,
-        label_encoder,
-        params,
-        tokenizer,
-        mode)
+    return inputs_list, target_list

@@ -9,6 +9,8 @@ from ..tokenization import FullTokenizer
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
 from ..create_generators import create_single_problem_generator, create_pretraining_generator
 
+from .preproc_decorator import proprocessing_fn
+
 NER_TYPE = ['LOC',  # location
             'GPE',
             'PER',  # person
@@ -125,9 +127,8 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     return result_dict
 
 
+@proprocessing_fn
 def weibo_ner(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
@@ -137,20 +138,7 @@ def weibo_ner(params, mode):
     inputs_list = data['inputs']
     target_list = data['target']
 
-    flat_label = [item for sublist in target_list for item in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'weibo_ner', mode, flat_label)
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-
-    return create_single_problem_generator('weibo_ner',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
 def gold_horse_segment_process_fn(d):
@@ -160,9 +148,8 @@ def gold_horse_segment_process_fn(d):
     return ent_type
 
 
+@proprocessing_fn
 def weibo_cws(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
@@ -172,20 +159,7 @@ def weibo_cws(params, mode):
     inputs_list = data['inputs']
     target_list = data['target']
 
-    flat_label = [item for sublist in target_list for item in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'weibo_cws', mode, flat_label, '0')
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-
-    return create_single_problem_generator('weibo_cws',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
 def read_bosonnlp_data(file_pattern, eval_size=0.2):
@@ -366,9 +340,8 @@ def NER(params, mode):
                                            mode)
 
 
+@proprocessing_fn
 def msra_ner(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 
@@ -382,26 +355,11 @@ def msra_ner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-    flat_target_list = [t for sublist in target_list for t in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'msra_ner', mode, flat_target_list, zero_class='O')
-
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-    return create_single_problem_generator('msra_ner',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def boson_ner(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
-
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
 
@@ -415,25 +373,11 @@ def boson_ner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-    flat_target_list = [t for sublist in target_list for t in sublist]
-    label_encoder = get_or_make_label_encoder(
-        params, 'boson_ner', mode, flat_target_list, zero_class='O')
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-
-    return create_single_problem_generator('boson_ner',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def boson_domain(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
-
     boson_data = read_bosonnlp_data(
         file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
 
@@ -448,23 +392,11 @@ def boson_domain(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
     target_list = ['boson_ner' for _ in target_list]
-    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
-    label_encoder = get_or_make_label_encoder(
-        params, 'ner_domain', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-    return create_single_problem_generator('boson_domain',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def Weibo_domain(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
     data = read_ner_data(file_pattern='data/ner/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
@@ -475,23 +407,11 @@ def Weibo_domain(params, mode):
     target_list = data['target']
 
     target_list = ['weibo_ner' for _ in target_list]
-    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
-    label_encoder = get_or_make_label_encoder(
-        params, 'ner_domain', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-    return create_single_problem_generator('Weibo_domain',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def msra_domain(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
 
     msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
 
@@ -507,15 +427,4 @@ def msra_domain(params, mode):
             target_list += data['eval']['target']
 
     target_list = ['msra_ner' for _ in target_list]
-    flat_target_list = ['boson_ner', 'weibo_ner', 'msra_ner']
-    label_encoder = get_or_make_label_encoder(
-        params, 'ner_domain', mode, flat_target_list)
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-    return create_single_problem_generator('msra_domain',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list

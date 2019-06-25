@@ -9,6 +9,7 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT
 from ..create_generators import create_single_problem_generator
+from .preproc_decorator import proprocessing_fn
 
 
 def read_ctb_pos():
@@ -44,8 +45,8 @@ def read_ctb_pos():
     return input_list, target_list
 
 
+@proprocessing_fn
 def ctb_pos(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
 
     input_list, target_list = read_ctb_pos()
 
@@ -56,23 +57,11 @@ def ctb_pos(params, mode):
         _, input_list, _, target_list = train_test_split(
             input_list, target_list, test_size=0.2, random_state=3721)
 
-    flat_target_list = [item for sublist in target_list for item in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'ctb_pos', mode, flat_target_list, zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-    return create_single_problem_generator('ctb_pos',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def ctb_cws(params, mode):
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     file_list = glob.glob('data/ctb8.0/data/segmented/*')
 
     input_list = []
@@ -113,16 +102,4 @@ def ctb_cws(params, mode):
         _, input_list, _, target_list = train_test_split(
             input_list, target_list, test_size=0.2, random_state=3721)
 
-    flat_target_list = [item for sublist in target_list for item in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'ctb_cws', mode, flat_target_list, zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-    return create_single_problem_generator('ctb_cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list

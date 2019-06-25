@@ -10,6 +10,7 @@ from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, filter_empty
 from ..create_generators import create_single_problem_generator
+from .preproc_decorator import proprocessing_fn
 
 
 def process_line_msr_pku(l):
@@ -109,10 +110,8 @@ def _process_text_files(path_list):
     return inputs, target
 
 
+@proprocessing_fn
 def cws(params, mode):
-    # ctb data
-
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     file_list = glob.glob('data/ctb8.0/data/segmented/*')
 
     input_list = []
@@ -153,7 +152,6 @@ def cws(params, mode):
         _, input_list, _, target_list = train_test_split(
             input_list, target_list, test_size=0.2, random_state=3721)
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
         file_list = [  # 'as_testing_gold.utf8',
             'cityu_training.utf8', 'msr_training.utf8', 'pku_training.utf8']
@@ -171,23 +169,12 @@ def cws(params, mode):
 
     input_list, target_list = filter_empty(input_list, target_list)
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-
-    return create_single_problem_generator('cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@proprocessing_fn
 def as_cws(params, mode):
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
         file_list = glob.glob('data/cws/training/as_*.utf8')
     else:
