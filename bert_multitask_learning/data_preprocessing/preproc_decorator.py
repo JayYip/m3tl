@@ -11,6 +11,8 @@ def preprocessing_fn(func):
         pickle_file = os.path.join(
             params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
         if os.path.exists(pickle_file) and params.multiprocess:
+            label_encoder = get_or_make_label_encoder(
+                params, problem=problem, mode=mode)
             return create_single_problem_generator(
                 func.__name__,
                 None,
