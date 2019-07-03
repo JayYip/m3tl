@@ -3,7 +3,7 @@ from tensorflow.contrib import autograph
 import os
 
 from . import modeling
-from .bert.modeling import BertModel
+from .modeling import BertModel
 
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
