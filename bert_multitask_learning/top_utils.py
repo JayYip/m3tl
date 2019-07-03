@@ -8,7 +8,7 @@ from tensor2tensor.utils import metrics as t2t_metrics
 
 from .t2t_utils import get_t2t_metric_op
 
-from .bert import modeling
+from . import modeling
 
 
 class TopLayer():

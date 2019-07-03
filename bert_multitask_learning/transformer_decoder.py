@@ -2,7 +2,7 @@ import tensorflow as tf
 import math
 from tensor2tensor.utils import beam_search
 
-from .bert import modeling
+from . import modeling
 
 
 class TransformerDecoder(object):

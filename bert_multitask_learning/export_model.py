@@ -5,7 +5,7 @@ import argparse
 import tensorflow as tf
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from .bert import modeling
+from . import modeling
 
 from .model_fn import BertMultiTask
 from .params import BaseParams

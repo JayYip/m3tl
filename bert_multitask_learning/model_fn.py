@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.contrib import autograph
 import os
 
-from .bert import modeling
+from . import modeling
 from .bert.modeling import BertModel
 
 from .optimizer import AdamWeightDecayOptimizer

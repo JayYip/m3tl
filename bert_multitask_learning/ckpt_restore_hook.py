@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from .bert import modeling
+from . import modeling
 
 
 class RestoreCheckpointHook(tf.train.SessionRunHook):

@@ -5,7 +5,7 @@ from tensor2tensor.utils import beam_search
 
 from .transformer_decoder import TransformerDecoder
 
-from .bert import modeling
+from . import modeling
 from .top_utils import (TopLayer, gather_indexes,
                         make_cudnngru, create_seq_smooth_label,
                         dense_layer)
