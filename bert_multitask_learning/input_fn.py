@@ -76,7 +76,7 @@ def train_eval_input_fn(config, mode='train'):
             output_type.update({'%s_loss_multiplier' % problem: tf.int32})
             output_shapes.update({'%s_loss_multiplier' % problem: []})
 
-            if problem_type in ['seq_tag']:
+            if problem_type in ['seq_tag', 'multi_cls']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update(
                     {'%s_label_ids' % problem: [None]})

@@ -1,6 +1,8 @@
 
 
 import re
+import string
+import random
 
 from ..tokenization import FullTokenizer
 
@@ -91,5 +93,24 @@ def weibo_fake_seq_tag(params, mode):
         data = data['eval']
     inputs_list = data['inputs'][:100]
     target_list = data['target'][:100]
+
+    return inputs_list, target_list
+
+
+@preprocessing_fn
+def weibo_fake_multi_cls(params, mode):
+    data = read_ner_data(file_pattern='data/weibo/weiboNER*',
+                         proc_fn=gold_horse_ent_type_process_fn)
+    if mode == 'train':
+        data = data['train']
+    else:
+        data = data['eval']
+    inputs_list = data['inputs'][:300]
+
+    # create fake target
+    target_list = []
+    for _ in inputs_list:
+        target_list.append(
+            list(string.ascii_lowercase[:random.randint(0, 25)]))
 
     return inputs_list, target_list

@@ -114,7 +114,10 @@ def create_single_problem_single_instance(problem,
     if isinstance(target, list):
         if problem_type == 'seq2seq_text':
             label_id = label_encoder.convert_tokens_to_ids(target)
+        elif problem_type == 'multi_cls':
+            label_id = label_encoder.transform([target])[0]
         else:
+            # seq2seq_tag
             label_id = label_encoder.transform(target).tolist()
             label_id = [np.int32(i) for i in label_id]
     else:

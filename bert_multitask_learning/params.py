@@ -150,9 +150,9 @@ class BaseParams():
         self.problem_assigned = False
 
     def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
-        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text']:
+        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls']:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
-                (['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text'], problem_type)))
+                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls'], problem_type))
 
         self.problem_type[problem_name] = problem_type
         self.read_data_fn[problem_name] = processing_fn

@@ -7,7 +7,10 @@ from .modeling import BertModel
 
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
-    Seq2Seq, SequenceLabel, Classification, LabelTransferHidden, MaskLM, PreTrain, GridTransformer, TaskTransformer)
+    Seq2Seq, SequenceLabel, Classification,
+    MaskLM, PreTrain, MultiLabelClassification)
+from .experimental_top import (
+    LabelTransferHidden, GridTransformer, TaskTransformer)
 
 
 @autograph.convert()
@@ -229,7 +232,8 @@ class BertMultiTask():
             'seq_tag': SequenceLabel,
             'cls': Classification,
             'seq2seq_tag': Seq2Seq,
-            'seq2seq_text': Seq2Seq
+            'seq2seq_text': Seq2Seq,
+            'multi_cls': MultiLabelClassification
         }
 
         return_dict = {}

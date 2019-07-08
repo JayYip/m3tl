@@ -5,6 +5,7 @@ import random
 import collections
 import re
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import MultiLabelBinarizer
 
 import numpy as np
 
@@ -130,30 +131,48 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
     create_path(problem_path)
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
     is_seq2seq_text = params.problem_type[problem] == 'seq2seq_text'
+    is_multi_cls = params.problem_type[problem] == 'multi_cls'
+    is_seq2seq_tag = params.problem_type[problem] == 'seq2seq_tag'
 
     if mode == 'train' and not os.path.exists(le_path):
-        if not is_seq2seq_text:
-            label_encoder = LabelEncoder()
 
-            label_encoder.fit(label_list, zero_class=zero_class)
-            label_encoder.dump(le_path)
-        else:
+        if is_seq2seq_text:
             vocab_file = params.decode_vocab_file if params.decode_vocab_file is not None else params.vocab_file
             label_encoder = FullTokenizer(vocab_file)
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
+        elif is_multi_cls:
+            label_encoder = MultiLabelBinarizer()
+            label_encoder.fit(label_list)
+            pickle.dump(label_encoder, open(le_path, 'wb'))
+
+        else:
+            if isinstance(label_list[0], list):
+                label_list = [
+                    item for sublist in label_list for item in sublist]
+                if is_seq2seq_tag:
+                    label_list.extend([BOS_TOKEN, EOS_TOKEN])
+            label_encoder = LabelEncoder()
+
+            label_encoder.fit(label_list, zero_class=zero_class)
+            label_encoder.dump(le_path)
+
     else:
-        if not is_seq2seq_text:
+
+        if is_seq2seq_text or is_multi_cls:
+            label_encoder = pickle.load(open(le_path, 'rb'))
+        else:
             label_encoder = LabelEncoder()
             label_encoder.load(le_path)
-        else:
-            label_encoder = pickle.load(open(le_path, 'rb'))
 
     if not is_seq2seq_text:
-        params.num_classes[problem] = len(label_encoder.encode_dict)
-        if EOS_TOKEN in label_encoder.encode_dict:
-            params.eos_id[problem] = int(
-                label_encoder.transform([EOS_TOKEN])[0])
+        if is_multi_cls:
+            params.num_classes[problem] = label_encoder.classes_.shape[0]
+        else:
+            params.num_classes[problem] = len(label_encoder.encode_dict)
+            if EOS_TOKEN in label_encoder.encode_dict:
+                params.eos_id[problem] = int(
+                    label_encoder.transform([EOS_TOKEN])[0])
     else:
         params.num_classes[problem] = len(label_encoder.vocab)
         params.eos_id[problem] = label_encoder.convert_tokens_to_ids(
