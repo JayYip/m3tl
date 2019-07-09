@@ -249,6 +249,10 @@ def acc_evaluate(problem, estimator, params):
 
             decode_pred = label_encoder.inverse_transform([predict])
             decode_label = [label]
+        elif params.problem_type[problem] in ['multi_cls']:
+            predict = np.round(pred_prob)
+            decode_pred = predict
+            decode_label = label
         else:
             raise ValueError(
                 'Acc evaluation dose not support problem type %s' % params.problem_type[problem])

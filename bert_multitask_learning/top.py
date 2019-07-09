@@ -469,9 +469,11 @@ class MultiLabelClassification(TopLayer):
             batch_loss = self.create_batch_loss(labels, logits, num_classes)
             # multiply with loss multiplier to make some loss as zero
             loss = tf.reduce_mean(batch_loss)
-
+            prob = tf.nn.sigmoid(logits)
+            prob = tf.round(prob)
+            prob = tf.expand_dims(prob, -1)
             return self.eval_metric_fn(
-                features, logits, loss, problem_name)
+                features, prob, loss, problem_name)
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.sigmoid(logits)
             self.prob = tf.identity(prob, name='%s_predict' % scope_name)

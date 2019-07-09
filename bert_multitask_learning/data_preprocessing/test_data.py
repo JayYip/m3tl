@@ -47,7 +47,7 @@ def weibo_fake_seq2seq_tag(params, mode: str):
         data = data['eval']
     inputs_list = data['inputs'][:100]
     target_list = data['target'][:100]
-    new_target_list = [['1', '2'] for t in target_list]
+    new_target_list = [['1', '2'] for _ in range(len(inputs_list))]
     return inputs_list, new_target_list
 
 
