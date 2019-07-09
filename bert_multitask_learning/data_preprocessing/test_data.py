@@ -10,7 +10,7 @@ from ..utils import (
     get_or_make_label_encoder, BOS_TOKEN, EOS_TOKEN)
 from ..create_generators import create_pretraining_generator, create_single_problem_generator
 
-from .ner_data import gold_horse_ent_type_process_fn, read_ner_data
+from .ner_data import gold_horse_ent_type_process_fn, read_ner_data, gold_horse_segment_process_fn
 from .preproc_decorator import preprocessing_fn
 
 
@@ -22,7 +22,7 @@ def weibo_fake_cls(params, mode):
         params {Params} -- params
         mode {mode} -- mode
     """
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/weibo/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -39,7 +39,7 @@ def weibo_fake_cls(params, mode):
 @preprocessing_fn
 def weibo_fake_seq2seq_tag(params, mode: str):
 
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/weibo/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']
@@ -51,12 +51,13 @@ def weibo_fake_seq2seq_tag(params, mode: str):
     return inputs_list, new_target_list
 
 
+@preprocessing_fn
 def weibo_pretrain(params, mode):
 
     sentence_split = r'[.!?。？！]'
 
     tokenizer = FullTokenizer(vocab_file=params.vocab_file)
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/weibo/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
         data = data['train']
@@ -85,7 +86,7 @@ def weibo_pretrain(params, mode):
 
 @preprocessing_fn
 def weibo_fake_seq_tag(params, mode):
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
+    data = read_ner_data(file_pattern='data/weibo/weiboNER*',
                          proc_fn=gold_horse_ent_type_process_fn)
     if mode == 'train':
         data = data['train']

@@ -418,15 +418,19 @@ def create_generator(params, mode):
         problem_chunk.append(list(problem_dict.keys()))
 
     # get dummy labels
-    def _create_dummpy_label(problem_type):
+    def _create_dummpy_label(problem_type, num_classes=None):
         if problem_type == 'cls':
             return 0
         elif problem_type == 'seq_tag':
             return [0]*params.max_seq_len
+        elif problem_type == 'mask_lm':
+            return [0]*params.max_predictions_per_seq
+        elif problem_type == 'multi_cls':
+            return [0]*num_classes
         else:
             return [0]*params.decode_max_seq_len
     dummy_label_dict = {problem+'_label_ids': _create_dummpy_label(
-        params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] != 'pretrain'}
+        params.problem_type[problem], params.num_classes[problem]) for problem in problem_list if params.problem_type[problem] != 'pretrain'}
     dummy_label_dict.update({problem+'_mask': _create_dummpy_label(
         params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']})
 
