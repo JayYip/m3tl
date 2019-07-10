@@ -27,11 +27,12 @@ To sum up, compared to the original bert repo, this repo has the following featu
 
 ## What type of problems are supported?
 
+- Masked LM and next sentence prediction Pre-train(pretrain)
 - Classification(cls)
 - Sequence Labeling(seq_tag)
 - Seq2seq Labeling(seq2seq_tag)
 - Seq2seq Text Generation(seq2seq_text)
-- (TODO)Multi-Label Classification(multi_cls)
+- Multi-Label Classification(multi_cls)
 
 ## How to run pre-defined problems
 
@@ -69,11 +70,12 @@ pip install bert-multitask-learning
 
 ## 目前支持的任务类型
 
+- Masked LM和next sentence prediction预训练(pretrain)
 - 单标签分类(cls)
 - 序列标注(seq_tag)
 - 序列到序列标签标注(seq2seq_tag)
 - 序列到序列文本生成(seq2seq_text)
-- (TODO)多标签分类(multi_cls)
+- 多标签分类(multi_cls)
 
 ## 如何运行预定义任务
 
