@@ -474,9 +474,13 @@ def create_generator(params, mode):
 
         # create loss multiplier
         loss_multiplier = {
-            problem+'_loss_multiplier': 0 for problem in problem_list}
+            problem+'_loss_multiplier': 0 for problem in problem_list if params.problem_type[problem] != 'pretrain'}
         for problem in current_problem_chunk:
-            loss_multiplier[problem+'_loss_multiplier'] = 1
+            if params.problem_type[problem] != 'pretrain':
+                loss_multiplier[problem+'_loss_multiplier'] = 1
+            else:
+                loss_multiplier['next_sentence_loss_multiplier'] = 1
+                loss_multiplier['masked_lm_loss_multiplier'] = 1
 
         base_dict = {}
         base_input = None
@@ -515,7 +519,7 @@ def create_generator(params, mode):
                 if problem_type == 'seq_tag':
                     base_dict[problem_label_name] = dummy_label_dict[problem_label_name][:len(
                         base_dict['input_ids'])]
-                if problem_type == 'pretrain':
+                elif problem_type == 'pretrain':
                     if 'masked_lm_ids' not in base_dict:
                         base_dict.update(pretrain_dummpy_dict)
                 else:

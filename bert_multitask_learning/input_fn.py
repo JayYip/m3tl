@@ -73,9 +73,19 @@ def train_eval_input_fn(config, mode='train'):
         })
     for problem_dict in config.run_problem_list:
         for problem, problem_type in problem_dict.items():
-            output_type.update({'%s_loss_multiplier' % problem: tf.int32})
-            output_shapes.update({'%s_loss_multiplier' % problem: []})
-
+            if problem_type != 'pretrain':
+                output_type.update({'%s_loss_multiplier' % problem: tf.int32})
+                output_shapes.update({'%s_loss_multiplier' % problem: []})
+            else:
+                output_type.update(
+                    {'next_sentence_loss_multiplier': tf.int32})
+                output_shapes.update(
+                    {'next_sentence_loss_multiplier': []})
+                output_type.update(
+                    {'masked_lm_loss_multiplier': tf.int32})
+                output_shapes.update(
+                    {'masked_lm_loss_multiplier': []})
+                    
             if problem_type in ['seq_tag', 'multi_cls']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update(

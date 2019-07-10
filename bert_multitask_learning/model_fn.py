@@ -134,16 +134,27 @@ class BertMultiTask():
             feature_this_round = features
             hidden_feature_this_round = hidden_feature
         else:
-            record_ind = tf.where(tf.cast(
-                features['%s_loss_multiplier' % problem], tf.bool))
-            feature_this_round = {
-                k: tf.gather_nd(v, record_ind)
-                for k, v in features.items()}
+            multiplier_name = '%s_loss_multiplier' % problem if self.params.problem_type[
+                problem] != 'pretrain' else 'masked_lm_loss_multiplier'
 
-            hidden_feature_this_round = {
-                k: tf.gather_nd(v, record_ind)
-                for k, v in hidden_feature.items()
-            }
+            record_ind = tf.where(tf.cast(
+                features[multiplier_name], tf.bool))
+
+            hidden_feature_this_round = {}
+            for hidden_feature_name in hidden_feature:
+                if hidden_feature_name != 'embed_table':
+                    hidden_feature_this_round[hidden_feature_name] = tf.gather_nd(
+                        hidden_feature[hidden_feature_name], record_ind
+                    )
+                else:
+                    hidden_feature_this_round[hidden_feature_name] = hidden_feature[hidden_feature_name]
+
+            feature_this_round = {}
+            for features_name in features:
+                feature_this_round[features_name] = tf.gather_nd(
+                    features[features_name],
+                    record_ind)
+
         return feature_this_round, hidden_feature_this_round
 
     def hidden(self, features, hidden_feature, mode):

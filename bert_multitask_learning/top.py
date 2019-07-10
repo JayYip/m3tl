@@ -258,12 +258,13 @@ class PreTrain(TopLayer):
     def __call__(self, features, hidden_feature, mode, problem_name):
         mask_lm_top = MaskLM(self.params)
         self.params.share_top['next_sentence'] = 'next_sentence'
-        cls = Classification(self.params)
         mask_lm_top_result = mask_lm_top(
             features, hidden_feature, mode, problem_name)
-        features['next_sentence_loss_multiplier'] = 1
-        next_sentence_top_result = cls(
-            features, hidden_feature, mode, 'next_sentence')
+        with tf.variable_scope('next_sentence', reuse=tf.AUTO_REUSE):
+            cls = Classification(self.params)
+            features['next_sentence_loss_multiplier'] = 1
+            next_sentence_top_result = cls(
+                features, hidden_feature, mode, 'next_sentence')
         if mode == tf.estimator.ModeKeys.TRAIN:
             self.loss = mask_lm_top_result+next_sentence_top_result
             return self.loss
