@@ -56,7 +56,6 @@ def weibo_pretrain(params, mode):
 
     sentence_split = r'[.!?。？！]'
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     data = read_ner_data(file_pattern='data/weibo/weiboNER*',
                          proc_fn=gold_horse_segment_process_fn)
     if mode == 'train':
@@ -75,13 +74,7 @@ def weibo_pretrain(params, mode):
                 segmented_list[-1].append(list(sentence))
     segmented_list = [doc for doc in segmented_list if doc]
 
-    return create_pretraining_generator('weibo_pretrain',
-                                        segmented_list,
-                                        None,
-                                        None,
-                                        params,
-                                        tokenizer,
-                                        mode)
+    return segmented_list
 
 
 @preprocessing_fn

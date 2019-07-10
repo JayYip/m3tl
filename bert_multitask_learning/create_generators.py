@@ -434,6 +434,14 @@ def create_generator(params, mode):
     dummy_label_dict.update({problem+'_mask': _create_dummpy_label(
         params.problem_type[problem]) for problem in problem_list if params.problem_type[problem] in ['seq2seq_tag', 'seq2seq_text']})
 
+    pretrain_dummpy_dict = {
+        "masked_lm_positions": _create_dummpy_label('mask_lm'),
+        "masked_lm_ids": _create_dummpy_label('mask_lm'),
+        "masked_lm_weights": _create_dummpy_label('mask_lm'),
+        "next_sentence_label_ids": _create_dummpy_label('cls'),
+        "next_sentence_loss_multiplier": 0,
+        "masked_lm_loss_multiplier": 0}
+
     # init gen
     try:
         gen_dict = {problem: params.read_data_fn[problem](params, mode)
@@ -507,6 +515,9 @@ def create_generator(params, mode):
                 if problem_type == 'seq_tag':
                     base_dict[problem_label_name] = dummy_label_dict[problem_label_name][:len(
                         base_dict['input_ids'])]
+                if problem_type == 'pretrain':
+                    if 'masked_lm_ids' not in base_dict:
+                        base_dict.update(pretrain_dummpy_dict)
                 else:
                     base_dict[problem_label_name] = dummy_label_dict[problem_label_name]
 

@@ -257,6 +257,7 @@ class PreTrain(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name):
         mask_lm_top = MaskLM(self.params)
+        self.params.share_top['next_sentence'] = 'next_sentence'
         cls = Classification(self.params)
         mask_lm_top_result = mask_lm_top(
             features, hidden_feature, mode, problem_name)
