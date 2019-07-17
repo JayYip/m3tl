@@ -138,7 +138,7 @@ def weibo_ner(params, mode):
     inputs_list = data['inputs']
     target_list = data['target']
 
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 def gold_horse_segment_process_fn(d):
@@ -159,7 +159,7 @@ def weibo_cws(params, mode):
     inputs_list = data['inputs']
     target_list = data['target']
 
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 def read_bosonnlp_data(file_pattern, eval_size=0.2):
@@ -355,7 +355,7 @@ def msra_ner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 @preprocessing_fn
@@ -373,7 +373,7 @@ def boson_ner(params, mode):
         else:
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 @preprocessing_fn
@@ -392,7 +392,7 @@ def boson_domain(params, mode):
             inputs_list += data['eval']['inputs']
             target_list += data['eval']['target']
     target_list = ['boson_ner' for _ in target_list]
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 @preprocessing_fn
@@ -407,7 +407,7 @@ def Weibo_domain(params, mode):
     target_list = data['target']
 
     target_list = ['weibo_ner' for _ in target_list]
-    return input_list, target_list
+    return inputs_list, target_list
 
 
 @preprocessing_fn
@@ -427,4 +427,4 @@ def msra_domain(params, mode):
             target_list += data['eval']['target']
 
     target_list = ['msra_ner' for _ in target_list]
-    return input_list, target_list
+    return inputs_list, target_list

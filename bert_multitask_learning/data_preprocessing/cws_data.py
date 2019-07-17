@@ -184,23 +184,12 @@ def as_cws(params, mode):
 
     input_list, target_list = _process_text_files(file_list)
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'as_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-
-    return create_single_problem_generator('as_cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@preprocessing_fn
 def msr_cws(params, mode):
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
         file_list = glob.glob('data/cws/training/msr_*.utf8')
     else:
@@ -210,23 +199,12 @@ def msr_cws(params, mode):
 
     input_list, target_list = _process_text_files(file_list)
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'msr_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-
-    return create_single_problem_generator('msr_cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@preprocessing_fn
 def pku_cws(params, mode):
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
         file_list = glob.glob('data/cws/training/pku_*.utf8')
     else:
@@ -236,23 +214,12 @@ def pku_cws(params, mode):
 
     input_list, target_list = _process_text_files(file_list)
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'pku_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-
-    return create_single_problem_generator('pku_cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
+@preprocessing_fn
 def city_cws(params, mode):
 
-    tokenizer = FullTokenizer(vocab_file=params.vocab_file)
     if mode == 'train':
         file_list = glob.glob('data/cws/training/cityu_*.utf8')
     else:
@@ -262,18 +229,7 @@ def city_cws(params, mode):
 
     input_list, target_list = _process_text_files(file_list)
 
-    label_encoder = get_or_make_label_encoder(
-        params, 'city_cws', mode, ['b', 'm', 'e', 's'], zero_class='[PAD]')
-    if mode == PREDICT:
-        return input_list, target_list, label_encoder
-
-    return create_single_problem_generator('city_cws',
-                                           input_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
+    return input_list, target_list
 
 
 def as_domain(params, mode):
