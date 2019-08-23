@@ -43,6 +43,23 @@ class TopLayer():
         self.eval_metrics = eval_metrics
         return self.eval_metrics
 
+    def uncertainty_weighted_loss(self, loss):
+        """Uncertainty to weight losses
+
+        Ref: https://arxiv.org/abs/1705.07115
+
+        Arguments:
+            loss {Tensor} -- Batch loss tensor
+
+        Returns:
+            Tensor -- Weighted batch loss tensor
+        """
+        log_var = tf.get_variable(
+            shape=(), name='log_var', initializer=tf.zeros_initializer())
+        precision = tf.exp(-log_var)
+        new_loss = precision*loss + log_var
+        return new_loss
+
     def create_loss(self, batch_loss, loss_multiplier):
         '''This helper function is used to multiply batch loss
         with loss multiplier

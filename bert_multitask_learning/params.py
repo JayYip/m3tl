@@ -103,15 +103,28 @@ class BaseParams():
         self.beam_search_alpha = 0.6
         self.decode_max_seq_len = 90
 
-        # multitask training
+        # experimental multitask approach
         self.label_transfer = False
+        # train mask lm and downstream task at the same time
         self.augument_mask_lm = False
         self.augument_rate = 0.5
+        # NOT implemented
         self.distillation = False
+        # Multi-Task Learning Using Uncertainty to Weigh Losses for Scene Geometry and Semantics
+        # ref: https://arxiv.org/abs/1705.07115
+        self.uncertain_weight_loss = False
         # dep since not good
         # self.mutual_prediction = False
+
+        # add an extra attention for each task
+        #   with BERT layers as encoder output, task logits as decoder inputs
         self.grid_transformer = False
+
+        # add an extra attention for each task
+        #   with other tasks' logits as encoder output, task logits asn decoder inputs
         self.task_transformer = False
+
+        # do a mean for gradients of BERT layers instead of sum
         self.mean_gradients = False
 
         # random replace punctuation by some prob to

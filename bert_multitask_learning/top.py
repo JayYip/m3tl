@@ -31,6 +31,9 @@ class SequenceLabel(TopLayer):
             batch_loss = tf.reduce_mean(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(
                     logits=logits, labels=seq_labels), axis=1)
+
+        if self.params.uncertain_weight_loss:
+            batch_loss = self.uncertainty_weighted_loss(batch_loss)
         return batch_loss
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
@@ -104,11 +107,16 @@ class Classification(TopLayer):
     def create_batch_loss(self, labels, logits,  num_classes):
         if self.params.label_smoothing > 0:
             one_hot_labels = tf.one_hot(labels, depth=num_classes)
-            return tf.losses.softmax_cross_entropy(
+            batch_loss = tf.losses.softmax_cross_entropy(
                 one_hot_labels, logits,
                 label_smoothing=self.params.label_smoothing)
         else:
-            return tf.losses.sparse_softmax_cross_entropy(labels, logits)
+            batch_loss = tf.losses.sparse_softmax_cross_entropy(
+                labels, logits)
+
+        if self.params.uncertain_weight_loss:
+            batch_loss = self.uncertainty_weighted_loss(batch_loss)
+        return batch_loss
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['pooled']
@@ -439,7 +447,12 @@ class MultiLabelClassification(TopLayer):
         labels = tf.cast(labels, tf.float32)
         batch_label_loss = tf.nn.sigmoid_cross_entropy_with_logits(
             labels=labels, logits=logits)
-        return tf.reduce_sum(batch_label_loss, axis=1)
+
+        batch_loss = tf.reduce_sum(batch_label_loss, axis=1)
+
+        if self.params.uncertain_weight_loss:
+            batch_loss = self.uncertainty_weighted_loss(batch_loss)
+        return batch_loss
 
     def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
         hidden_feature = hidden_feature['pooled']
