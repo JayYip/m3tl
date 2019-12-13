@@ -142,6 +142,9 @@ class Classification(TopLayer):
             batch_loss = self.create_batch_loss(labels, logits, num_classes)
             self.loss = self.create_loss(
                 batch_loss, features['%s_loss_multiplier' % problem_name])
+            # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
+            # and loss will be NaN. Replacing NaN with 0 fixes the problem.
+            self.loss = tf.where(tf.math.is_nan(self.loss), tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
