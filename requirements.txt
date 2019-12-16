@@ -10,4 +10,4 @@ nltk
 scikit_learn
 atlas
 pyarrow
-tensorflow_gpu==1.13.1
+tensorflow_gpu==1.15.0
