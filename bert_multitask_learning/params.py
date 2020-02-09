@@ -34,13 +34,6 @@ class BaseParams():
             'ontonotes_ner': 'seq_tag',
             'ontonotes_cws': 'seq_tag',
             'ontonotes_chunk': 'seq2seq_tag',
-            'boson_domain': 'cls',
-            'Weibo_domain': 'cls',
-            'msra_domain': 'cls',
-            'as_domain': 'cls',
-            'msr_domain': 'cls',
-            'pku_domain': 'cls',
-            'cityu_domain': 'cls',
             'emotion_analysis': 'cls',
             'ontonotes_pos': 'seq_tag'
         }
@@ -53,14 +46,7 @@ class BaseParams():
             'msr_cws': 'cws',
             'pku_cws': 'cws',
             'city_cws': 'cws',
-            'ctb_pos': 'POS',
-            'boson_domain': 'ner_domain',
-            'Weibo_domain': 'ner_domain',
-            'msra_domain': 'ner_domain',
-            'as_domain': 'cws_domain',
-            'msr_domain': 'cws_domain',
-            'pku_domain': 'cws_domain',
-            'cityu_domain': 'cws_domain'
+            'ctb_pos': 'POS'
         }
         for p in self.problem_type:
             if p not in self.share_top:
@@ -264,10 +250,10 @@ class BaseParams():
             # update data_num and train_steps
             self.data_num = 0
             for problem in problem_list:
-                if problem not in self.data_num_dict or self.multiprocess:
+                if problem not in self.data_num_dict:
 
-                    self.data_num_dict[problem] = len(
-                        list(self.read_data_fn[problem](self, 'train')))
+                    self.data_num_dict[problem] = self.read_data_fn[problem](
+                        self, 'train', get_data_num=True)
                     self.data_num += self.data_num_dict[problem]
                 else:
                     self.data_num += self.data_num_dict[problem]

@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from ..tokenization import FullTokenizer
 
 from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
-from ..create_generators import create_single_problem_generator, create_pretraining_generator
+from ..create_generators import create_single_problem_tfrecord, create_pretraining_generator
 
 from .preproc_decorator import preprocessing_fn
 
@@ -331,7 +331,7 @@ def NER(params, mode):
         params, 'NER', mode, flat_target_list, zero_class='O')
     if mode == PREDICT:
         return inputs_list, target_list, label_encoder
-    return create_single_problem_generator('NER',
+    return create_single_problem_tfrecord('NER',
                                            inputs_list,
                                            target_list,
                                            label_encoder,

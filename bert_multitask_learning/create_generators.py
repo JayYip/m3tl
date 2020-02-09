@@ -4,6 +4,7 @@ import tempfile
 from copy import copy
 from functools import partial
 from multiprocessing import cpu_count
+from multiprocessing import Pool
 import pickle
 
 import numpy as np
@@ -17,218 +18,246 @@ from .utils import (BOS_TOKEN, EOS_TOKEN, add_special_tokens_with_seqs,
                     tokenize_text_with_seqs, truncate_seq_pair)
 
 
-def create_single_problem_single_instance(problem,
-                                          ex_index,
-                                          example,
-                                          label_encoder,
-                                          params,
-                                          tokenizer,
-                                          mode,
-                                          problem_type,
-                                          is_seq):
+def create_bert_features(problem,
+                         example_list,
+                         label_encoder,
+                         params,
+                         tokenizer,
+                         mode,
+                         problem_type,
+                         is_seq):
+    return_dict_list = []
+    for example in example_list:
+        raw_inputs, raw_target = example
 
-    raw_inputs, raw_target = example
+        # punctuation augumentation
+        if params.punc_replace_prob > 0 and mode == 'train':
+            raw_inputs = punc_augument(raw_inputs, params)
 
-    # punctuation augumentation
-    if params.punc_replace_prob > 0 and mode == 'train':
-        raw_inputs = punc_augument(raw_inputs, params)
-
-    # tokenize inputs, now the length is fixed, target == raw_target
-    if isinstance(raw_inputs, dict):
-        tokens_a, target = tokenize_text_with_seqs(
-            tokenizer, raw_inputs['a'], raw_target, is_seq)
-        tokens_b, _ = tokenize_text_with_seqs(
-            tokenizer, raw_inputs['b'], raw_target)
-    else:
-        tokens_a, target = tokenize_text_with_seqs(
-            tokenizer, raw_inputs, raw_target, is_seq)
-        tokens_b = None
-
-    if tokens_b is not None and is_seq:
-        raise NotImplementedError(
-            'Sequence Labeling with tokens b is not implemented')
-
-    if not tokens_a:
-        return
-    # check whether tokenization changed the length
-    if is_seq:
-        if len(target) != len(tokens_a):
-            tf.logging.warning('Data %d broken' % ex_index)
-            return
-
-    # truncate tokens and target to max_seq_len
-    tokens_a, tokens_b, target = truncate_seq_pair(
-        tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
-
-    # add [SEP], [CLS] tokens
-    tokens, segment_ids, target = add_special_tokens_with_seqs(
-        tokens_a, tokens_b, target, is_seq)
-
-    # train mask lm as augument task while training
-    if params.augument_mask_lm and mode == 'train':
-        rng = random.Random()
-        (mask_lm_tokens, masked_lm_positions,
-            masked_lm_labels) = create_masked_lm_predictions(
-                tokens,
-                params.masked_lm_prob,
-                params.max_predictions_per_seq,
-                list(tokenizer.vocab.keys()), rng)
-        _, mask_lm_tokens, _, _ = create_mask_and_padding(
-            mask_lm_tokens,
-            copy(segment_ids),
-            copy(target),
-            params.max_seq_len,
-            is_seq,
-            dynamic_padding=params.dynamic_padding)
-        masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
-            masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
-        mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
-            mask_lm_tokens)
-        masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
-
-    input_mask, tokens, segment_ids, target = create_mask_and_padding(
-        tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
-
-    # create mask and padding for labels of seq2seq problem
-    if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-
-        # tokenize text if target is text
-        if problem_type == 'seq2seq_text':
-
-            # assign num_classes for text generation problem
-            params.num_classes[problem] = len(label_encoder.vocab)
-
-            target, _ = tokenize_text_with_seqs(
-                label_encoder, target, None, False)
-
-        target, _, _ = truncate_seq_pair(
-            target, None, None, params.decode_max_seq_len, is_seq=is_seq)
-        # since we initialize the id to 0 in prediction, we need
-        # to make sure that BOS_TOKEN is [PAD]
-        target = [BOS_TOKEN] + target + [EOS_TOKEN]
-        label_mask, target, _, _ = create_mask_and_padding(
-            target, [0] * len(target), None, params.decode_max_seq_len)
-
-    input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-    if isinstance(target, list):
-        if problem_type == 'seq2seq_text':
-            label_id = label_encoder.convert_tokens_to_ids(target)
-        elif problem_type == 'multi_cls':
-            label_id = label_encoder.transform([target])[0]
+        # tokenize inputs, now the length is fixed, target == raw_target
+        if isinstance(raw_inputs, dict):
+            tokens_a, target = tokenize_text_with_seqs(
+                tokenizer, raw_inputs['a'], raw_target, is_seq)
+            tokens_b, _ = tokenize_text_with_seqs(
+                tokenizer, raw_inputs['b'], raw_target)
         else:
-            # seq2seq_tag
-            label_id = label_encoder.transform(target).tolist()
-            label_id = [np.int32(i) for i in label_id]
-    else:
-        label_id = label_encoder.transform([target]).tolist()[0]
-        label_id = np.int32(label_id)
+            tokens_a, target = tokenize_text_with_seqs(
+                tokenizer, raw_inputs, raw_target, is_seq)
+            tokens_b = None
 
-    if not params.dynamic_padding:
-        assert len(input_ids) == params.max_seq_len
-        assert len(input_mask) == params.max_seq_len
-        assert len(segment_ids) == params.max_seq_len, segment_ids
+        if tokens_b is not None and is_seq:
+            raise NotImplementedError(
+                'Sequence Labeling with tokens b is not implemented')
+
+        if not tokens_a:
+            continue
+        # check whether tokenization changed the length
         if is_seq:
-            assert len(label_id) == params.max_seq_len
+            if len(target) != len(tokens_a):
+                continue
 
-    # logging in debug mode
-    if ex_index < 5:
-        tf.logging.debug("*** Example ***")
-        tf.logging.debug("tokens: %s" % " ".join(
-            [printable_text(x) for x in tokens]))
-        tf.logging.debug("input_ids: %s" %
-                         " ".join([str(x) for x in input_ids]))
-        tf.logging.debug("input_mask: %s" %
-                         " ".join([str(x) for x in input_mask]))
-        tf.logging.debug("segment_ids: %s" %
-                         " ".join([str(x) for x in segment_ids]))
-        if is_seq or problem_type in ['seq2seq_tag', 'seq2seq_text']:
-            tf.logging.debug("%s_label_ids: %s" %
-                             (problem, " ".join([str(x) for x in label_id])))
-            tf.logging.debug("%s_label: %s" %
-                             (problem, " ".join([str(x) for x in target])))
-        else:
-            tf.logging.debug("%s_label_ids: %s" %
-                             (problem, str(label_id)))
-            tf.logging.debug("%s_label: %s" %
-                             (problem, str(target)))
+        # truncate tokens and target to max_seq_len
+        tokens_a, tokens_b, target = truncate_seq_pair(
+            tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
+
+        # add [SEP], [CLS] tokens
+        tokens, segment_ids, target = add_special_tokens_with_seqs(
+            tokens_a, tokens_b, target, is_seq)
+
+        # train mask lm as augument task while training
         if params.augument_mask_lm and mode == 'train':
-            tf.logging.debug("mask lm tokens: %s" % " ".join(
-                [printable_text(x) for x in mask_lm_tokens]))
-            tf.logging.debug("mask lm input_ids: %s" %
-                             " ".join([str(x) for x in mask_lm_input_ids]))
-            tf.logging.debug("mask lm label ids: %s" %
-                             " ".join([str(x) for x in masked_lm_ids]))
-            tf.logging.debug("mask lm position: %s" %
-                             " ".join([str(x) for x in masked_lm_positions]))
+            rng = random.Random()
+            (mask_lm_tokens, masked_lm_positions,
+                masked_lm_labels) = create_masked_lm_predictions(
+                    tokens,
+                    params.masked_lm_prob,
+                    params.max_predictions_per_seq,
+                    list(tokenizer.vocab.keys()), rng)
+            _, mask_lm_tokens, _, _ = create_mask_and_padding(
+                mask_lm_tokens,
+                copy(segment_ids),
+                copy(target),
+                params.max_seq_len,
+                is_seq,
+                dynamic_padding=params.dynamic_padding)
+            masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
+                masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
+            mask_lm_input_ids = tokenizer.convert_tokens_to_ids(
+                mask_lm_tokens)
+            masked_lm_ids = tokenizer.convert_tokens_to_ids(masked_lm_labels)
 
-    # create return dict
-    if not params.augument_mask_lm:
-        return_dict = {
-            'input_ids': input_ids,
-            'input_mask': input_mask,
-            'segment_ids': segment_ids,
-            '%s_label_ids' % problem: label_id
-        }
-    else:
-        if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
-            return_dict = {
-                'input_ids': mask_lm_input_ids,
-                'input_mask': input_mask,
-                'segment_ids': segment_ids,
-                '%s_label_ids' % problem: label_id,
-                "masked_lm_positions": masked_lm_positions,
-                "masked_lm_ids": masked_lm_ids,
-                "masked_lm_weights": masked_lm_weights,
-            }
+        input_mask, tokens, segment_ids, target = create_mask_and_padding(
+            tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
+
+        # create mask and padding for labels of seq2seq problem
+        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+
+            # tokenize text if target is text
+            if problem_type == 'seq2seq_text':
+
+                # assign num_classes for text generation problem
+                params.num_classes[problem] = len(label_encoder.vocab)
+
+                target, _ = tokenize_text_with_seqs(
+                    label_encoder, target, None, False)
+
+            target, _, _ = truncate_seq_pair(
+                target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+            # since we initialize the id to 0 in prediction, we need
+            # to make sure that BOS_TOKEN is [PAD]
+            target = [BOS_TOKEN] + target + [EOS_TOKEN]
+            label_mask, target, _, _ = create_mask_and_padding(
+                target, [0] * len(target), None, params.decode_max_seq_len)
+
+        input_ids = tokenizer.convert_tokens_to_ids(tokens)
+
+        if isinstance(target, list):
+            if problem_type == 'seq2seq_text':
+                label_id = label_encoder.convert_tokens_to_ids(target)
+            elif problem_type == 'multi_cls':
+                label_id = label_encoder.transform([target])[0]
+            else:
+                # seq2seq_tag
+                label_id = label_encoder.transform(target).tolist()
+                label_id = [np.int32(i) for i in label_id]
         else:
+            label_id = label_encoder.transform([target]).tolist()[0]
+            label_id = np.int32(label_id)
+
+        if not params.dynamic_padding:
+            assert len(input_ids) == params.max_seq_len
+            assert len(input_mask) == params.max_seq_len
+            assert len(segment_ids) == params.max_seq_len, segment_ids
+            if is_seq:
+                assert len(label_id) == params.max_seq_len
+
+        # create return dict
+        if not params.augument_mask_lm:
             return_dict = {
                 'input_ids': input_ids,
                 'input_mask': input_mask,
                 'segment_ids': segment_ids,
-                '%s_label_ids' % problem: label_id,
-                "masked_lm_positions": np.zeros([params.max_predictions_per_seq]),
-                "masked_lm_ids": np.zeros([params.max_predictions_per_seq]),
-                "masked_lm_weights": np.zeros([params.max_predictions_per_seq]),
+                '%s_label_ids' % problem: label_id
             }
+        else:
+            if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
+                return_dict = {
+                    'input_ids': mask_lm_input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids,
+                    '%s_label_ids' % problem: label_id,
+                    "masked_lm_positions": masked_lm_positions,
+                    "masked_lm_ids": masked_lm_ids,
+                    "masked_lm_weights": masked_lm_weights,
+                }
+            else:
+                return_dict = {
+                    'input_ids': input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids,
+                    '%s_label_ids' % problem: label_id,
+                    "masked_lm_positions": np.zeros([params.max_predictions_per_seq]),
+                    "masked_lm_ids": np.zeros([params.max_predictions_per_seq]),
+                    "masked_lm_weights": np.zeros([params.max_predictions_per_seq]),
+                }
 
-    if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-        return_dict['%s_mask' % problem] = label_mask
+        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+            return_dict['%s_mask' % problem] = label_mask
 
-    return return_dict
+        return_dict_list.append(return_dict)
 
-
-def _multiprocessing_wrapper(
-        problem,
-        example_list,
-        label_encoder,
-        params,
-        tokenizer,
-        mode,
-        problem_type,
-        is_seq):
-    return_list = []
-    for ex_index, example in enumerate(example_list):
-        return_list.append(create_single_problem_single_instance(
-            problem,
-            999,
-            example,
-            label_encoder,
-            params,
-            tokenizer,
-            mode,
-            problem_type,
-            is_seq))
-    return return_list
+    return return_dict_list
 
 
-def create_single_problem_generator(problem,
-                                    inputs_list,
-                                    target_list,
-                                    label_encoder,
-                                    params,
-                                    tokenizer,
-                                    mode):
+def _float_list_feature(value):
+    """Returns a float_list from a float / double."""
+    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+
+def _float_feature(value):
+    """Returns a float_list from a float / double."""
+    return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
+
+
+def _int64_list_feature(value):
+    """Returns an int64_list from a bool / enum / int / uint."""
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+
+
+def _int64_feature(value):
+    """Returns an int64_list from a bool / enum / int / uint."""
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+
+def serialize_fn(features: dict):
+    features_tuple = {}
+    for feature_name, feature in features.items():
+        if type(feature) is list:
+            feature = np.array(feature)
+        if type(feature) is np.ndarray:
+            if issubclass(feature.dtype.type, np.integer):
+                features_tuple[feature_name] = _int64_list_feature(
+                    feature.flatten())
+            elif issubclass(feature.dtype.type, np.float):
+                features_tuple[feature_name] = _float_list_feature(
+                    feature.flatten())
+
+            features_tuple['{}_shape'.format(
+                feature_name)] = _int64_list_feature(feature.shape)
+
+        elif type(feature) is float:
+            features_tuple[feature_name] = _float_feature(feature)
+            features_tuple['{}_shape'.format(
+                feature_name)] = _int64_list_feature([])
+        else:
+            features_tuple[feature_name] = _int64_feature(feature)
+            features_tuple['{}_shape'.format(
+                feature_name)] = _int64_list_feature([])
+
+    example_proto = tf.train.Example(
+        features=tf.train.Features(feature=features_tuple))
+    return example_proto.SerializeToString()
+
+
+def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_file=10000, prefix='', **kwargs):
+    """Function to make TF Records from csv files
+    This function will take all csv files in data_dir, convert them
+    to tf example and write to *_{suffix}_train/eval.tfrecord to data_dir.
+    Arguments:
+        data_dir {str} -- dir that has csv files and store tf record
+        generator_fn {fn} -- A function that takes a list of filepath and yield the
+        parsed recored from file.
+        serialize_fn {fn} -- A function that takes output of generator fn and convert to tf example
+    Keyword Arguments:
+        suffix {str} -- suffix to add to tf record files (default: {''})
+    """
+
+    # create output tfrecord path
+    file_list = [os.path.join(
+        output_dir, prefix, '{}_{:05d}.tfrecord'.format(mode, i)) for i in range(len(data_list))]
+
+    os.makedirs(os.path.dirname(file_list[0]), exist_ok=True)
+
+    def _write_fn(d_list, path, serialize_fn):
+        print('Writing {}'.format(os.path.basename(path)))
+        with tf.io.TFRecordWriter(path) as writer:
+            for features in d_list:
+                example = serialize_fn(features)
+                writer.write(example)
+
+    _write_part_fn = partial(_write_fn, serialize_fn=serialize_fn)
+
+    Parallel(min(cpu_count(), len(file_list)))(delayed(_write_part_fn)(d_list=x, path=y)
+                                               for x, y in zip(data_list, file_list))
+
+
+def create_single_problem_tfrecord(problem,
+                                   inputs_list,
+                                   target_list,
+                                   label_encoder,
+                                   params,
+                                   tokenizer,
+                                   mode):
     """Function to create iterator for single problem
 
     This function will:
@@ -259,54 +288,25 @@ def create_single_problem_generator(problem,
     # for sequential labeling, targets needs to align with any
     # change of inputs
     is_seq = problem_type in ['seq_tag']
-    if not params.multiprocess:
-        for ex_index, example in enumerate(zip(inputs_list, target_list)):
-            return_dict = create_single_problem_single_instance(problem,
-                                                                ex_index,
-                                                                example,
-                                                                label_encoder,
-                                                                params,
-                                                                tokenizer,
-                                                                mode,
-                                                                problem_type,
-                                                                is_seq)
 
-            yield return_dict
-    else:
-        return_dict_list = []
-        pickle_file = os.path.join(
-            params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
+    example_list = list(zip(inputs_list, target_list))
+    # split data_list by shards_per_file
+    data_shards = []
+    for i in range(0, len(example_list), 5000):
+        data_shards.append(example_list[i:i + 5000])
 
-        if not os.path.exists(pickle_file):
-            # params.tmp_file_dir = tempfile.mkdtemp(dir='.')
-            os.makedirs('tmp', exist_ok=True)
-            params.tmp_file_dir = 'tmp'
-            pickle_file = os.path.join(
-                params.tmp_file_dir, '{0}_{1}_data.pkl'.format(problem, mode))
-            tf.logging.info(
-                'Saving preprocessing files to {0}'.format(pickle_file))
-            partial_fn = partial(_multiprocessing_wrapper, problem=problem, label_encoder=label_encoder,
-                                 params=params, tokenizer=tokenizer,
-                                 mode=mode, problem_type=problem_type, is_seq=is_seq)
-            example_list = list(zip(inputs_list, target_list))
-            num_process = cpu_count()
+    part_fn = partial(create_bert_features, problem=problem,
+                      label_encoder=label_encoder,
+                      params=params,
+                      tokenizer=tokenizer,
+                      mode=mode,
+                      problem_type=problem_type,
+                      is_seq=is_seq)
+    data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
+                                                             for d_list in data_shards)
 
-            def split(a, n):
-                k, m = divmod(len(a), n)
-                return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
-            example_list = list(split(example_list, num_process))
-
-            return_dict_list_list = Parallel(num_process)(delayed(partial_fn)(
-                example_list=example) for example in example_list
-            )
-
-            pickle.dump(return_dict_list_list, open(pickle_file, 'wb'))
-        else:
-            return_dict_list_list = pickle.load(open(pickle_file, 'rb'))
-
-        for return_dict_list in return_dict_list_list:
-            for return_dict in return_dict_list:
-                yield return_dict
+    make_tfrecord(data_list=data_list,
+                  output_dir=params.tmp_file_dir, serialize_fn=serialize_fn)
 
 
 def create_pretraining_generator(problem,
