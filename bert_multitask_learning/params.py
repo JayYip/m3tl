@@ -19,7 +19,6 @@ class BaseParams():
             'weibo_cws': 'seq_tag',
             'weibo_pretrain': 'pretrain',
             'cws': 'seq_tag',
-            'NER': 'seq_tag',
             'ctb_pos': 'seq_tag',
             'ctb_cws': 'seq_tag',
             'as_cws': 'seq_tag',

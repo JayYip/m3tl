@@ -5,12 +5,13 @@ from multiprocessing import cpu_count
 
 import tensorflow as tf
 
-from .tokenization import FullTokenizer
+from .bert_preprocessing.tokenization import FullTokenizer
+from .bert_preprocessing.bert_utils import (tokenize_text_with_seqs, truncate_seq_pair,
+                                            add_special_tokens_with_seqs, create_mask_and_padding)
 
-from .utils import (tokenize_text_with_seqs, truncate_seq_pair,
-                    add_special_tokens_with_seqs, create_mask_and_padding, cluster_alphnum,
-                    TRAIN, EVAL, PREDICT)
-from .create_generators import create_generator
+from .utils import cluster_alphnum
+from .special_tokens import TRAIN, EVAL, PREDICT
+from .read_write_tfrecord import create_generator
 
 
 def element_length_func(yield_dict):
@@ -85,7 +86,7 @@ def train_eval_input_fn(config, mode='train'):
                     {'masked_lm_loss_multiplier': tf.int32})
                 output_shapes.update(
                     {'masked_lm_loss_multiplier': []})
-                    
+
             if problem_type in ['seq_tag', 'multi_cls']:
                 output_type.update({'%s_label_ids' % problem: tf.int32})
                 output_shapes.update(

@@ -1,8 +1,10 @@
 import os
 
-from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
-from ..create_generators import create_single_problem_tfrecord, create_pretraining_generator
-from ..tokenization import FullTokenizer
+from ..utils import get_or_make_label_encoder, cluster_alphnum
+from ..special_tokens import TRAIN, EVAL, PREDICT
+from ..read_write_tfrecord import write_single_problem_tfrecord
+from ..bert_preprocessing.create_bert_features import create_pretraining_generator
+from ..bert_preprocessing.tokenization import FullTokenizer
 
 
 def preprocessing_fn(func):
@@ -21,7 +23,7 @@ def preprocessing_fn(func):
                 params, problem=problem, mode=mode, label_list=target_list)
             if mode == PREDICT:
                 return inputs_list, target_list, label_encoder
-            return create_single_problem_tfrecord(
+            return write_single_problem_tfrecord(
                 func.__name__,
                 inputs_list,
                 target_list,

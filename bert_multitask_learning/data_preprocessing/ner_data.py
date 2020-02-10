@@ -4,10 +4,7 @@ import random
 
 from sklearn.model_selection import train_test_split
 
-from ..tokenization import FullTokenizer
-
-from ..utils import get_or_make_label_encoder, TRAIN, EVAL, PREDICT, cluster_alphnum
-from ..create_generators import create_single_problem_tfrecord, create_pretraining_generator
+from ..utils import cluster_alphnum
 
 from .preproc_decorator import preprocessing_fn
 
@@ -303,41 +300,6 @@ def read_msra(file_pattern, eval_size):
     result_dict['eval']['inputs'] = eval_input
     result_dict['eval']['target'] = eval_target
     return result_dict
-
-
-def NER(params, mode):
-    tokenizer = FullTokenizer(
-        vocab_file=params.vocab_file, do_lower_case=True)
-    weibo_data = read_ner_data(file_pattern='data/ner/weiboNER*',
-                               proc_fn=gold_horse_ent_type_process_fn)
-    boson_data = read_bosonnlp_data(
-        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
-    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
-
-    inputs_list = []
-    target_list = []
-    for data in [weibo_data, boson_data, msra_data]:
-        if mode == 'train':
-            inputs_list += data['train']['inputs']
-            target_list += data['train']['target']
-
-        else:
-            inputs_list += data['eval']['inputs']
-            target_list += data['eval']['target']
-
-    flat_target_list = [t for sublist in target_list for t in sublist]
-
-    label_encoder = get_or_make_label_encoder(
-        params, 'NER', mode, flat_target_list, zero_class='O')
-    if mode == PREDICT:
-        return inputs_list, target_list, label_encoder
-    return create_single_problem_tfrecord('NER',
-                                           inputs_list,
-                                           target_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode)
 
 
 @preprocessing_fn
