@@ -12,7 +12,7 @@ from .model_fn import BertMultiTask
 from .params import BaseParams, DynamicBatchSizeParams
 from .ckpt_restore_hook import RestoreCheckpointHook
 from . import metrics
-from .utils import TRAIN, EVAL, PREDICT
+from .special_tokens import TRAIN, EVAL, PREDICT
 
 
 def _create_estimator(

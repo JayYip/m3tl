@@ -1,10 +1,9 @@
 import re
 
-from ..utils import (
-    get_or_make_label_encoder,
-    BOS_TOKEN,
-    EOS_TOKEN,
-    PREDICT)
+from ..utils import get_or_make_label_encoder
+from ..special_tokens import (BOS_TOKEN,
+                              EOS_TOKEN,
+                              PREDICT)
 from .preproc_decorator import preprocessing_fn
 
 

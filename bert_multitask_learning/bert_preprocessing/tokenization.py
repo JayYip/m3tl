@@ -23,7 +23,7 @@ import unicodedata
 import six
 import tensorflow as tf
 
-from .special_tokens import SPECIAL_TOKENS, UNK_TOKEN, SPACE_TOKEN
+from ..special_tokens import SPECIAL_TOKENS, UNK_TOKEN, SPACE_TOKEN
 
 
 def convert_to_unicode(text):
