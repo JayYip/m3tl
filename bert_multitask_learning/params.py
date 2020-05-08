@@ -144,7 +144,7 @@ class BaseParams():
                     data_preprocessing, problem)
             except AttributeError:
                 raise AttributeError(
-                    '%s function not implemented in data_preprocessing.py' % problem)
+                    '%s function not implemented' % problem)
         self.problem_assigned = False
 
     def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
