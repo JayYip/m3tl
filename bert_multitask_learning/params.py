@@ -251,7 +251,7 @@ class BaseParams():
             for problem in problem_list:
                 if problem not in self.data_num_dict:
 
-                    self.data_num_dict[problem] = self.read_data_fn[problem](
+                    self.data_num_dict[problem], self.num_classes[problem] = self.read_data_fn[problem](
                         self, 'train', get_data_num=True)
                     self.data_num += self.data_num_dict[problem]
                 else:

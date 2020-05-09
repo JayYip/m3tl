@@ -210,6 +210,12 @@ def reshape_tensors_in_dataset(example):
     return example
 
 
+def add_loss_multiplier(example, problem):
+    example['{}_loss_multiplier'.format(problem)] = tf.constant(
+        value=1, shape=(), dtype=tf.int32)
+    return example
+
+
 def set_shape_for_dataset(example, feature_desc_dict):
     for feature_key in example:
         example[feature_key].set_shape(
@@ -217,11 +223,69 @@ def set_shape_for_dataset(example, feature_desc_dict):
     return example
 
 
+def get_dummy_features(dataset_dict, feature_desc_dict):
+    """Get dummy features.
+    Dummy features are used to make sure every feature dict
+    at every iteration has the same keys.
+
+    Example:
+        problem A: {'input_ids': [1,2,3], 'A_label_ids': 1}
+        problem B: {'input_ids': [1,2,3], 'B_label_ids': 2}
+
+    Then dummy features:
+        {'A_label_ids': 0, 'B_label_ids': 0}
+
+    At each iteration, we sample a problem, let's say we sampled A
+    Then:
+        feature dict without dummy:
+            {'input_ids': [1,2,3], 'A_label_ids': 1}
+        feature dict with dummy:
+            {'input_ids': [1,2,3], 'A_label_ids': 1, 'B_label_ids':0}
+
+    Arguments:
+        dataset_dict {dict} -- dict of datasets of all problems
+
+    Returns:
+        dummy_features -- dict of dummy tensors
+    """
+
+    feature_keys = [list(d.output_shapes.keys())
+                    for _, d in dataset_dict.items()]
+    common_features_accross_problems = set(
+        feature_keys[0]).intersection(*feature_keys[1:])
+
+    dummy_features = {}
+    for problem, problem_dataset in dataset_dict.items():
+        output_types = problem_dataset.output_types
+        dummy_features.update({k: tf.cast(tf.constant(shape=[1 for _ in feature_desc_dict.get('{}_shape_value'.format(k), [])], value=0), v)
+                               for k, v in output_types.items()
+                               if k not in common_features_accross_problems})
+    return dummy_features
+
+
+def add_dummy_features_to_dataset(example, dummy_features):
+    """Add dummy features to dataset
+
+    feature dict without dummy:
+        {'input_ids': [1,2,3], 'A_label_ids': 1}
+    feature dict with dummy:
+        {'input_ids': [1,2,3], 'A_label_ids': 1, 'B_label_ids':0}
+
+    Arguments:
+        example {data example} -- dataset example
+        dummy_features {dict} -- dict of dummy tensors
+    """
+    for feature_name in dummy_features:
+        if feature_name not in example:
+            example[feature_name] = tf.identity(dummy_features[feature_name])
+    return example
+
+
 def read_tfrecord(params, mode: str):
     """Read and parse TFRecord for every problem
 
-    The returned dataset is parsed, reshaped, to_dense tensors 
-    WITHOUT dummy features.
+    The returned dataset is parsed, reshaped, to_dense tensors
+    with dummy features.
 
     Arguments:
         params {params} -- params
@@ -231,17 +295,26 @@ def read_tfrecord(params, mode: str):
         dict -- dict with keys: problem name, values: dataset
     """
     dataset_dict = {}
+    all_feature_desc_dict = {}
     for problem in params.problem_list:
         file_dir = os.path.join(params.tmp_file_dir, problem)
         tfrecord_path_list = glob(os.path.join(
             file_dir, '{}_*.tfrecord'.format(mode)))
         feature_desc_dict = json.load(
             open(os.path.join(file_dir, '{}_feature_desc.json'.format(mode))))
+        all_feature_desc_dict.update(feature_desc_dict)
         feature_desc = make_feature_desc(feature_desc_dict)
         dataset = tf.data.TFRecordDataset(tfrecord_path_list)
         dataset = dataset.map(lambda x: tf.io.parse_single_example(
             x, feature_desc)).map(reshape_tensors_in_dataset).map(
                 lambda x: set_shape_for_dataset(x, feature_desc_dict)
-        )
+        ).map(lambda x: add_loss_multiplier(x, problem))
         dataset_dict[problem] = dataset
+
+    # add dummy features
+    dummy_features = get_dummy_features(dataset_dict, all_feature_desc_dict)
+    for problem in params.problem_list:
+        dataset_dict[problem] = dataset_dict[problem].map(
+            lambda x: add_dummy_features_to_dataset(x, dummy_features)
+        ).repeat()
     return dataset_dict

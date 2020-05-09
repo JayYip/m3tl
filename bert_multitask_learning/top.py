@@ -28,6 +28,15 @@ class SequenceLabel(TopLayer):
                     transition_params=crf_transition_param)
                 batch_loss = -log_likelihood
         else:
+            # inconsistent shape might be introduced to labels
+            # so we need to do some padding to make sure that
+            # seq_labels has the same sequence length as logits
+            pad_len = tf.shape(logits)[1] - tf.shape(seq_labels)[1]
+
+            # top, bottom, left, right
+            pad_tensor = [[0, 0], [0, pad_len]]
+            seq_labels = tf.pad(seq_labels, paddings=pad_tensor)
+
             batch_loss = tf.reduce_mean(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(
                     logits=logits, labels=seq_labels), axis=1)
@@ -85,7 +94,7 @@ class SequenceLabel(TopLayer):
             seq_loss = tf.reduce_mean(batch_loss)
 
             return self.eval_metric_fn(
-                features, logits, seq_loss, problem_name, features['input_mask'])
+                features, logits, seq_loss, problem_name, features['input_mask'], pad_labels_to_logits=True)
 
         elif mode == tf.estimator.ModeKeys.PREDICT:
             if self.params.crf:

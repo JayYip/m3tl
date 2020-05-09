@@ -18,64 +18,6 @@ def element_length_func(yield_dict):
     return tf.shape(yield_dict['input_ids'])[0]
 
 
-def get_dummy_features(dataset_dict):
-    """Get dummy features.
-    Dummy features are used to make sure every feature dict
-    at every iteration has the same keys.
-
-    Example:
-        problem A: {'input_ids': [1,2,3], 'A_label_ids': 1}
-        problem B: {'input_ids': [1,2,3], 'B_label_ids': 2}
-
-    Then dummy features:
-        {'A_label_ids': 0, 'B_label_ids': 0}
-
-    At each iteration, we sample a problem, let's say we sampled A
-    Then:
-        feature dict without dummy:
-            {'input_ids': [1,2,3], 'A_label_ids': 1}
-        feature dict with dummy:
-            {'input_ids': [1,2,3], 'A_label_ids': 1, 'B_label_ids':0}
-
-    Arguments:
-        dataset_dict {dict} -- dict of datasets of all problems
-
-    Returns:
-        dummy_features -- dict of dummy tensors
-    """
-
-    feature_keys = [list(d.output_shapes.keys())
-                    for _, d in dataset_dict.items()]
-    common_features_accross_problems = set(
-        feature_keys[0]).intersection(*feature_keys[1:])
-
-    dummy_features = {}
-    for problem, problem_dataset in dataset_dict.items():
-        tensor_dict = tf.data.experimental.get_single_element(problem_dataset)
-        dummy_features.update({k: tf.zeros_like(v)
-                               for k, v in tensor_dict.items()
-                               if k not in common_features_accross_problems})
-    return dummy_features
-
-
-def add_dummy_features_to_dataset(example, dummy_features):
-    """Add dummy features to dataset
-
-    feature dict without dummy:
-        {'input_ids': [1,2,3], 'A_label_ids': 1}
-    feature dict with dummy:
-        {'input_ids': [1,2,3], 'A_label_ids': 1, 'B_label_ids':0}
-
-    Arguments:
-        example {data example} -- dataset example
-        dummy_features {dict} -- dict of dummy tensors
-    """
-    for feature_name in dummy_features:
-        if feature_name not in example:
-            example[feature_name] = tf.identity(dummy_features[feature_name])
-    return example
-
-
 def train_eval_input_fn(params, mode='train'):
     '''Train and eval input function of estimator.
     This function will create as tf dataset from generator. 
@@ -97,13 +39,6 @@ def train_eval_input_fn(params, mode='train'):
     write_tfrecord(params=params)
 
     dataset_dict = read_tfrecord(params=params, mode=mode)
-    dummy_features = get_dummy_features(dataset_dict)
-
-    for problem in dataset_dict.keys():
-
-        dataset_dict[problem] = dataset_dict[problem].map(
-            lambda x: add_dummy_features_to_dataset(x, dummy_features)
-        ).repeat()
 
     dataset = tf.data.experimental.sample_from_datasets(
         [ds for _, ds in dataset_dict.items()])

@@ -27,8 +27,18 @@ class TopLayer():
     def get_logit(self):
         return self.logits
 
-    def eval_metric_fn(self, features, logits, loss, problem, weights=None):
+    def eval_metric_fn(self, features, logits, loss, problem, weights=None, pad_labels_to_logits=True):
         label_ids = features['%s_label_ids' % problem]
+
+        if pad_labels_to_logits:
+            # inconsistent shape might be introduced to labels
+            # so we need to do some padding to make sure that
+            # seq_labels has the same sequence length as logits
+            pad_len = tf.shape(logits)[1] - tf.shape(label_ids)[1]
+
+            # top, bottom, left, right
+            pad_tensor = [[0, 0], [0, pad_len]]
+            label_ids = tf.pad(label_ids, paddings=pad_tensor)
 
         def metric_fn(label_ids, logits):
             predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
@@ -72,6 +82,10 @@ class TopLayer():
             loss_multiplier, tf.float32)
         # multiply with loss multiplier to make some loss as zero
         loss = tf.reduce_mean(batch_loss * loss_multiplier)
+        # if batch_loss is empty, loss will be nan, replace with zero
+        loss = tf.where(tf.is_nan(loss),
+                        tf.zeros_like(loss), loss)
+
         tf.summary.scalar('loss', loss)
         return loss
 
