@@ -274,13 +274,13 @@ class BertMultiTask():
                     layer = problem_type_layer[
                         problem_type](
                         self.params)
-                    return_dict[scope_name] = layer(
+                    return_dict[problem] = layer(
                         feature_this_round,
                         hidden_feature_this_round, mode, problem)
 
                     if mode == tf.estimator.ModeKeys.TRAIN:
-                        return_dict[scope_name] = filter_loss(
-                            return_dict[scope_name], feature_this_round, problem)
+                        return_dict[problem] = filter_loss(
+                            return_dict[problem], feature_this_round, problem)
 
         if self.params.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             try:

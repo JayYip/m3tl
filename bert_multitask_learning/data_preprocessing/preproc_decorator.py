@@ -16,11 +16,12 @@ def preprocessing_fn(func):
                 vocab_file=params.vocab_file, do_lower_case=True)
             inputs_list, target_list = func(params, mode)
 
-            if get_data_num:
-                return len(inputs_list)
-
             label_encoder = get_or_make_label_encoder(
                 params, problem=problem, mode=mode, label_list=target_list)
+
+            if get_data_num:
+                return len(inputs_list), len(label_encoder.encode_dict)
+
             if mode == PREDICT:
                 return inputs_list, target_list, label_encoder
             return write_single_problem_tfrecord(
