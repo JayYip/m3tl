@@ -12,6 +12,7 @@ import logging
 import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
+import pandas as pd
 
 from .special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, EVAL
 from .bert_preprocessing.create_bert_features import create_bert_features
@@ -112,36 +113,83 @@ def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_
         _write_part_fn(d_list=x, path=y)
 
 
-def write_single_problem_tfrecord(problem,
-                                  inputs_list,
-                                  target_list,
-                                  label_encoder,
-                                  params,
-                                  tokenizer,
-                                  mode):
+def write_single_problem_chunk_tfrecord(problem,
+                                        inputs_list,
+                                        target_list,
+                                        label_encoder,
+                                        params,
+                                        tokenizer,
+                                        mode):
 
-    problem_type = params.problem_type[problem]
+    def _make_single_problem_data_list(problem, inputs_list, target_list, label_encoder):
+        problem_type = params.problem_type[problem]
 
-    # whether this problem is sequential labeling
-    # for sequential labeling, targets needs to align with any
-    # change of inputs
-    is_seq = problem_type in ['seq_tag']
+        # whether this problem is sequential labeling
+        # for sequential labeling, targets needs to align with any
+        # change of inputs
+        is_seq = problem_type in ['seq_tag']
 
-    example_list = list(zip(inputs_list, target_list))
-    # split data_list by shards_per_file
-    data_shards = []
-    for i in range(0, len(example_list), 5000):
-        data_shards.append(example_list[i:i + 5000])
+        example_list = list(zip(inputs_list, target_list))
+        # split data_list by shards_per_file
+        data_shards = []
+        for i in range(0, len(example_list), 10000):
+            data_shards.append(example_list[i:i + 10000])
 
-    part_fn = partial(create_bert_features, problem=problem,
-                      label_encoder=label_encoder,
-                      params=params,
-                      tokenizer=tokenizer,
-                      mode=mode,
-                      problem_type=problem_type,
-                      is_seq=is_seq)
-    data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
-                                                             for d_list in data_shards)
+        part_fn = partial(create_bert_features, problem=problem,
+                          label_encoder=label_encoder,
+                          params=params,
+                          tokenizer=tokenizer,
+                          mode=mode,
+                          problem_type=problem_type,
+                          is_seq=is_seq)
+        data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
+                                                                 for d_list in data_shards)
+        return data_list
+
+    # single problem in problem_chunk
+    if isinstance(problem, str) or (isinstance(problem, list) and len(problem) == 1):
+        if isinstance(problem, list):
+            problem = problem[0]
+        data_list = _make_single_problem_data_list(
+            problem, inputs_list=inputs_list, target_list=target_list, label_encoder=label_encoder)
+
+    # multiple problem in problem chunk
+    else:
+        assert (type(problem), type(inputs_list),
+                type(target_list)) == (list, dict, dict)
+        # convert data_list to dataframe and join by input_ids
+        data_dict = {}
+        column_list = []
+        for pro in problem:
+            data_shards = _make_single_problem_data_list(
+                pro, inputs_list=inputs_list[pro], target_list=target_list[pro], label_encoder=label_encoder[pro])
+            data_dict[pro] = [
+                item for sublist in data_shards for item in sublist]
+            column_list.append(list(data_dict[pro][0].keys()))
+
+        # get intersection and use as ensure features are the same
+        join_key = list(set(column_list[0]).intersection(*column_list[1:]))
+
+        flat_data_list = []
+        while data_dict[problem[0]]:
+            d = {}
+            for pro in data_dict:
+                if not d:
+                    d = data_dict[pro].pop(0)
+                else:
+                    for k in join_key:
+                        assert d[k] == data_dict[pro][0][k], 'At iteration {}, feature {} not align. Expected {}, got: {}'.format(
+                            len(flat_data_list), k, d[k], data_dict[pro][0][k]
+                        )
+                    d.update(data_dict[pro].pop(0))
+            flat_data_list.append(d)
+
+        data_list = []
+        for i in range(0, len(flat_data_list), 10000):
+            data_list.append(flat_data_list[i:i + 10000])
+
+    if isinstance(problem, list):
+        problem = '_'.join(sorted(problem))
 
     make_tfrecord(data_list=data_list,
                   output_dir=params.tmp_file_dir,
@@ -151,7 +199,7 @@ def write_single_problem_tfrecord(problem,
 
 
 def write_tfrecord(params, replace=False):
-    """Write TFRecord for every problem
+    """Write TFRecord for every problem chunk
 
     Output location: params.tmp_file_dir
 
@@ -164,12 +212,48 @@ def write_tfrecord(params, replace=False):
 
     read_data_fn_dict = params.read_data_fn
     path_list = []
-    for problem in params.problem_list:
-        read_fn = read_data_fn_dict[problem]
-        file_dir = os.path.join(params.tmp_file_dir, problem)
-        if not os.path.exists(file_dir) or replace:
-            read_fn(params, TRAIN)
-            read_fn(params, EVAL)
+    for problem_list in params.problem_chunk:
+        # if only one problem in problem chunk, create individual tf record
+        if len(problem_list) == 1:
+            problem = problem_list[0]
+            read_fn = read_data_fn_dict[problem]
+            file_dir = os.path.join(params.tmp_file_dir, problem)
+            if not os.path.exists(file_dir) or replace:
+                read_fn(params, TRAIN)
+                read_fn(params, EVAL)
+        # if more than one problem in problem chunk, that means multiple
+        # same feature space problems are chained by &. In this case, we
+        # need to aggregate data from these problems first, then write to one
+        # tf record.
+        else:
+            for mode in [TRAIN, EVAL]:
+                problem_str = '_'.join(sorted(problem_list))
+                file_dir = os.path.join(params.tmp_file_dir, problem_str)
+
+                input_list_dict = {}
+                target_list_dict = {}
+                label_encoder_dict = {}
+                for p_idx, p in enumerate(problem_list):
+
+                    res_dict = read_data_fn_dict[p](
+                        params=params, mode=mode, get_data_num=False, write_tfrecord=False)
+                    if p_idx == 0:
+                        tokenizer = res_dict['tokenizer']
+
+                    input_list_dict[p] = res_dict['inputs_list']
+                    target_list_dict[p] = res_dict['target_list']
+                    label_encoder_dict[p] = res_dict['label_encoder']
+
+                if not os.path.exists(file_dir) or replace:
+                    write_single_problem_chunk_tfrecord(
+                        problem=problem_list,
+                        inputs_list=input_list_dict,
+                        target_list=target_list_dict,
+                        label_encoder=label_encoder_dict,
+                        params=params,
+                        tokenizer=tokenizer,
+                        mode=mode
+                    )
 
 
 def make_feature_desc(feature_desc_dict: dict):
@@ -296,7 +380,8 @@ def read_tfrecord(params, mode: str):
     """
     dataset_dict = {}
     all_feature_desc_dict = {}
-    for problem in params.problem_list:
+    for problem_list in params.problem_chunk:
+        problem = '_'.join(sorted(problem_list))
         file_dir = os.path.join(params.tmp_file_dir, problem)
         tfrecord_path_list = glob(os.path.join(
             file_dir, '{}_*.tfrecord'.format(mode)))
@@ -308,12 +393,15 @@ def read_tfrecord(params, mode: str):
         dataset = dataset.map(lambda x: tf.io.parse_single_example(
             x, feature_desc)).map(reshape_tensors_in_dataset).map(
                 lambda x: set_shape_for_dataset(x, feature_desc_dict)
-        ).map(lambda x: add_loss_multiplier(x, problem))
+        )
+        for p in problem_list:
+            dataset = dataset.map(lambda x: add_loss_multiplier(x, p))
         dataset_dict[problem] = dataset
 
     # add dummy features
     dummy_features = get_dummy_features(dataset_dict, all_feature_desc_dict)
-    for problem in params.problem_list:
+    for problem_list in params.problem_chunk:
+        problem = '_'.join(sorted(problem_list))
         dataset_dict[problem] = dataset_dict[problem].map(
             lambda x: add_dummy_features_to_dataset(x, dummy_features)
         ).repeat()
