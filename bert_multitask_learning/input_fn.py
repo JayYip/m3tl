@@ -20,7 +20,8 @@ def element_length_func(yield_dict):
 
 def train_eval_input_fn(params, mode='train'):
     '''Train and eval input function of estimator.
-    This function will create as tf dataset from generator. 
+    This function will write and read tf record for training
+    and evaluation.
 
     Usage:
         def train_input_fn(): return train_eval_input_fn(params)
@@ -28,7 +29,7 @@ def train_eval_input_fn(params, mode='train'):
             train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
 
     Arguments:
-        config {Params} -- Params objects
+        params {Params} -- Params objects
 
     Keyword Arguments:
         mode {str} -- ModeKeys (default: {'train'})

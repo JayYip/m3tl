@@ -183,7 +183,7 @@ class BaseParams():
         self.problem_assigned = True
         self.is_serve = is_serve
 
-        self.problem_list = self.parse_problem_string(flag_string)
+        self.problem_list, self.problem_chunk = self.parse_problem_string(flag_string)
 
         # create dir and get vocab, config
         self.prepare_dir(base_dir, dir_name, self.problem_list)
@@ -284,23 +284,27 @@ class BaseParams():
         self.problem_str = flag_string
         # Parse problem string
         self.run_problem_list = []
+        problem_chunk = []
         for flag_chunk in flag_string.split('|'):
 
             if '&' not in flag_chunk:
                 problem_type = {}
                 problem_type[flag_chunk] = self.problem_type[flag_chunk]
                 self.run_problem_list.append(problem_type)
+                problem_chunk.append([flag_chunk])
             else:
                 problem_type = {}
+                problem_chunk.append([])
                 for problem in flag_chunk.split('&'):
                     problem_type[problem] = self.problem_type[problem]
+                    problem_chunk[-1].append(problem)
                 self.run_problem_list.append(problem_type)
         # if (self.label_transfer or self.mutual_prediction) and self.train_problem is None:
         if self.train_problem is None:
             self.train_problem = [p for p in self.run_problem_list]
 
         problem_list = sorted(re.split(r'[&|]', flag_string))
-        return problem_list
+        return problem_list, problem_chunk
 
     def prepare_dir(self, base_dir, dir_name, problem_list):
         base = base_dir if base_dir is not None else 'models'
