@@ -28,6 +28,15 @@ def create_bert_features(problem,
                          mode,
                          problem_type,
                          is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        return create_bert_pretraining(
+            problem=problem,
+            inputs_list=example_list,
+            label_encoder=label_encoder,
+            params=params,
+            tokenizer=tokenizer
+        )
+
     return_dict_list = []
     for example in example_list:
         raw_inputs, raw_target = example
@@ -171,19 +180,17 @@ def create_bert_features(problem,
     return return_dict_list
 
 
-def create_pretraining_generator(problem,
-                                 inputs_list,
-                                 target_list,
-                                 label_encoder,
-                                 params,
-                                 tokenizer
-                                 ):
+def create_bert_pretraining(problem,
+                            inputs_list,
+                            label_encoder,
+                            params,
+                            tokenizer
+                            ):
     """Slight modification of original code
 
     Raises:
         ValueError -- Input format not right
     """
-
     if not isinstance(inputs_list[0][0], list):
         raise ValueError('inputs is expected to be list of list of list.')
 
@@ -201,6 +208,7 @@ def create_pretraining_generator(problem,
     instances = []
 
     print_count = 0
+    return_list = []
     for _ in range(params.dupe_factor):
         for document_index in range(len(all_documents)):
             instances = create_instances_from_document(
@@ -244,4 +252,5 @@ def create_pretraining_generator(problem,
                                              (k, ' '.join([str(x) for x in v])))
                     print_count += 1
 
-                yield yield_dict
+                return_list.append(yield_dict)
+    return return_list
