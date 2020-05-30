@@ -139,7 +139,7 @@ class Classification(TopLayer):
                 keep_prob=self.params.dropout_keep_prob)
 
         if mask is None:
-            num_classes = self.params.num_classes[problem_name]
+            num_classes = self.params.num_classes.get(problem_name, 2)
         else:
             num_classes = mask.shape[0]
         # make hidden model
@@ -165,7 +165,7 @@ class Classification(TopLayer):
             loss = tf.reduce_mean(batch_loss)
 
             return self.eval_metric_fn(
-                features, logits, loss, problem_name)
+                features, logits, loss, problem_name, pad_labels_to_logits=False)
         elif mode == tf.estimator.ModeKeys.PREDICT:
             prob = tf.nn.softmax(logits)
             self.prob = tf.identity(prob, name='%s_predict' % scope_name)
@@ -233,6 +233,7 @@ class MaskLM(TopLayer):
                 # padding predictions.
                 per_example_loss = - \
                     tf.reduce_sum(log_probs * one_hot_labels, axis=[-1])
+                label_weights = tf.cast(label_weights, tf.float32)
                 numerator = tf.reduce_sum(label_weights * per_example_loss)
                 denominator = tf.reduce_sum(label_weights) + 1e-5
                 loss = numerator / denominator

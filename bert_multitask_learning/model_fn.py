@@ -119,8 +119,7 @@ class BertMultiTask():
             feature_this_round = features
             hidden_feature_this_round = hidden_feature
         else:
-            multiplier_name = '%s_loss_multiplier' % problem if self.params.problem_type[
-                problem] != 'pretrain' else 'masked_lm_loss_multiplier'
+            multiplier_name = '%s_loss_multiplier' % problem
 
             record_ind = tf.where(tf.cast(
                 features[multiplier_name], tf.bool))

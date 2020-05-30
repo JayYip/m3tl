@@ -183,7 +183,8 @@ class BaseParams():
         self.problem_assigned = True
         self.is_serve = is_serve
 
-        self.problem_list, self.problem_chunk = self.parse_problem_string(flag_string)
+        self.problem_list, self.problem_chunk = self.parse_problem_string(
+            flag_string)
 
         # create dir and get vocab, config
         self.prepare_dir(base_dir, dir_name, self.problem_list)
@@ -330,6 +331,9 @@ class BaseParams():
         self.bert_config_dict = self.bert_config.__dict__
         with open(self.vocab_file, 'r', encoding='utf8') as vf:
             self.vocab_size = len(vf.readlines())
+
+    def get_problem_type(self, problem: str):
+        return self.problem_type[problem]
 
 
 class CRFParams(BaseParams):

@@ -58,23 +58,28 @@ def serialize_fn(features: dict, return_feature_desc=False):
                 feature_name)] = _int64_list_feature(feature.shape)
             feature_desc['{}_shape_value'.format(feature_name)] = feature.shape
 
+            feature_desc['{}_shape'.format(
+                feature_name)] = 'int64'
+            feature_desc['{}_shape_value'.format(feature_name)] = [
+                None for _ in feature.shape]
+
         elif type(feature) is float:
             features_tuple[feature_name] = _float_feature(feature)
             features_tuple['{}_shape'.format(
                 feature_name)] = _int64_list_feature([])
             feature_desc[feature_name] = 'float32'
-            feature_desc['{}_shape_value'.format(feature_name)] = feature.shape
+
+            feature_desc['{}_shape'.format(
+                feature_name)] = 'int64'
+            feature_desc['{}_shape_value'.format(feature_name)] = []
         else:
             features_tuple[feature_name] = _int64_feature(feature)
             features_tuple['{}_shape'.format(
                 feature_name)] = _int64_list_feature([])
             feature_desc[feature_name] = 'int64'
-            feature_desc['{}_shape_value'.format(feature_name)] = feature.shape
-
-        feature_desc['{}_shape'.format(
-            feature_name)] = 'int64'
-        feature_desc['{}_shape_value'.format(feature_name)] = [
-            None for _ in feature.shape]
+            feature_desc['{}_shape'.format(
+                feature_name)] = 'int64'
+            feature_desc['{}_shape_value'.format(feature_name)] = []
 
     example_proto = tf.train.Example(
         features=tf.train.Features(feature=features_tuple))
@@ -128,8 +133,11 @@ def write_single_problem_chunk_tfrecord(problem,
         # for sequential labeling, targets needs to align with any
         # change of inputs
         is_seq = problem_type in ['seq_tag']
-
-        example_list = list(zip(inputs_list, target_list))
+        try:
+            example_list = list(zip(inputs_list, target_list))
+        except TypeError:
+            # target_list is None
+            example_list = inputs_list
         # split data_list by shards_per_file
         data_shards = []
         for i in range(0, len(example_list), 10000):
