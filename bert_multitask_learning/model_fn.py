@@ -367,7 +367,7 @@ class BertMultiTask():
 
         if self.params.mean_gradients:
             for v_idx, v in enumerate(tvars):
-                if v.name.startwith('bert/'):
+                if v.name.startswith('bert/'):
                     grads[v_idx] = grads[v_idx] / \
                         len(self.params.run_problem_list)
 
