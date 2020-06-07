@@ -13,16 +13,6 @@ from .experimental_top import (
     LabelTransferHidden, GridTransformer, TaskTransformer)
 
 
-@autograph.convert()
-def stop_grad(global_step, tensor, freeze_step):
-
-    if freeze_step > 0:
-        if global_step <= freeze_step:
-            tensor = tf.stop_gradient(tensor)
-
-    return tensor
-
-
 def variable_summaries(var, name):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
     with tf.name_scope(name):
@@ -34,17 +24,6 @@ def variable_summaries(var, name):
         tf.summary.scalar('max', tf.reduce_max(var))
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram', var)
-
-
-@autograph.convert()
-def filter_loss(loss, features, problem):
-
-    if tf.reduce_mean(features['%s_loss_multiplier' % problem]) == 0:
-        return_loss = 0.0
-    else:
-        return_loss = loss
-
-    return return_loss
 
 
 class BertMultiTask():
@@ -121,11 +100,6 @@ class BertMultiTask():
 
         feature_dict['all'] = tf.concat(feature_dict['all'], axis=1)
 
-        global_step = tf.train.get_or_create_global_step()
-
-        feature_dict['seq'] = stop_grad(
-            global_step, feature_dict['seq'], self.params.freeze_step)
-
         return feature_dict
 
     def get_features_for_problem(self, features, hidden_feature, problem, mode):
@@ -200,8 +174,6 @@ class BertMultiTask():
 
                 top_scope_name = self.get_scope_name(problem)
 
-                # WARNING: Potential nan created here!
-                # TODO: Fix this.
                 if len(self.params.run_problem_list) > 1:
                     feature_this_round, hidden_feature_this_round = self.get_features_for_problem(
                         features, hidden_feature, problem, mode)
@@ -385,7 +357,17 @@ class BertMultiTask():
         if self.params.mean_gradients:
             for v_idx, v in enumerate(tvars):
                 if v.name.startwith('bert/'):
-                    g[v_idx] = g[v_idx] / len(self.params.run_problem_list)
+                    grads[v_idx] = grads[v_idx] / \
+                        len(self.params.run_problem_list)
+
+        if self.params.freeze_step > 0:
+            # if global_step > freeze_step, gradient_mask == 1, inverse_gradient_mask == 0
+            # else: reverse
+            gradient_mask = tf.cast(tf.greater(
+                global_step, self.params.freeze_step), dtype=tf.float32)
+            for v_idx, v in enumerate(tvars):
+                if v.name.startswith('bert/'):
+                    grads[v_idx] = grads[v_idx] * gradient_mask
 
         if self.params.detail_log:
             # add grad summary
