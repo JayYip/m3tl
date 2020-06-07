@@ -26,6 +26,17 @@ def variable_summaries(var, name):
         tf.summary.histogram('histogram', var)
 
 
+@autograph.convert()
+def filter_loss(loss, features, problem):
+
+    if tf.reduce_mean(features['%s_loss_multiplier' % problem]) == 0:
+        return_loss = 0.0
+    else:
+        return_loss = loss
+
+    return return_loss
+
+
 class BertMultiTask():
     """Main model class for creating Bert multi-task model
 
