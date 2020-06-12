@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from ..utils import cluster_alphnum
 
-from .preproc_decorator import preprocessing_fn
+from ..preproc_decorator import preprocessing_fn
 
 NER_TYPE = ['LOC',  # location
             'GPE',
@@ -124,18 +124,20 @@ def read_ner_data(file_pattern='data/ner/weiboNER*', proc_fn=None):
     return result_dict
 
 
-@preprocessing_fn
-def weibo_ner(params, mode):
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
-                         proc_fn=gold_horse_ent_type_process_fn)
-    if mode == 'train':
-        data = data['train']
-    else:
-        data = data['eval']
-    inputs_list = data['inputs']
-    target_list = data['target']
+def get_weibo_ner_fn(file_path):
+    @preprocessing_fn
+    def weibo_ner(params, mode):
+        data = read_ner_data(file_pattern=file_path,
+                             proc_fn=gold_horse_ent_type_process_fn)
+        if mode == 'train':
+            data = data['train']
+        else:
+            data = data['eval']
+        inputs_list = data['inputs']
+        target_list = data['target']
 
-    return inputs_list, target_list
+        return inputs_list, target_list
+    return weibo_ner
 
 
 def gold_horse_segment_process_fn(d):
@@ -145,18 +147,20 @@ def gold_horse_segment_process_fn(d):
     return ent_type
 
 
-@preprocessing_fn
-def weibo_cws(params, mode):
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
-                         proc_fn=gold_horse_segment_process_fn)
-    if mode == 'train':
-        data = data['train']
-    else:
-        data = data['eval']
-    inputs_list = data['inputs']
-    target_list = data['target']
+def get_weibo_cws_fn(file_path):
+    @preprocessing_fn
+    def weibo_cws(params, mode):
+        data = read_ner_data(file_pattern=file_path,
+                             proc_fn=gold_horse_segment_process_fn)
+        if mode == 'train':
+            data = data['train']
+        else:
+            data = data['eval']
+        inputs_list = data['inputs']
+        target_list = data['target']
 
-    return inputs_list, target_list
+        return inputs_list, target_list
+    return weibo_cws
 
 
 def read_bosonnlp_data(file_pattern, eval_size=0.2):
@@ -302,91 +306,42 @@ def read_msra(file_pattern, eval_size):
     return result_dict
 
 
-@preprocessing_fn
-def msra_ner(params, mode):
+def get_msra_ner_fn(file_path):
+    @preprocessing_fn
+    def msra_ner(params, mode):
 
-    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
+        msra_data = read_msra(
+            file_pattern=file_path, eval_size=0.2)
 
-    inputs_list = []
-    target_list = []
-    for data in [msra_data]:
-        if mode == 'train':
-            inputs_list += data['train']['inputs']
-            target_list += data['train']['target']
+        inputs_list = []
+        target_list = []
+        for data in [msra_data]:
+            if mode == 'train':
+                inputs_list += data['train']['inputs']
+                target_list += data['train']['target']
 
-        else:
-            inputs_list += data['eval']['inputs']
-            target_list += data['eval']['target']
-    return inputs_list, target_list
-
-
-@preprocessing_fn
-def boson_ner(params, mode):
-    boson_data = read_bosonnlp_data(
-        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
-
-    inputs_list = []
-    target_list = []
-    for data in [boson_data]:
-        if mode == 'train':
-            inputs_list += data['train']['inputs']
-            target_list += data['train']['target']
-
-        else:
-            inputs_list += data['eval']['inputs']
-            target_list += data['eval']['target']
-    return inputs_list, target_list
+            else:
+                inputs_list += data['eval']['inputs']
+                target_list += data['eval']['target']
+        return inputs_list, target_list
+    return msra_ner
 
 
-@preprocessing_fn
-def boson_domain(params, mode):
-    boson_data = read_bosonnlp_data(
-        file_pattern='data/ner/BosonNLP_NER_6C/BosonNLP*', eval_size=0.2)
+def get_boson_ner_fn(file_path):
+    @preprocessing_fn
+    def boson_ner(params, mode):
+        boson_data = read_bosonnlp_data(
+            file_pattern=file_path, eval_size=0.2)
 
-    inputs_list = []
-    target_list = []
-    for data in [boson_data]:
-        if mode == 'train':
-            inputs_list += data['train']['inputs']
-            target_list += data['train']['target']
+        inputs_list = []
+        target_list = []
+        for data in [boson_data]:
+            if mode == 'train':
+                inputs_list += data['train']['inputs']
+                target_list += data['train']['target']
 
-        else:
-            inputs_list += data['eval']['inputs']
-            target_list += data['eval']['target']
-    target_list = ['boson_ner' for _ in target_list]
-    return inputs_list, target_list
-
-
-@preprocessing_fn
-def Weibo_domain(params, mode):
-    data = read_ner_data(file_pattern='data/ner/weiboNER*',
-                         proc_fn=gold_horse_ent_type_process_fn)
-    if mode == 'train':
-        data = data['train']
-    else:
-        data = data['eval']
-    inputs_list = data['inputs']
-    target_list = data['target']
-
-    target_list = ['weibo_ner' for _ in target_list]
-    return inputs_list, target_list
-
-
-@preprocessing_fn
-def msra_domain(params, mode):
-
-    msra_data = read_msra(file_pattern='data/ner/MSRA/train*', eval_size=0.2)
-
-    inputs_list = []
-    target_list = []
-    for data in [msra_data]:
-        if mode == 'train':
-            inputs_list += data['train']['inputs']
-            target_list += data['train']['target']
-
-        else:
-            inputs_list += data['eval']['inputs']
-            target_list += data['eval']['target']
-
-    target_list = ['msra_ner' for _ in target_list]
-    return inputs_list, target_list
+            else:
+                inputs_list += data['eval']['inputs']
+                target_list += data['eval']['target']
+        return inputs_list, target_list
+    return boson_ner

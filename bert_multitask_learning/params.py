@@ -5,7 +5,6 @@ import shutil
 
 from .modeling import BertConfig
 
-from . import data_preprocessing
 from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
 
 
@@ -14,38 +13,11 @@ class BaseParams():
         self.run_problem_list = []
 
         self.problem_type = {
-            'weibo_ner': 'seq_tag',
-            'weibo_fake_cls': 'cls',
-            'weibo_cws': 'seq_tag',
-            'weibo_pretrain': 'pretrain',
-            'cws': 'seq_tag',
-            'ctb_pos': 'seq_tag',
-            'ctb_cws': 'seq_tag',
-            'as_cws': 'seq_tag',
-            'msr_cws': 'seq_tag',
-            'pku_cws': 'seq_tag',
-            'city_cws': 'seq_tag',
-            'boson_ner': 'seq_tag',
-            'msra_ner': 'seq_tag',
-            'POS': 'seq_tag',
-            'weibo_fake_seq2seq_tag': 'seq2seq_tag',
-            'weibo_fake_seq_tag': 'seq_tag',
-            'ontonotes_ner': 'seq_tag',
-            'ontonotes_cws': 'seq_tag',
-            'ontonotes_chunk': 'seq2seq_tag',
-            'emotion_analysis': 'cls',
-            'ontonotes_pos': 'seq_tag'
         }
 
         # specify this will make key reuse values top
         # that it, weibo_ner problem will use NER's top
         self.share_top = {
-            'ctb_cws': 'cws',
-            'as_cws': 'cws',
-            'msr_cws': 'cws',
-            'pku_cws': 'cws',
-            'city_cws': 'cws',
-            'ctb_pos': 'POS'
         }
         for p in self.problem_type:
             if p not in self.share_top:
@@ -138,19 +110,12 @@ class BaseParams():
         self.tmp_file_dir = 'tmp'
         # get generator function for each problem
         self.read_data_fn = {}
-        for problem in self.problem_type:
-            try:
-                self.read_data_fn[problem] = getattr(
-                    data_preprocessing, problem)
-            except AttributeError:
-                raise AttributeError(
-                    '%s function not implemented' % problem)
         self.problem_assigned = False
 
     def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
-        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls']:
+        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain']:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
-                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls'], problem_type))
+                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain'], problem_type))
 
         self.problem_type[problem_name] = problem_type
         self.read_data_fn[problem_name] = processing_fn
@@ -180,6 +145,8 @@ class BaseParams():
             dir_name {str} -- dir name for ckpt, if None,
                 will be created automatically (default: {None})
         """
+        self.assigned_details = (
+            flag_string, gpu, base_dir, dir_name, is_serve)
         self.problem_assigned = True
         self.is_serve = is_serve
 
@@ -219,13 +186,21 @@ class BaseParams():
             json.dump(dump_dict, f)
 
     def from_json(self, json_path=None):
-        params_path = json_path if json_path is not None else self.params_path
+        try:
+            params_path = json_path if json_path is not None else self.params_path
+        except AttributeError:
+            raise AttributeError(
+                'Either json_path should not be None or problem is assigned.')
+        if self.problem_assigned:
+            assign_details = self.assigned_details
+
         with open(params_path, 'r', encoding='utf8') as f:
             dump_dict = json.load(f)
         for att in dump_dict:
             setattr(self, att, dump_dict[att])
         self.bert_config = BertConfig.from_dict(self.bert_config_dict)
         self.bert_config.num_hidden_layers = dump_dict['bert_num_hidden_layer']
+        self.assign_problem(*assign_details)
 
     def get_data_info(self, problem_list, base):
         '''Get number of data, number of classes of data and eos_id of data.
