@@ -1,9 +1,9 @@
 import os
 
-from ..utils import get_or_make_label_encoder, cluster_alphnum, LabelEncoder
-from ..special_tokens import TRAIN, EVAL, PREDICT
-from ..read_write_tfrecord import write_single_problem_chunk_tfrecord
-from ..bert_preprocessing.tokenization import FullTokenizer
+from .utils import get_or_make_label_encoder, cluster_alphnum, LabelEncoder
+from .special_tokens import TRAIN, EVAL, PREDICT
+from .read_write_tfrecord import write_single_problem_chunk_tfrecord
+from .bert_preprocessing.tokenization import FullTokenizer
 
 
 def preprocessing_fn(func):

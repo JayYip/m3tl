@@ -12,4 +12,4 @@ from .run_bert_multitask import *
 from .transformer_decoder import *
 from .utils import *
 from .export_model import *
-from .data_preprocessing import preprocessing_fn
+from .preproc_decorator import preprocessing_fn
