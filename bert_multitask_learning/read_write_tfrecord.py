@@ -244,34 +244,34 @@ def write_tfrecord(params, replace=False):
         # need to aggregate data from these problems first, then write to one
         # tf record.
         else:
-            for mode in [TRAIN, EVAL]:
-                problem_str = '_'.join(sorted(problem_list))
-                file_dir = os.path.join(params.tmp_file_dir, problem_str)
+            problem_str = '_'.join(sorted(problem_list))
+            file_dir = os.path.join(params.tmp_file_dir, problem_str)
+            if not os.path.exists(file_dir) or replace:
+                for mode in [TRAIN, EVAL]:
 
-                input_list_dict = {}
-                target_list_dict = {}
-                label_encoder_dict = {}
-                for p_idx, p in enumerate(problem_list):
+                    input_list_dict = {}
+                    target_list_dict = {}
+                    label_encoder_dict = {}
+                    for p_idx, p in enumerate(problem_list):
 
-                    res_dict = read_data_fn_dict[p](
-                        params=params, mode=mode, get_data_num=False, write_tfrecord=False)
-                    if p_idx == 0:
-                        tokenizer = res_dict['tokenizer']
+                        res_dict = read_data_fn_dict[p](
+                            params=params, mode=mode, get_data_num=False, write_tfrecord=False)
+                        if p_idx == 0:
+                            tokenizer = res_dict['tokenizer']
 
-                    input_list_dict[p] = res_dict['inputs_list']
-                    target_list_dict[p] = res_dict['target_list']
-                    label_encoder_dict[p] = res_dict['label_encoder']
+                        input_list_dict[p] = res_dict['inputs_list']
+                        target_list_dict[p] = res_dict['target_list']
+                        label_encoder_dict[p] = res_dict['label_encoder']
 
-                if not os.path.exists(file_dir) or replace:
-                    write_single_problem_chunk_tfrecord(
-                        problem=problem_list,
-                        inputs_list=input_list_dict,
-                        target_list=target_list_dict,
-                        label_encoder=label_encoder_dict,
-                        params=params,
-                        tokenizer=tokenizer,
-                        mode=mode
-                    )
+                        write_single_problem_chunk_tfrecord(
+                            problem=problem_list,
+                            inputs_list=input_list_dict,
+                            target_list=target_list_dict,
+                            label_encoder=label_encoder_dict,
+                            params=params,
+                            tokenizer=tokenizer,
+                            mode=mode
+                        )
 
 
 def make_feature_desc(feature_desc_dict: dict):

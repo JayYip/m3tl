@@ -1,4 +1,5 @@
 import os
+from sklearn.preprocessing import MultiLabelBinarizer
 
 from .utils import get_or_make_label_encoder, cluster_alphnum, LabelEncoder
 from .special_tokens import TRAIN, EVAL, PREDICT
@@ -27,6 +28,8 @@ def preprocessing_fn(func):
                 return len(inputs_list), 0
             elif isinstance(label_encoder, LabelEncoder):
                 return len(inputs_list), len(label_encoder.encode_dict)
+            elif isinstance(label_encoder, MultiLabelBinarizer):
+                return len(inputs_list), label_encoder.classes_.shape[0]
             else:
                 # label_encoder is tokenizer
                 return len(inputs_list), len(label_encoder.vocab)

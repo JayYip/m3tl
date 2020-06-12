@@ -149,6 +149,7 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         else:
+            print(problem)
             if isinstance(label_list[0], list):
                 label_list = [
                     item for sublist in label_list for item in sublist]
