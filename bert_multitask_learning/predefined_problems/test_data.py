@@ -9,7 +9,7 @@ from .ner_data import gold_horse_ent_type_process_fn, read_ner_data, gold_horse_
 from ..preproc_decorator import preprocessing_fn
 
 
-def get_weibo_fake_cls_fn(file_pattern):
+def get_weibo_fake_cls_fn(file_path):
     @preprocessing_fn
     def weibo_fake_cls(params, mode):
         """Just a test problem to test multiproblem support
@@ -18,14 +18,14 @@ def get_weibo_fake_cls_fn(file_pattern):
             params {Params} -- params
             mode {mode} -- mode
         """
-        data = read_ner_data(file_pattern=file_pattern,
+        data = read_ner_data(file_pattern=file_path,
                              proc_fn=gold_horse_ent_type_process_fn)
         if mode == 'train':
             data = data['train']
         else:
             data = data['eval']
-        inputs_list = data['inputs'][:100]
-        target_list = data['target'][:100]
+        inputs_list = data['inputs']
+        target_list = data['target']
 
         new_target_list = ['1' if len(
             set(t)) > 1 else '0' for t in target_list]
@@ -38,14 +38,14 @@ def get_weibo_fake_seq2seq_tag_fn(file_path):
     @preprocessing_fn
     def weibo_fake_seq2seq_tag(params, mode: str):
 
-        data = read_ner_data(file_pattern='data/weibo/weiboNER*',
+        data = read_ner_data(file_pattern=file_path,
                              proc_fn=gold_horse_ent_type_process_fn)
         if mode == 'train':
             data = data['train']
         else:
             data = data['eval']
-        inputs_list = data['inputs'][:100]
-        target_list = data['target'][:100]
+        inputs_list = data['inputs']
+        target_list = data['target']
         new_target_list = [['1', '2'] for _ in range(len(inputs_list))]
         return inputs_list, new_target_list
     return weibo_fake_seq2seq_tag
@@ -82,14 +82,14 @@ def get_weibo_pretrain_fn(file_path):
 def get_weibo_fake_seq_tag_fn(file_path):
     @preprocessing_fn
     def weibo_fake_seq_tag(params, mode):
-        data = read_ner_data(file_pattern='data/weibo/weiboNER*',
+        data = read_ner_data(file_pattern=file_path,
                              proc_fn=gold_horse_ent_type_process_fn)
         if mode == 'train':
             data = data['train']
         else:
             data = data['eval']
-        inputs_list = data['inputs'][:100]
-        target_list = data['target'][:100]
+        inputs_list = data['inputs']
+        target_list = data['target']
 
         return inputs_list, target_list
     return weibo_fake_seq_tag
@@ -98,13 +98,13 @@ def get_weibo_fake_seq_tag_fn(file_path):
 def get_weibo_fake_multi_cls_fn(file_path):
     @preprocessing_fn
     def weibo_fake_multi_cls(params, mode):
-        data = read_ner_data(file_pattern='data/weibo/weiboNER*',
+        data = read_ner_data(file_pattern=file_path,
                              proc_fn=gold_horse_ent_type_process_fn)
         if mode == 'train':
             data = data['train']
         else:
             data = data['eval']
-        inputs_list = data['inputs'][:300]
+        inputs_list = data['inputs']
 
         # create fake target
         target_list = []

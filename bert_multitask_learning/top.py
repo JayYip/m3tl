@@ -83,7 +83,8 @@ class SequenceLabel(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss), tf.zeros_like(self.loss), self.loss)
+            self.loss = tf.where(tf.math.is_nan(self.loss),
+                                 tf.zeros_like(self.loss), self.loss)
             return self.loss
 
         elif mode == tf.estimator.ModeKeys.EVAL:
@@ -156,7 +157,8 @@ class Classification(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss), tf.zeros_like(self.loss), self.loss)
+            self.loss = tf.where(tf.math.is_nan(self.loss),
+                                 tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
@@ -439,7 +441,7 @@ class Seq2Seq(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss), tf.zeros_like(self.loss), self.loss)
+            loss = tf.where(tf.math.is_nan(loss), tf.zeros_like(loss), loss)
             self.loss = loss
 
             if mode == tf.estimator.ModeKeys.TRAIN:
@@ -499,7 +501,8 @@ class MultiLabelClassification(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss), tf.zeros_like(self.loss), self.loss)
+            self.loss = tf.where(tf.math.is_nan(self.loss),
+                                 tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
