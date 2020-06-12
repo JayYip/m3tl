@@ -13,3 +13,4 @@ from .transformer_decoder import *
 from .utils import *
 from .export_model import *
 from .preproc_decorator import preprocessing_fn
+from . import predefined_problems
