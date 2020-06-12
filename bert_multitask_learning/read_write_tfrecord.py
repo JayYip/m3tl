@@ -63,7 +63,7 @@ def serialize_fn(features: dict, return_feature_desc=False):
             feature_desc['{}_shape_value'.format(feature_name)] = [
                 None for _ in feature.shape]
 
-        elif type(feature) is float:
+        elif np.issubdtype(type(feature), np.float):
             features_tuple[feature_name] = _float_feature(feature)
             features_tuple['{}_shape'.format(
                 feature_name)] = _int64_list_feature([])
@@ -72,11 +72,21 @@ def serialize_fn(features: dict, return_feature_desc=False):
             feature_desc['{}_shape'.format(
                 feature_name)] = 'int64'
             feature_desc['{}_shape_value'.format(feature_name)] = []
-        else:
+        elif np.issubdtype(type(feature), np.integer):
             features_tuple[feature_name] = _int64_feature(feature)
             features_tuple['{}_shape'.format(
                 feature_name)] = _int64_list_feature([])
             feature_desc[feature_name] = 'int64'
+            feature_desc['{}_shape'.format(
+                feature_name)] = 'int64'
+            feature_desc['{}_shape_value'.format(feature_name)] = []
+        else:
+            if isinstance(feature, str):
+                feature = feature.encode('utf8')
+            features_tuple[feature_name] = _bytes_feature(feature)
+            features_tuple['{}_shape'.format(
+                feature_name)] = _int64_list_feature([])
+            feature_desc[feature_name] = 'string'
             feature_desc['{}_shape'.format(
                 feature_name)] = 'int64'
             feature_desc['{}_shape_value'.format(feature_name)] = []
