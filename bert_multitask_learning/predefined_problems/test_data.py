@@ -9,7 +9,7 @@ from .ner_data import gold_horse_ent_type_process_fn, read_ner_data, gold_horse_
 from ..preproc_decorator import preprocessing_fn
 
 
-def get_weibo_fake_fake_cls_fn(file_pattern):
+def get_weibo_fake_cls_fn(file_pattern):
     @preprocessing_fn
     def weibo_fake_cls(params, mode):
         """Just a test problem to test multiproblem support
