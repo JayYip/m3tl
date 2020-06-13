@@ -263,15 +263,15 @@ def write_tfrecord(params, replace=False):
                         target_list_dict[p] = res_dict['target_list']
                         label_encoder_dict[p] = res_dict['label_encoder']
 
-                        write_single_problem_chunk_tfrecord(
-                            problem=problem_list,
-                            inputs_list=input_list_dict,
-                            target_list=target_list_dict,
-                            label_encoder=label_encoder_dict,
-                            params=params,
-                            tokenizer=tokenizer,
-                            mode=mode
-                        )
+                    write_single_problem_chunk_tfrecord(
+                        problem=problem_list,
+                        inputs_list=input_list_dict,
+                        target_list=target_list_dict,
+                        label_encoder=label_encoder_dict,
+                        params=params,
+                        tokenizer=tokenizer,
+                        mode=mode
+                    )
 
 
 def make_feature_desc(feature_desc_dict: dict):
