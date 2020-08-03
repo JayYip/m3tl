@@ -1,21 +1,16 @@
-import os
-import random
-import tempfile
-from copy import copy
-from functools import partial
-from multiprocessing import cpu_count
-import pickle
 import json
-from glob import glob
 import logging
+import os
+from functools import partial
+from glob import glob
+from multiprocessing import cpu_count
 
 import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
-import pandas as pd
 
-from .special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, EVAL
 from .bert_preprocessing.create_bert_features import create_bert_features
+from .special_tokens import BOS_TOKEN, EOS_TOKEN, EVAL, TRAIN
 
 
 def _float_list_feature(value):

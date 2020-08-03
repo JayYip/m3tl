@@ -1,6 +1,5 @@
 import tensorflow as tf
 import math
-from tensor2tensor.utils import beam_search
 
 from . import modeling
 

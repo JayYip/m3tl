@@ -1,6 +1,4 @@
 import numpy as np
-import os
-from copy import copy
 from nltk.translate import bleu_score
 
 from .input_fn import predict_input_fn

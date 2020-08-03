@@ -1,8 +1,5 @@
 import pickle
 import os
-import unicodedata
-import random
-import collections
 import re
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer

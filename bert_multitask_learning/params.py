@@ -1,11 +1,10 @@
+import json
 import os
 import re
-import json
 import shutil
 
 from .modeling import BertConfig
-
-from .utils import create_path, EOS_TOKEN, get_or_make_label_encoder
+from .utils import EOS_TOKEN, create_path
 
 
 class BaseParams():
