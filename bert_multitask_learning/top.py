@@ -1,5 +1,4 @@
 import tensorflow as tf
-from copy import copy
 
 from tensor2tensor.utils import beam_search
 

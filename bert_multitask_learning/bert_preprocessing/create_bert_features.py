@@ -1,23 +1,17 @@
-import os
+import logging
 import random
-import tempfile
 from copy import copy
-from functools import partial
-from multiprocessing import cpu_count
-from multiprocessing import Pool
-import pickle
 
 import numpy as np
 import tensorflow as tf
-from joblib import Parallel, delayed
 
-from ..special_tokens import BOS_TOKEN, EOS_TOKEN
-
-from .tokenization import printable_text
+from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN
 from .bert_utils import (add_special_tokens_with_seqs,
-                         create_instances_from_document, create_mask_and_padding,
-                         create_masked_lm_predictions, punc_augument,
-                         tokenize_text_with_seqs, truncate_seq_pair)
+                         create_instances_from_document,
+                         create_mask_and_padding, create_masked_lm_predictions,
+                         punc_augument, tokenize_text_with_seqs,
+                         truncate_seq_pair)
+from .tokenization import printable_text
 
 
 def create_bert_features(problem,

@@ -4,10 +4,6 @@ from tensorflow import keras
 from tensorflow.contrib import autograph
 
 
-from tensor2tensor.utils import metrics as t2t_metrics
-
-from .t2t_utils import get_t2t_metric_op
-
 from . import modeling
 
 
