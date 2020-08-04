@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
 
-from .bert_preprocessing.create_bert_features import create_bert_features
+from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features
 from .special_tokens import BOS_TOKEN, EOS_TOKEN, EVAL, TRAIN
 
 
@@ -148,13 +148,22 @@ def write_single_problem_chunk_tfrecord(problem,
         for i in range(0, len(example_list), 10000):
             data_shards.append(example_list[i:i + 10000])
 
-        part_fn = partial(create_bert_features, problem=problem,
-                          label_encoder=label_encoder,
-                          params=params,
-                          tokenizer=tokenizer,
-                          mode=mode,
-                          problem_type=problem_type,
-                          is_seq=is_seq)
+        if isinstance(inputs_list[0], dict) and 'a' not in inputs_list[0]:
+            part_fn = partial(create_multimodal_bert_features, problem=problem,
+                              label_encoder=label_encoder,
+                              params=params,
+                              tokenizer=tokenizer,
+                              mode=mode,
+                              problem_type=problem_type,
+                              is_seq=is_seq)
+        else:
+            part_fn = partial(create_bert_features, problem=problem,
+                              label_encoder=label_encoder,
+                              params=params,
+                              tokenizer=tokenizer,
+                              mode=mode,
+                              problem_type=problem_type,
+                              is_seq=is_seq)
         data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
                                                                  for d_list in data_shards)
         return data_list

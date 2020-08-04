@@ -248,3 +248,151 @@ def create_bert_pretraining(problem,
 
                 return_list.append(yield_dict)
     return return_list
+
+
+def create_multimodal_bert_features(problem,
+                                    example_list,
+                                    label_encoder,
+                                    params,
+                                    tokenizer,
+                                    mode,
+                                    problem_type,
+                                    is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        raise NotImplementedError('Multimodal Pretraining is not implemented')
+
+    return_dict_list = []
+    for example in example_list:
+        raw_inputs, raw_target = example
+
+        if problem_type == 'seq_tag' and not isinstance(raw_target, dict):
+            raise ValueError(
+                'Label of multimodal sequence tagging must be a dictionary')
+
+        if not isinstance(raw_inputs, dict):
+            raise ValueError(
+                'Multimodal inputs is supposed to be a dictionary')
+
+        if isinstance(raw_target, dict):
+            target_by_modal = True
+        else:
+            target_by_modal = False
+
+        modal_name_list = ['text', 'image', 'others']
+
+        max_segment_id = 0
+        target_processed = False
+        return_dict = {}
+        for modal_name in modal_name_list:
+            if modal_name not in raw_inputs:
+                continue
+
+            modal_inputs = raw_inputs[modal_name]
+
+            if target_by_modal:
+                modal_target = raw_target[modal_name]
+            else:
+                modal_target = raw_target
+
+            if modal_name == 'text':
+                # tokenize inputs, now the length is fixed, target == raw_target
+                if isinstance(modal_inputs, dict):
+                    tokens_a, target = tokenize_text_with_seqs(
+                        tokenizer, modal_inputs['a'], modal_target, is_seq)
+                    tokens_b, _ = tokenize_text_with_seqs(
+                        tokenizer, modal_inputs['b'], modal_target)
+                else:
+                    tokens_a, target = tokenize_text_with_seqs(
+                        tokenizer, modal_inputs, modal_target, is_seq)
+                    tokens_b = None
+
+                if tokens_b is not None and is_seq:
+                    raise NotImplementedError(
+                        'Sequence Labeling with tokens b is not implemented')
+
+                # if not tokens_a:
+                #     continue
+                # check whether tokenization changed the length
+                if is_seq:
+                    if len(target) != len(tokens_a):
+                        continue
+
+                # only truncate text
+                # truncate tokens and target to max_seq_len
+                tokens_a, tokens_b, target = truncate_seq_pair(
+                    tokens_a, tokens_b, target, params.max_seq_len, is_seq=is_seq)
+                # add [SEP], [CLS] tokens
+                tokens, segment_ids, target = add_special_tokens_with_seqs(
+                    tokens_a, tokens_b, target, is_seq)
+                segment_ids = np.array(segment_ids) + max_segment_id
+                max_segment_id = max(segment_ids)
+
+                input_mask, tokens, segment_ids, target = create_mask_and_padding(
+                    tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
+                input_ids = tokenizer.convert_tokens_to_ids(tokens)
+                modal_feature_dict = {
+                    'input_ids': input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids
+                }
+
+            else:
+                modal_inputs = np.array(modal_inputs)
+                if len(modal_inputs.shape) == 1:
+                    modal_inputs = np.expand_dims(modal_inputs, axis=0)
+                target = modal_target
+                segment_ids = np.zeros(
+                    modal_inputs.shape[0], dtype=np.int32) + max_segment_id + 1
+                max_segment_id = max(segment_ids)
+                input_mask = [1]*len(modal_inputs)
+                modal_feature_dict = {
+                    '{}_input'.format(modal_name): modal_inputs,
+                    '{}_mask'.format(modal_name): input_mask,
+                    '{}_segment_ids'.format(modal_name): segment_ids}
+
+            # create mask and padding for labels of seq2seq problem
+            if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+
+                # tokenize text if target is text
+                if problem_type == 'seq2seq_text':
+
+                    # assign num_classes for text generation problem
+                    params.num_classes[problem] = len(label_encoder.vocab)
+
+                    target, _ = tokenize_text_with_seqs(
+                        label_encoder, target, None, False)
+
+                target, _, _ = truncate_seq_pair(
+                    target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+                # since we initialize the id to 0 in prediction, we need
+                # to make sure that BOS_TOKEN is [PAD]
+                target = [BOS_TOKEN] + target + [EOS_TOKEN]
+                label_mask, target, _, _ = create_mask_and_padding(
+                    target, [0] * len(target), None, params.decode_max_seq_len)
+
+            # encode labels
+            if isinstance(target, list):
+                if problem_type == 'seq2seq_text':
+                    label_id = label_encoder.convert_tokens_to_ids(target)
+                elif problem_type == 'multi_cls':
+                    label_id = label_encoder.transform([target])[0]
+                else:
+                    # seq2seq_tag
+                    label_id = label_encoder.transform(target).tolist()
+                    label_id = [np.int32(i) for i in label_id]
+            else:
+                label_id = label_encoder.transform([target]).tolist()[0]
+                label_id = np.int32(label_id)
+
+            if target_by_modal:
+                modal_feature_dict['{}_{}_label_ids'.format(
+                    problem, modal_name)] = label_id
+            else:
+                modal_feature_dict['{}_label_ids'.format(problem)] = label_id
+            return_dict.update(modal_feature_dict)
+
+        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+            return_dict['%s_mask' % problem] = label_mask
+        return_dict_list.append(return_dict)
+
+    return return_dict_list
