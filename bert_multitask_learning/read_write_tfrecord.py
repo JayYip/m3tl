@@ -418,14 +418,18 @@ def read_tfrecord(params, mode: str):
             open(os.path.join(file_dir, '{}_feature_desc.json'.format(mode))))
         all_feature_desc_dict.update(feature_desc_dict)
         feature_desc = make_feature_desc(feature_desc_dict)
-        dataset = tf.data.TFRecordDataset(tfrecord_path_list)
+        dataset = tf.data.TFRecordDataset(
+            tfrecord_path_list, num_parallel_reads=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(lambda x: tf.io.parse_single_example(
-            x, feature_desc)).map(reshape_tensors_in_dataset)
+            x, feature_desc), num_parallel_calls=tf.data.experimental.AUTOTUNE).map(
+                reshape_tensors_in_dataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(
-            lambda x: set_shape_for_dataset(x, feature_desc_dict)
+            lambda x: set_shape_for_dataset(x, feature_desc_dict),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
         )
         for p in problem_list:
-            dataset = dataset.map(lambda x: add_loss_multiplier(x, p))
+            dataset = dataset.map(lambda x: add_loss_multiplier(x, p),
+                                  num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset_dict[problem] = dataset
 
     # add dummy features
@@ -433,6 +437,7 @@ def read_tfrecord(params, mode: str):
     for problem_list in params.problem_chunk:
         problem = '_'.join(sorted(problem_list))
         dataset_dict[problem] = dataset_dict[problem].map(
-            lambda x: add_dummy_features_to_dataset(x, dummy_features)
+            lambda x: add_dummy_features_to_dataset(x, dummy_features),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
         ).repeat()
     return dataset_dict
