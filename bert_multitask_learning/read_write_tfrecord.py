@@ -55,8 +55,14 @@ def serialize_fn(features: dict, return_feature_desc=False):
 
             feature_desc['{}_shape'.format(
                 feature_name)] = 'int64'
-            feature_desc['{}_shape_value'.format(feature_name)] = [
-                None for _ in feature.shape]
+
+            # this seems not a good idea
+            if len(feature.shape) > 1:
+                feature_desc['{}_shape_value'.format(feature_name)] = [
+                    None] + list(feature.shape[1:])
+            else:
+                feature_desc['{}_shape_value'.format(feature_name)] = [
+                    None for _ in feature.shape]
 
         elif np.issubdtype(type(feature), np.float):
             features_tuple[feature_name] = _float_feature(feature)
@@ -363,9 +369,10 @@ def get_dummy_features(dataset_dict, feature_desc_dict):
     dummy_features = {}
     for problem, problem_dataset in dataset_dict.items():
         output_types = problem_dataset.output_types
-        dummy_features.update({k: tf.cast(tf.constant(shape=[1 for _ in feature_desc_dict.get('{}_shape_value'.format(k), [])], value=0), v)
+        dummy_features.update({k: tf.cast(tf.constant(shape=[1 if s is None else s for s in feature_desc_dict.get('{}_shape_value'.format(k), [])], value=0), v)
                                for k, v in output_types.items()
                                if k not in common_features_accross_problems})
+
     return dummy_features
 
 
@@ -413,8 +420,9 @@ def read_tfrecord(params, mode: str):
         feature_desc = make_feature_desc(feature_desc_dict)
         dataset = tf.data.TFRecordDataset(tfrecord_path_list)
         dataset = dataset.map(lambda x: tf.io.parse_single_example(
-            x, feature_desc)).map(reshape_tensors_in_dataset).map(
-                lambda x: set_shape_for_dataset(x, feature_desc_dict)
+            x, feature_desc)).map(reshape_tensors_in_dataset)
+        dataset = dataset.map(
+            lambda x: set_shape_for_dataset(x, feature_desc_dict)
         )
         for p in problem_list:
             dataset = dataset.map(lambda x: add_loss_multiplier(x, p))
