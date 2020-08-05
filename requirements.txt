@@ -3,11 +3,8 @@ joblib
 tqdm
 six
 pandas
-pytablewriter
 setuptools
 tensor2tensor
 nltk
 scikit_learn
-atlas
-pyarrow
 tensorflow>=1.13.1

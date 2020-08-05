@@ -1,8 +1,6 @@
 import tensorflow as tf
 from copy import copy
 
-from tensor2tensor.utils import beam_search
-
 from .transformer_decoder import TransformerDecoder
 
 from . import modeling
