@@ -3,7 +3,7 @@ from tensorflow.contrib import autograph
 import os
 
 from . import modeling
-from .modeling import BertModel
+from .modeling import BertModel, MultiModalBertModel
 
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
@@ -77,13 +77,15 @@ class BertMultiTask():
         input_mask = features["input_mask"]
         segment_ids = features["segment_ids"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
-        model = BertModel(
+
+        model = MultiModalBertModel(
             config=config.bert_config,
             is_training=is_training,
             input_ids=input_ids,
             input_mask=input_mask,
             token_type_ids=segment_ids,
-            use_one_hot_embeddings=config.use_one_hot_embeddings)
+            use_one_hot_embeddings=config.use_one_hot_embeddings,
+            features_dict=features)
 
         feature_dict = {}
         for logit_type in ['seq', 'pooled', 'all', 'embed', 'embed_table']:
