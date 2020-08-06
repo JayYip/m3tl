@@ -1,7 +1,7 @@
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.contrib import autograph
+from tensorflow import autograph
 
 
 from . import modeling
