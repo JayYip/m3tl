@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow import autograph
+from tensorflow.contrib import autograph
 import os
 
 from . import modeling
