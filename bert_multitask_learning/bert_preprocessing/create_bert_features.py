@@ -21,7 +21,8 @@ def create_bert_features(problem,
                          tokenizer,
                          mode,
                          problem_type,
-                         is_seq):
+                         is_seq,
+                         as_gen=False):
     if params.get_problem_type(problem) == 'pretrain':
         return create_bert_pretraining(
             problem=problem,
@@ -169,9 +170,13 @@ def create_bert_features(problem,
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
 
-        return_dict_list.append(return_dict)
+        if as_gen:
+            yield return_dict
+        else:
+            return_dict_list.append(return_dict)
 
-    return return_dict_list
+    if not as_gen:
+        return return_dict_list
 
 
 def create_bert_pretraining(problem,
@@ -257,7 +262,8 @@ def create_multimodal_bert_features(problem,
                                     tokenizer,
                                     mode,
                                     problem_type,
-                                    is_seq):
+                                    is_seq,
+                                    as_gen=False):
     if params.get_problem_type(problem) == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
@@ -393,6 +399,10 @@ def create_multimodal_bert_features(problem,
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
-        return_dict_list.append(return_dict)
+        if as_gen:
+            yield return_dict
+        else:
+            return_dict_list.append(return_dict)
 
-    return return_dict_list
+    if not as_gen:
+        return return_dict_list

@@ -4,6 +4,6 @@ tqdm
 six
 pandas
 setuptools
-tensor2tensor
+tensor2tensor==1.15.5
 nltk
 scikit_learn
