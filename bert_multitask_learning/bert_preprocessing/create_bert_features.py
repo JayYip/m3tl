@@ -14,23 +14,14 @@ from .bert_utils import (add_special_tokens_with_seqs,
 from .tokenization import printable_text
 
 
-def create_bert_features(problem,
-                         example_list,
-                         label_encoder,
-                         params,
-                         tokenizer,
-                         mode,
-                         problem_type,
-                         is_seq,
-                         as_gen=False):
-    if params.get_problem_type(problem) == 'pretrain':
-        return create_bert_pretraining(
-            problem=problem,
-            inputs_list=example_list,
-            label_encoder=label_encoder,
-            params=params,
-            tokenizer=tokenizer
-        )
+def _create_bert_features(problem,
+                          example_list,
+                          label_encoder,
+                          params,
+                          tokenizer,
+                          mode,
+                          problem_type,
+                          is_seq):
 
     return_dict_list = []
     for example in example_list:
@@ -169,14 +160,56 @@ def create_bert_features(problem,
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
+        yield return_dict
 
-        if as_gen:
-            yield return_dict
-        else:
-            return_dict_list.append(return_dict)
 
-    if not as_gen:
-        return return_dict_list
+def create_bert_features(problem,
+                         example_list,
+                         label_encoder,
+                         params,
+                         tokenizer,
+                         mode,
+                         problem_type,
+                         is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        return create_bert_pretraining(
+            problem=problem,
+            inputs_list=example_list,
+            label_encoder=label_encoder,
+            params=params,
+            tokenizer=tokenizer
+        )
+    gen = _create_bert_features(problem,
+                                example_list,
+                                label_encoder,
+                                params,
+                                tokenizer,
+                                mode,
+                                problem_type,
+                                is_seq)
+    return_dict_list = [d for d in gen]
+    return return_dict_list
+
+
+def create_bert_features_generator(problem,
+                                   example_list,
+                                   label_encoder,
+                                   params,
+                                   tokenizer,
+                                   mode,
+                                   problem_type,
+                                   is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_bert_features(problem,
+                                example_list,
+                                label_encoder,
+                                params,
+                                tokenizer,
+                                mode,
+                                problem_type,
+                                is_seq)
+    return gen
 
 
 def create_bert_pretraining(problem,
@@ -255,15 +288,14 @@ def create_bert_pretraining(problem,
     return return_list
 
 
-def create_multimodal_bert_features(problem,
-                                    example_list,
-                                    label_encoder,
-                                    params,
-                                    tokenizer,
-                                    mode,
-                                    problem_type,
-                                    is_seq,
-                                    as_gen=False):
+def _create_multimodal_bert_features(problem,
+                                     example_list,
+                                     label_encoder,
+                                     params,
+                                     tokenizer,
+                                     mode,
+                                     problem_type,
+                                     is_seq):
     if params.get_problem_type(problem) == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
@@ -399,10 +431,54 @@ def create_multimodal_bert_features(problem,
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
-        if as_gen:
-            yield return_dict
-        else:
-            return_dict_list.append(return_dict)
+        yield return_dict
 
-    if not as_gen:
-        return return_dict_list
+
+def create_multimodal_bert_features(problem,
+                                    example_list,
+                                    label_encoder,
+                                    params,
+                                    tokenizer,
+                                    mode,
+                                    problem_type,
+                                    is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        # return create_bert_pretraining(
+        #     problem=problem,
+        #     inputs_list=example_list,
+        #     label_encoder=label_encoder,
+        #     params=params,
+        #     tokenizer=tokenizer
+        # )
+        raise NotImplementedError("Multimodal pretraining is not implemented")
+    gen = _create_multimodal_bert_features(problem,
+                                           example_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer,
+                                           mode,
+                                           problem_type,
+                                           is_seq)
+    return_dict_list = [d for d in gen]
+    return return_dict_list
+
+
+def create_multimodal_bert_features_generator(problem,
+                                              example_list,
+                                              label_encoder,
+                                              params,
+                                              tokenizer,
+                                              mode,
+                                              problem_type,
+                                              is_seq):
+    if params.get_problem_type(problem) == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_multimodal_bert_features(problem,
+                                           example_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer,
+                                           mode,
+                                           problem_type,
+                                           is_seq)
+    return gen
