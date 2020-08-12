@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
 
-from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features
+from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features, create_bert_features_generator, create_multimodal_bert_features_generator
 from .special_tokens import BOS_TOKEN, EOS_TOKEN, EVAL, TRAIN
 
 
@@ -103,17 +103,14 @@ def serialize_fn(features: dict, return_feature_desc=False):
 def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_file=10000, prefix='', **kwargs):
 
     # create output tfrecord path
-    file_list = [os.path.join(
-        output_dir, prefix, '{}_{:05d}.tfrecord'.format(mode, i)) for i in range(len(data_list))]
-
-    os.makedirs(os.path.dirname(file_list[0]), exist_ok=True)
+    os.makedirs(os.path.join(
+        output_dir, prefix), exist_ok=True)
 
     def _write_fn(d_list, path, serialize_fn, mode='train'):
         logging.info('Writing {}'.format(path))
         feature_desc_path = os.path.join(os.path.dirname(
             path), '{}_feature_desc.json'.format(mode))
 
-        return_list = []
         with tf.io.TFRecordWriter(path) as writer:
             for features in d_list:
                 example, feature_desc = serialize_fn(
@@ -125,8 +122,22 @@ def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_
 
     _write_part_fn = partial(_write_fn, serialize_fn=serialize_fn, mode=mode)
 
-    for x, y in zip(data_list, file_list):
-        _write_part_fn(d_list=x, path=y)
+    x = []
+    shard_count = 0
+    for idx, example in enumerate(data_list):
+        x.append(example)
+        if idx % shards_per_file == 0 and idx:
+            path = os.path.join(
+                output_dir, prefix, '{}_{:05d}.tfrecord'.format(mode, shard_count))
+            shard_count += 1
+            _write_part_fn(d_list=x, path=path)
+            x = []
+
+    # add remaining
+    if x:
+        path = os.path.join(
+            output_dir, prefix, '{}_{:05d}.tfrecord'.format(mode, shard_count))
+        _write_part_fn(d_list=x, path=path)
 
 
 def write_single_problem_chunk_tfrecord(problem,
@@ -172,6 +183,7 @@ def write_single_problem_chunk_tfrecord(problem,
                               is_seq=is_seq)
         data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
                                                                  for d_list in data_shards)
+
         return data_list
 
     # single problem in problem_chunk
@@ -180,6 +192,8 @@ def write_single_problem_chunk_tfrecord(problem,
             problem = problem[0]
         data_list = _make_single_problem_data_list(
             problem, inputs_list=inputs_list, target_list=target_list, label_encoder=label_encoder)
+        data_list = [
+            item for sublist in data_list for item in sublist]
 
     # multiple problem in problem chunk
     else:
@@ -191,9 +205,13 @@ def write_single_problem_chunk_tfrecord(problem,
         for pro in problem:
             data_shards = _make_single_problem_data_list(
                 pro, inputs_list=inputs_list[pro], target_list=target_list[pro], label_encoder=label_encoder[pro])
+
             data_dict[pro] = [
                 item for sublist in data_shards for item in sublist]
-            column_list.append(list(data_dict[pro][0].keys()))
+            try:
+                column_list.append(list(data_dict[pro][0].keys()))
+            except IndexError:
+                raise IndexError("Problem {} has no data".format(pro))
 
         # get intersection and use as ensure features are the same
         join_key = list(set(column_list[0]).intersection(*column_list[1:]))
@@ -211,10 +229,63 @@ def write_single_problem_chunk_tfrecord(problem,
                         )
                     d.update(data_dict[pro].pop(0))
             flat_data_list.append(d)
+        data_list = flat_data_list
 
-        data_list = []
-        for i in range(0, len(flat_data_list), 10000):
-            data_list.append(flat_data_list[i:i + 10000])
+    if isinstance(problem, list):
+        problem = '_'.join(sorted(problem))
+
+    make_tfrecord(data_list=data_list,
+                  output_dir=params.tmp_file_dir,
+                  serialize_fn=serialize_fn,
+                  prefix=problem,
+                  mode=mode)
+
+
+def write_single_problem_gen_tfrecord(problem,
+                                      gen,
+                                      label_encoder,
+                                      params,
+                                      tokenizer,
+                                      mode):
+
+    def _make_single_problem_data_gen(problem, example_list, label_encoder):
+        problem_type = params.problem_type[problem]
+
+        # whether this problem is sequential labeling
+        # for sequential labeling, targets needs to align with any
+        # change of inputs
+        is_seq = problem_type in ['seq_tag']
+        first_example = next(gen)
+
+        if isinstance(first_example[0], dict) and 'a' not in first_example[0]:
+            part_fn = partial(create_multimodal_bert_features_generator, problem=problem,
+                              label_encoder=label_encoder,
+                              params=params,
+                              tokenizer=tokenizer,
+                              mode=mode,
+                              problem_type=problem_type,
+                              is_seq=is_seq)
+        else:
+            part_fn = partial(create_bert_features_generator, problem=problem,
+                              label_encoder=label_encoder,
+                              params=params,
+                              tokenizer=tokenizer,
+                              mode=mode,
+                              problem_type=problem_type,
+                              is_seq=is_seq)
+        return part_fn(example_list=example_list)
+
+    # single problem in problem_chunk
+    if isinstance(problem, str) or (isinstance(problem, list) and len(problem) == 1):
+        if isinstance(problem, list):
+            problem = problem[0]
+        data_list = _make_single_problem_data_gen(
+            problem, example_list=gen, label_encoder=label_encoder)
+
+    # multiple problem in problem chunk
+    else:
+        raise NotImplementedError(
+            'The problem returns generator, which dose not support & chaining')
 
     if isinstance(problem, list):
         problem = '_'.join(sorted(problem))
