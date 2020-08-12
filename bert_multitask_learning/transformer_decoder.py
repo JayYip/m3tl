@@ -2,6 +2,7 @@ import tensorflow as tf
 import math
 
 from . import modeling
+from .special_tokens import MODAL_LIST
 
 
 class TransformerDecoder(object):
@@ -234,7 +235,18 @@ class TransformerDecoder(object):
         encoder_output = hidden_feature[key]
 
         label_ids = features['%s_label_ids' % problem_name]
+
+        # concat all input masks
         input_mask = features['input_mask']
+        for modal_name in MODAL_LIST:
+            mask_name = '{}_mask'.format(modal_name)
+            if mask_name in features:
+                # add mask
+                modal_mask = tf.concat(
+                    [tf.expand_dims(features[mask_name][:, 0], axis=1),
+                        features[mask_name],
+                        tf.expand_dims(features[mask_name][:, 0], axis=1)], axis=1)
+                input_mask = tf.concat([input_mask, modal_mask], axis=1)
         num_classes = self.params.num_classes[problem_name]
 
         if self.params.problem_type[problem_name] == 'seq2seq_text':

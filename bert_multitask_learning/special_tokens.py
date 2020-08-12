@@ -7,3 +7,4 @@ SPECIAL_TOKENS = [BOS_TOKEN, EOS_TOKEN, CLS_TOKEN, SPACE_TOKEN, UNK_TOKEN]
 TRAIN = 'train'
 EVAL = 'eval'
 PREDICT = 'infer'
+MODAL_LIST = ['image', 'others']
