@@ -44,7 +44,7 @@ def train_eval_input_fn(params, mode='train'):
     if mode == 'train':
         dataset = dataset.shuffle(params.shuffle_buffer)
 
-    dataset = dataset.prefetch(params.prefetch)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     if params.dynamic_padding:
         dataset = dataset.apply(
             tf.data.experimental.bucket_by_sequence_length(
