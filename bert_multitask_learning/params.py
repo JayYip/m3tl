@@ -30,6 +30,8 @@ class BaseParams():
         self.detail_log = True
 
         self.multiprocess = True
+        self.num_cpus = 4
+        self.per_cpu_buffer = 3000
         self.decode_vocab_file = None
         self.eval_throttle_secs = 600
 

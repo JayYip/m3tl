@@ -191,27 +191,6 @@ def create_bert_features(problem,
     return return_dict_list
 
 
-def create_bert_features_generator(problem,
-                                   example_list,
-                                   label_encoder,
-                                   params,
-                                   tokenizer,
-                                   mode,
-                                   problem_type,
-                                   is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
-        raise ValueError('pretraining does not support generator')
-    gen = _create_bert_features(problem,
-                                example_list,
-                                label_encoder,
-                                params,
-                                tokenizer,
-                                mode,
-                                problem_type,
-                                is_seq)
-    return gen
-
-
 def create_bert_pretraining(problem,
                             inputs_list,
                             label_encoder,
@@ -443,13 +422,6 @@ def create_multimodal_bert_features(problem,
                                     problem_type,
                                     is_seq):
     if params.get_problem_type(problem) == 'pretrain':
-        # return create_bert_pretraining(
-        #     problem=problem,
-        #     inputs_list=example_list,
-        #     label_encoder=label_encoder,
-        #     params=params,
-        #     tokenizer=tokenizer
-        # )
         raise NotImplementedError("Multimodal pretraining is not implemented")
     gen = _create_multimodal_bert_features(problem,
                                            example_list,
@@ -461,24 +433,3 @@ def create_multimodal_bert_features(problem,
                                            is_seq)
     return_dict_list = [d for d in gen]
     return return_dict_list
-
-
-def create_multimodal_bert_features_generator(problem,
-                                              example_list,
-                                              label_encoder,
-                                              params,
-                                              tokenizer,
-                                              mode,
-                                              problem_type,
-                                              is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
-        raise ValueError('pretraining does not support generator')
-    gen = _create_multimodal_bert_features(problem,
-                                           example_list,
-                                           label_encoder,
-                                           params,
-                                           tokenizer,
-                                           mode,
-                                           problem_type,
-                                           is_seq)
-    return gen

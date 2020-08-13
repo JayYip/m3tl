@@ -3,13 +3,12 @@ import logging
 import os
 from functools import partial
 from glob import glob
-from multiprocessing import cpu_count
 
 import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
 
-from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features, create_bert_features_generator, create_multimodal_bert_features_generator
+from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features
 from .special_tokens import BOS_TOKEN, EOS_TOKEN, EVAL, TRAIN
 
 
@@ -181,8 +180,8 @@ def write_single_problem_chunk_tfrecord(problem,
                               mode=mode,
                               problem_type=problem_type,
                               is_seq=is_seq)
-        data_list = Parallel(min(cpu_count(), len(data_shards)))(delayed(part_fn)(example_list=d_list)
-                                                                 for d_list in data_shards)
+        data_list = Parallel(min(params.num_cpus, len(data_shards)))(delayed(part_fn)(example_list=d_list)
+                                                                     for d_list in data_shards)
 
         return data_list
 
@@ -258,7 +257,7 @@ def write_single_problem_gen_tfrecord(problem,
         first_example = next(gen)
 
         if isinstance(first_example[0], dict) and 'a' not in first_example[0]:
-            part_fn = partial(create_multimodal_bert_features_generator, problem=problem,
+            part_fn = partial(create_multimodal_bert_features, problem=problem,
                               label_encoder=label_encoder,
                               params=params,
                               tokenizer=tokenizer,
@@ -266,14 +265,42 @@ def write_single_problem_gen_tfrecord(problem,
                               problem_type=problem_type,
                               is_seq=is_seq)
         else:
-            part_fn = partial(create_bert_features_generator, problem=problem,
+            part_fn = partial(create_bert_features, problem=problem,
                               label_encoder=label_encoder,
                               params=params,
                               tokenizer=tokenizer,
                               mode=mode,
                               problem_type=problem_type,
                               is_seq=is_seq)
-        return part_fn(example_list=example_list)
+
+        # get num_cpus*per_cpu_buffer instances
+        cpus = params.num_cpus
+        tmp_instances_list = [[] for _ in range(cpus)]
+        per_cpu_buffer = params.per_cpu_buffer
+        for example in example_list:
+            is_full = False
+            for i in range(cpus):
+                if len(tmp_instances_list[i]) < per_cpu_buffer:
+                    tmp_instances_list[i].append(example)
+                    if i == cpus - 1 and len(tmp_instances_list[i]) == per_cpu_buffer:
+                        is_full = True
+                    break
+
+            # if is full, process and clear
+            if is_full:
+                data_list = Parallel(min(params.num_cpus, len(tmp_instances_list)))(delayed(part_fn)(example_list=d_list)
+                                                                                    for d_list in tmp_instances_list)
+                for d_list in data_list:
+                    for d in d_list:
+                        yield d
+
+                tmp_instances_list = [[] for _ in range(cpus)]
+        # process remaining
+        for tmp_list in tmp_instances_list:
+            if tmp_list:
+                d_list = part_fn(example_list=tmp_list)
+                for d in d_list:
+                    yield d
 
     # single problem in problem_chunk
     if isinstance(problem, str) or (isinstance(problem, list) and len(problem) == 1):
