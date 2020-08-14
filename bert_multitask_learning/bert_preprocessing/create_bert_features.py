@@ -25,9 +25,9 @@ def _create_bert_features(problem,
 
     return_dict_list = []
     for example in example_list:
-        if mode != PREDICT:
+        try:
             raw_inputs, raw_target = example
-        else:
+        except ValueError:
             raw_inputs = example
             raw_target = None
 
@@ -287,14 +287,14 @@ def _create_multimodal_bert_features(problem,
                                      mode,
                                      problem_type,
                                      is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
+    if problem_type == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
     return_dict_list = []
     for example in example_list:
-        if mode != PREDICT:
+        try:
             raw_inputs, raw_target = example
-        else:
+        except ValueError:
             raw_inputs = example
             raw_target = None
 
@@ -414,16 +414,18 @@ def _create_multimodal_bert_features(problem,
                         # seq2seq_tag
                         label_id = label_encoder.transform(target).tolist()
                         label_id = [np.int32(i) for i in label_id]
-                    if target_by_modal:
-                        modal_feature_dict['{}_{}_label_ids'.format(
-                            problem, modal_name)] = label_id
-                    else:
-                        modal_feature_dict['{}_label_ids'.format(
-                            problem)] = label_id
-                    return_dict.update(modal_feature_dict)
+
                 else:
                     label_id = label_encoder.transform([target]).tolist()[0]
                     label_id = np.int32(label_id)
+
+                if target_by_modal:
+                    modal_feature_dict['{}_{}_label_ids'.format(
+                        problem, modal_name)] = label_id
+                else:
+                    modal_feature_dict['{}_label_ids'.format(
+                        problem)] = label_id
+            return_dict.update(modal_feature_dict)
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
@@ -450,3 +452,45 @@ def create_multimodal_bert_features(problem,
                                            is_seq)
     return_dict_list = [d for d in gen]
     return return_dict_list
+
+
+def create_bert_features_generator(problem,
+                                   example_list,
+                                   label_encoder,
+                                   params,
+                                   tokenizer,
+                                   mode,
+                                   problem_type,
+                                   is_seq):
+    if problem_type == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_bert_features(problem,
+                                example_list,
+                                label_encoder,
+                                params,
+                                tokenizer,
+                                mode,
+                                problem_type,
+                                is_seq)
+    return gen
+
+
+def create_multimodal_bert_features_generator(problem,
+                                              example_list,
+                                              label_encoder,
+                                              params,
+                                              tokenizer,
+                                              mode,
+                                              problem_type,
+                                              is_seq):
+    if problem_type == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_multimodal_bert_features(problem,
+                                           example_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer,
+                                           mode,
+                                           problem_type,
+                                           is_seq)
+    return gen

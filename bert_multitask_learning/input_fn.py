@@ -9,7 +9,7 @@ from .bert_preprocessing.bert_utils import (add_special_tokens_with_seqs,
                                             tokenize_text_with_seqs,
                                             truncate_seq_pair)
 from .bert_preprocessing.create_bert_features import (
-    create_bert_features, create_multimodal_bert_features)
+    create_bert_features_generator, create_multimodal_bert_features_generator)
 from .bert_preprocessing.tokenization import FullTokenizer
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
 from .special_tokens import EVAL, PREDICT, TRAIN
@@ -17,6 +17,7 @@ from .utils import cluster_alphnum, infer_shape_and_type_from_dict
 
 import pandas as pd
 import numpy as np
+from itertools import tee
 
 
 def element_length_func(yield_dict):
@@ -69,7 +70,7 @@ def train_eval_input_fn(params, mode='train'):
     return dataset
 
 
-def predict_input_fn(input_file_or_list, config, mode=PREDICT):
+def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=False):
     '''Input function that takes a file path or list of string and 
     convert it to tf.dataset
 
@@ -90,13 +91,19 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT):
 
     # if is string, treat it as path to file
     if isinstance(input_file_or_list, str):
-        inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
+        inputs = open(input_file_or_list, 'r', encoding='utf8')
     else:
         inputs = input_file_or_list
 
+    tmp_iter, inputs = tee(inputs, 2)
+    first_element = next(tmp_iter)
+
+    if labels_in_input:
+        first_element, _ = first_element
+
     tokenizer = FullTokenizer(config.vocab_file)
-    if isinstance(inputs[0], dict) and 'a' not in inputs[0]:
-        part_fn = partial(create_multimodal_bert_features, problem='',
+    if isinstance(first_element, dict) and 'a' not in first_element:
+        part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,
                           params=config,
                           tokenizer=tokenizer,
@@ -104,19 +111,19 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT):
                           problem_type='cls',
                           is_seq=False)
     else:
-        part_fn = partial(create_bert_features, problem='',
+        part_fn = partial(create_bert_features_generator, problem='',
                           label_encoder=None,
                           params=config,
                           tokenizer=tokenizer,
                           mode=mode,
                           problem_type='cls',
                           is_seq=False)
-    data_list = part_fn(example_list=inputs)
+    first_dict = next(part_fn(example_list=tmp_iter))
 
     def gen():
-        for d in data_list:
+        for d in part_fn(example_list=inputs):
             yield d
-    output_shapes, output_type = infer_shape_and_type_from_dict(data_list[0])
+    output_shapes, output_type = infer_shape_and_type_from_dict(first_dict)
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
 
