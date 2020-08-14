@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 import tensorflow as tf
 
-from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN
+from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, PREDICT
 from .bert_utils import (add_special_tokens_with_seqs,
                          create_instances_from_document,
                          create_mask_and_padding, create_masked_lm_predictions,
@@ -25,7 +25,11 @@ def _create_bert_features(problem,
 
     return_dict_list = []
     for example in example_list:
-        raw_inputs, raw_target = example
+        try:
+            raw_inputs, raw_target = example
+        except ValueError:
+            raw_inputs = example
+            raw_target = None
 
         # punctuation augumentation
         if params.punc_replace_prob > 0 and mode == 'train':
@@ -86,40 +90,41 @@ def _create_bert_features(problem,
         input_mask, tokens, segment_ids, target = create_mask_and_padding(
             tokens, segment_ids, target, params.max_seq_len, is_seq, dynamic_padding=params.dynamic_padding)
 
-        # create mask and padding for labels of seq2seq problem
-        if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-
-            # tokenize text if target is text
-            if problem_type == 'seq2seq_text':
-
-                # assign num_classes for text generation problem
-                params.num_classes[problem] = len(label_encoder.vocab)
-
-                target, _ = tokenize_text_with_seqs(
-                    label_encoder, target, None, False)
-
-            target, _, _ = truncate_seq_pair(
-                target, None, None, params.decode_max_seq_len, is_seq=is_seq)
-            # since we initialize the id to 0 in prediction, we need
-            # to make sure that BOS_TOKEN is [PAD]
-            target = [BOS_TOKEN] + target + [EOS_TOKEN]
-            label_mask, target, _, _ = create_mask_and_padding(
-                target, [0] * len(target), None, params.decode_max_seq_len)
-
         input_ids = tokenizer.convert_tokens_to_ids(tokens)
 
-        if isinstance(target, list):
-            if problem_type == 'seq2seq_text':
-                label_id = label_encoder.convert_tokens_to_ids(target)
-            elif problem_type == 'multi_cls':
-                label_id = label_encoder.transform([target])[0]
+        if mode != PREDICT:
+            # create mask and padding for labels of seq2seq problem
+            if problem_type in ['seq2seq_tag', 'seq2seq_text']:
+
+                # tokenize text if target is text
+                if problem_type == 'seq2seq_text':
+
+                    # assign num_classes for text generation problem
+                    params.num_classes[problem] = len(label_encoder.vocab)
+
+                    target, _ = tokenize_text_with_seqs(
+                        label_encoder, target, None, False)
+
+                target, _, _ = truncate_seq_pair(
+                    target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+                # since we initialize the id to 0 in prediction, we need
+                # to make sure that BOS_TOKEN is [PAD]
+                target = [BOS_TOKEN] + target + [EOS_TOKEN]
+                label_mask, target, _, _ = create_mask_and_padding(
+                    target, [0] * len(target), None, params.decode_max_seq_len)
+
+            if isinstance(target, list):
+                if problem_type == 'seq2seq_text':
+                    label_id = label_encoder.convert_tokens_to_ids(target)
+                elif problem_type == 'multi_cls':
+                    label_id = label_encoder.transform([target])[0]
+                else:
+                    # seq2seq_tag
+                    label_id = label_encoder.transform(target).tolist()
+                    label_id = [np.int32(i) for i in label_id]
             else:
-                # seq2seq_tag
-                label_id = label_encoder.transform(target).tolist()
-                label_id = [np.int32(i) for i in label_id]
-        else:
-            label_id = label_encoder.transform([target]).tolist()[0]
-            label_id = np.int32(label_id)
+                label_id = label_encoder.transform([target]).tolist()[0]
+                label_id = np.int32(label_id)
 
         if not params.dynamic_padding:
             assert len(input_ids) == params.max_seq_len
@@ -129,13 +134,20 @@ def _create_bert_features(problem,
                 assert len(label_id) == params.max_seq_len
 
         # create return dict
-        if not params.augument_mask_lm:
-            return_dict = {
-                'input_ids': input_ids,
-                'input_mask': input_mask,
-                'segment_ids': segment_ids,
-                '%s_label_ids' % problem: label_id
-            }
+        if not params.augument_mask_lm or mode == PREDICT:
+            if mode != PREDICT:
+                return_dict = {
+                    'input_ids': input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids,
+                    '%s_label_ids' % problem: label_id
+                }
+            else:
+                return_dict = {
+                    'input_ids': input_ids,
+                    'input_mask': input_mask,
+                    'segment_ids': segment_ids
+                }
         else:
             if mode == 'train' and random.uniform(0, 1) <= params.augument_rate:
                 return_dict = {
@@ -171,7 +183,7 @@ def create_bert_features(problem,
                          mode,
                          problem_type,
                          is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
+    if problem_type == 'pretrain':
         return create_bert_pretraining(
             problem=problem,
             inputs_list=example_list,
@@ -275,12 +287,16 @@ def _create_multimodal_bert_features(problem,
                                      mode,
                                      problem_type,
                                      is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
+    if problem_type == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
     return_dict_list = []
     for example in example_list:
-        raw_inputs, raw_target = example
+        try:
+            raw_inputs, raw_target = example
+        except ValueError:
+            raw_inputs = example
+            raw_target = None
 
         if problem_type == 'seq_tag' and not isinstance(raw_target, dict):
             raise ValueError(
@@ -367,45 +383,48 @@ def _create_multimodal_bert_features(problem,
                     '{}_mask'.format(modal_name): input_mask,
                     '{}_segment_ids'.format(modal_name): segment_ids}
 
-            # create mask and padding for labels of seq2seq problem
-            if problem_type in ['seq2seq_tag', 'seq2seq_text']:
-
-                # tokenize text if target is text
-                if problem_type == 'seq2seq_text':
-
-                    # assign num_classes for text generation problem
-                    params.num_classes[problem] = len(label_encoder.vocab)
-
-                    target, _ = tokenize_text_with_seqs(
-                        label_encoder, target, None, False)
-
-                target, _, _ = truncate_seq_pair(
-                    target, None, None, params.decode_max_seq_len, is_seq=is_seq)
-                # since we initialize the id to 0 in prediction, we need
-                # to make sure that BOS_TOKEN is [PAD]
-                target = [BOS_TOKEN] + target + [EOS_TOKEN]
-                label_mask, target, _, _ = create_mask_and_padding(
-                    target, [0] * len(target), None, params.decode_max_seq_len)
-
             # encode labels
-            if isinstance(target, list):
-                if problem_type == 'seq2seq_text':
-                    label_id = label_encoder.convert_tokens_to_ids(target)
-                elif problem_type == 'multi_cls':
-                    label_id = label_encoder.transform([target])[0]
-                else:
-                    # seq2seq_tag
-                    label_id = label_encoder.transform(target).tolist()
-                    label_id = [np.int32(i) for i in label_id]
-            else:
-                label_id = label_encoder.transform([target]).tolist()[0]
-                label_id = np.int32(label_id)
+            if mode != PREDICT:
+                # create mask and padding for labels of seq2seq problem
+                if problem_type in ['seq2seq_tag', 'seq2seq_text']:
 
-            if target_by_modal:
-                modal_feature_dict['{}_{}_label_ids'.format(
-                    problem, modal_name)] = label_id
-            else:
-                modal_feature_dict['{}_label_ids'.format(problem)] = label_id
+                    # tokenize text if target is text
+                    if problem_type == 'seq2seq_text':
+
+                        # assign num_classes for text generation problem
+                        params.num_classes[problem] = len(label_encoder.vocab)
+
+                        target, _ = tokenize_text_with_seqs(
+                            label_encoder, target, None, False)
+
+                    target, _, _ = truncate_seq_pair(
+                        target, None, None, params.decode_max_seq_len, is_seq=is_seq)
+                    # since we initialize the id to 0 in prediction, we need
+                    # to make sure that BOS_TOKEN is [PAD]
+                    target = [BOS_TOKEN] + target + [EOS_TOKEN]
+                    label_mask, target, _, _ = create_mask_and_padding(
+                        target, [0] * len(target), None, params.decode_max_seq_len)
+
+                if isinstance(target, list):
+                    if problem_type == 'seq2seq_text':
+                        label_id = label_encoder.convert_tokens_to_ids(target)
+                    elif problem_type == 'multi_cls':
+                        label_id = label_encoder.transform([target])[0]
+                    else:
+                        # seq2seq_tag
+                        label_id = label_encoder.transform(target).tolist()
+                        label_id = [np.int32(i) for i in label_id]
+
+                else:
+                    label_id = label_encoder.transform([target]).tolist()[0]
+                    label_id = np.int32(label_id)
+
+                if target_by_modal:
+                    modal_feature_dict['{}_{}_label_ids'.format(
+                        problem, modal_name)] = label_id
+                else:
+                    modal_feature_dict['{}_label_ids'.format(
+                        problem)] = label_id
             return_dict.update(modal_feature_dict)
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
@@ -421,7 +440,7 @@ def create_multimodal_bert_features(problem,
                                     mode,
                                     problem_type,
                                     is_seq):
-    if params.get_problem_type(problem) == 'pretrain':
+    if problem_type == 'pretrain':
         raise NotImplementedError("Multimodal pretraining is not implemented")
     gen = _create_multimodal_bert_features(problem,
                                            example_list,
@@ -433,3 +452,45 @@ def create_multimodal_bert_features(problem,
                                            is_seq)
     return_dict_list = [d for d in gen]
     return return_dict_list
+
+
+def create_bert_features_generator(problem,
+                                   example_list,
+                                   label_encoder,
+                                   params,
+                                   tokenizer,
+                                   mode,
+                                   problem_type,
+                                   is_seq):
+    if problem_type == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_bert_features(problem,
+                                example_list,
+                                label_encoder,
+                                params,
+                                tokenizer,
+                                mode,
+                                problem_type,
+                                is_seq)
+    return gen
+
+
+def create_multimodal_bert_features_generator(problem,
+                                              example_list,
+                                              label_encoder,
+                                              params,
+                                              tokenizer,
+                                              mode,
+                                              problem_type,
+                                              is_seq):
+    if problem_type == 'pretrain':
+        raise ValueError('pretraining does not support generator')
+    gen = _create_multimodal_bert_features(problem,
+                                           example_list,
+                                           label_encoder,
+                                           params,
+                                           tokenizer,
+                                           mode,
+                                           problem_type,
+                                           is_seq)
+    return gen

@@ -4,6 +4,24 @@ from nltk.translate import bleu_score
 from .input_fn import predict_input_fn
 from .special_tokens import PREDICT
 
+from itertools import tee
+
+
+def pred_wrappter(params, problem, estimator):
+    try:
+        text, label_data, label_encoder = params.read_data_fn[problem](
+            params, PREDICT)
+        data_list = zip(text, label_data)
+    except ValueError:
+        data_list, label_encoder = params.read_data_fn[problem](
+            params, PREDICT)
+    data_list, iter_for_pred = tee(data_list, 2)
+
+    def pred_input_fn(): return predict_input_fn(
+        iter_for_pred, params, mode=PREDICT, labels_in_input=True)
+    pred_list = estimator.predict(pred_input_fn)
+    return data_list, pred_list, label_encoder
+
 
 def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
     sent_num = len(golden_lists)
@@ -160,23 +178,16 @@ def get_ner_BIO(label_list):
 
 
 def ner_evaluate(problem, estimator, params):
-    text, label_data, label_encoder = params.read_data_fn[problem](
-        params, PREDICT)
-
-    t_l_tuple_list = list(zip(text, label_data))
-    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
-    text, label_data = zip(*t_l_tuple_list)
-
-    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    pred_list = estimator.predict(pred_input_fn)
+    data_list, pred_list, label_encoder = pred_wrappter(
+        params, problem, estimator)
 
     decode_pred_list = []
     decode_label_list = []
 
     scope_name = params.share_top[problem]
 
-    for p, label, t in zip(pred_list, label_data, text):
+    for p, dat in zip(pred_list, data_list):
+        label, t = dat
         if not t:
             continue
         true_seq_length = len(t) - 1
@@ -208,22 +219,16 @@ def ner_evaluate(problem, estimator, params):
 
 
 def acc_evaluate(problem, estimator, params):
-    text, label_data, label_encoder = params.read_data_fn[problem](
-        params, PREDICT)
-    t_l_tuple_list = list(zip(text, label_data))
-    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
-    text, label_data = zip(*t_l_tuple_list)
-
-    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    pred_list = estimator.predict(pred_input_fn)
+    data_list, pred_list, label_encoder = pred_wrappter(
+        params, problem, estimator)
 
     decode_pred_list = []
     decode_label_list = []
 
     scope_name = params.share_top[problem]
 
-    for p, label, t in zip(pred_list, label_data, text):
+    for p, dat in zip(pred_list, data_list):
+        label, t = dat
         if not t:
             continue
 
@@ -280,22 +285,16 @@ def acc_evaluate(problem, estimator, params):
 
 
 def cws_evaluate(problem, estimator, params):
-    text, label_data, label_encoder = params.read_data_fn[problem](
-        params, PREDICT)
-    t_l_tuple_list = list(zip(text, label_data))
-    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
-    text, label_data = zip(*t_l_tuple_list)
-
-    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    pred_list = estimator.predict(pred_input_fn)
+    data_list, pred_list, label_encoder = pred_wrappter(
+        params, problem, estimator)
 
     decode_pred_list = []
     decode_label_list = []
 
     scope_name = params.share_top[problem]
 
-    for p, label, t in zip(pred_list, label_data, text):
+    for p, dat in zip(pred_list, data_list):
+        label, t = dat
         if not t:
             continue
         true_seq_length = len(t) - 1
@@ -422,22 +421,16 @@ def getChunks(tagList):
 
 
 def seq2seq_evaluate(problem, estimator, params):
-    text, label_data, label_encoder = params.read_data_fn[problem](
-        params, PREDICT)
-    t_l_tuple_list = list(zip(text, label_data))
-    t_l_tuple_list = sorted(t_l_tuple_list, key=lambda t: len(t[0]))
-    text, label_data = zip(*t_l_tuple_list)
-
-    def pred_input_fn(): return predict_input_fn(text, params, mode=PREDICT)
-
-    pred_list = estimator.predict(pred_input_fn)
+    data_list, pred_list, label_encoder = pred_wrappter(
+        params, problem, estimator)
 
     decode_pred_list = []
     decode_label_list = []
 
     scope_name = params.share_top[problem]
 
-    for p, label, t in zip(pred_list, label_data, text):
+    for p, dat in zip(pred_list, data_list):
+        label, t = dat
         if not t:
             continue
 

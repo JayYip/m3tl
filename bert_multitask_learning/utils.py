@@ -1,13 +1,13 @@
-import pickle
 import os
+import pickle
 import re
+
+import numpy as np
+import tensorflow as tf
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
 
-import numpy as np
-
-
-from .bert_preprocessing.tokenization import (_is_control, FullTokenizer)
+from .bert_preprocessing.tokenization import FullTokenizer, _is_control
 from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
 
@@ -283,3 +283,40 @@ def filter_empty(input_list, target_list):
             return_input.append(inp)
             return_target.append(tar)
     return return_input, return_target
+
+
+def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=True):
+    shape_dict = {}
+    type_dict = {}
+    for feature_name, feature in inp_dict.items():
+        if type(feature) is list:
+            feature = np.array(feature)
+        if type(feature) is np.ndarray:
+            if issubclass(feature.dtype.type, np.integer):
+                type_dict[feature_name] = tf.int32
+            elif issubclass(feature.dtype.type, np.float):
+                type_dict[feature_name] = tf.float32
+
+            # this seems not a good idea
+            if len(feature.shape) > 1 and fix_dim_for_high_rank_tensor:
+                shape_dict[feature_name] = [
+                    None] + list(feature.shape[1:])
+            else:
+                shape_dict[feature_name] = [
+                    None for _ in feature.shape]
+
+        elif np.issubdtype(type(feature), np.float):
+
+            type_dict[feature_name] = tf.float32
+            shape_dict[feature_name] = []
+        elif np.issubdtype(type(feature), np.integer):
+
+            type_dict[feature_name] = tf.int32
+            shape_dict[feature_name] = []
+        else:
+            if isinstance(feature, str):
+                feature = feature.encode('utf8')
+
+            type_dict[feature_name] = tf.string
+            shape_dict[feature_name] = []
+    return shape_dict, type_dict

@@ -1,14 +1,23 @@
 
 
+from functools import partial
+
 import tensorflow as tf
 
+from .bert_preprocessing.bert_utils import (add_special_tokens_with_seqs,
+                                            create_mask_and_padding,
+                                            tokenize_text_with_seqs,
+                                            truncate_seq_pair)
+from .bert_preprocessing.create_bert_features import (
+    create_bert_features_generator, create_multimodal_bert_features_generator)
 from .bert_preprocessing.tokenization import FullTokenizer
-from .bert_preprocessing.bert_utils import (tokenize_text_with_seqs, truncate_seq_pair,
-                                            add_special_tokens_with_seqs, create_mask_and_padding)
+from .read_write_tfrecord import read_tfrecord, write_tfrecord
+from .special_tokens import EVAL, PREDICT, TRAIN
+from .utils import cluster_alphnum, infer_shape_and_type_from_dict
 
-from .utils import cluster_alphnum
-from .special_tokens import TRAIN, EVAL, PREDICT
-from .read_write_tfrecord import write_tfrecord, read_tfrecord
+import pandas as pd
+import numpy as np
+from itertools import tee
 
 
 def element_length_func(yield_dict):
@@ -61,7 +70,7 @@ def train_eval_input_fn(params, mode='train'):
     return dataset
 
 
-def predict_input_fn(input_file_or_list, config, mode=PREDICT):
+def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=False):
     '''Input function that takes a file path or list of string and 
     convert it to tf.dataset
 
@@ -82,44 +91,39 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT):
 
     # if is string, treat it as path to file
     if isinstance(input_file_or_list, str):
-        inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
+        inputs = open(input_file_or_list, 'r', encoding='utf8')
     else:
         inputs = input_file_or_list
 
+    tmp_iter, inputs = tee(inputs, 2)
+    first_element = next(tmp_iter)
+
+    if labels_in_input:
+        first_element, _ = first_element
+
     tokenizer = FullTokenizer(config.vocab_file)
+    if isinstance(first_element, dict) and 'a' not in first_element:
+        part_fn = partial(create_multimodal_bert_features_generator, problem='',
+                          label_encoder=None,
+                          params=config,
+                          tokenizer=tokenizer,
+                          mode=mode,
+                          problem_type='cls',
+                          is_seq=False)
+    else:
+        part_fn = partial(create_bert_features_generator, problem='',
+                          label_encoder=None,
+                          params=config,
+                          tokenizer=tokenizer,
+                          mode=mode,
+                          problem_type='cls',
+                          is_seq=False)
+    first_dict = next(part_fn(example_list=tmp_iter))
 
     def gen():
-        data_dict = {}
-        for doc in inputs:
-            inputs_a = list(doc)
-            tokens, target = tokenize_text_with_seqs(
-                tokenizer, inputs_a, None)
-
-            tokens_a, tokens_b, target = truncate_seq_pair(
-                tokens, None, target, config.max_seq_len)
-
-            tokens, segment_ids, target = add_special_tokens_with_seqs(
-                tokens_a, tokens_b, target)
-
-            input_mask, tokens, segment_ids, target = create_mask_and_padding(
-                tokens, segment_ids, target, config.max_seq_len, dynamic_padding=config.dynamic_padding)
-
-            input_ids = tokenizer.convert_tokens_to_ids(tokens)
-            data_dict['input_ids'] = input_ids
-            data_dict['input_mask'] = input_mask
-            data_dict['segment_ids'] = segment_ids
-            yield data_dict
-    output_type = {
-        'input_ids': tf.int32,
-        'input_mask': tf.int32,
-        'segment_ids': tf.int32
-    }
-    output_shapes = {
-        'input_ids': [None],
-        'input_mask': [None],
-        'segment_ids': [None]
-    }
-    # dataset = tf.data.Dataset.from_tensor_slices(data_dict)
+        for d in part_fn(example_list=inputs):
+            yield d
+    output_shapes, output_type = infer_shape_and_type_from_dict(first_dict)
     dataset = tf.data.Dataset.from_generator(
         gen, output_types=output_type, output_shapes=output_shapes)
 
