@@ -23,10 +23,7 @@ def _create_estimator(
         model = BertMultiTask(params=params)
     model_fn = model.get_model_fn(warm_start=False)
 
-    dist_trategy = tf.contrib.distribute.MirroredStrategy(
-        num_gpus=int(num_gpus),
-        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
-            'nccl', num_packs=int(num_gpus)))
+    dist_trategy = tf.distribute.MirroredStrategy()
 
     run_config = tf.estimator.RunConfig(
         train_distribute=dist_trategy,
@@ -223,7 +220,7 @@ def predict_bert_multitask(
         print('Params problem assigned. Problem list: {0}'.format(
             params.run_problem_list))
 
-    tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
+    tf.compat.v1.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
 
     estimator = _create_estimator(num_gpus=1, params=params, model=model)

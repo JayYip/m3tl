@@ -267,11 +267,11 @@ def create_bert_pretraining(problem,
                 }
 
                 if print_count < 3:
-                    tf.logging.debug('%s : %s' %
+                    tf.compat.v1.logging.debug('%s : %s' %
                                      ('tokens', ' '.join([str(x) for x in tokens])))
                     for k, v in yield_dict.items():
                         if not isinstance(v, int):
-                            tf.logging.debug('%s : %s' %
+                            tf.compat.v1.logging.debug('%s : %s' %
                                              (k, ' '.join([str(x) for x in v])))
                     print_count += 1
 

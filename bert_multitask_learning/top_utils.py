@@ -1,7 +1,6 @@
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.contrib import autograph
 
 
 from . import modeling
@@ -30,16 +29,17 @@ class TopLayer():
             # inconsistent shape might be introduced to labels
             # so we need to do some padding to make sure that
             # seq_labels has the same sequence length as logits
-            pad_len = tf.shape(logits)[1] - tf.shape(label_ids)[1]
+            pad_len = tf.shape(input=logits)[1] - tf.shape(input=label_ids)[1]
 
             # top, bottom, left, right
             pad_tensor = [[0, 0], [0, pad_len]]
-            label_ids = tf.pad(label_ids, paddings=pad_tensor)
+            label_ids = tf.pad(tensor=label_ids, paddings=pad_tensor)
 
         def metric_fn(label_ids, logits):
-            predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+            predictions = tf.argmax(
+                input=logits, axis=-1, output_type=tf.int32)
 
-            accuracy = tf.metrics.accuracy(
+            accuracy = tf.compat.v1.metrics.accuracy(
                 label_ids, predictions, weights=weights)
 
             return {
@@ -60,8 +60,8 @@ class TopLayer():
         Returns:
             Tensor -- Weighted batch loss tensor
         """
-        log_var = tf.get_variable(
-            shape=(), name='log_var', initializer=tf.zeros_initializer())
+        log_var = tf.compat.v1.get_variable(
+            shape=(), name='log_var', initializer=tf.compat.v1.zeros_initializer())
         precision = tf.exp(-log_var)
         new_loss = precision*loss + log_var
         return new_loss
@@ -77,18 +77,18 @@ class TopLayer():
         loss_multiplier = tf.cast(
             loss_multiplier, tf.float32)
         # multiply with loss multiplier to make some loss as zero
-        loss = tf.reduce_mean(batch_loss * loss_multiplier)
+        loss = tf.reduce_mean(input_tensor=batch_loss * loss_multiplier)
         # if batch_loss is empty, loss will be nan, replace with zero
-        loss = tf.where(tf.is_nan(loss),
-                        tf.zeros_like(loss), loss)
+        loss = tf.compat.v1.where(tf.math.is_nan(loss),
+                                  tf.zeros_like(loss), loss)
 
-        tf.summary.scalar('loss', loss)
+        tf.compat.v1.summary.scalar('loss', loss)
         return loss
 
     def make_hidden_model(self, features, hidden_feature, mode, is_seq=False):
 
         if self.params.hidden_gru and is_seq:
-            with tf.variable_scope('hidden'):
+            with tf.compat.v1.variable_scope('hidden'):
                 new_hidden_feature = make_cudnngru(
                     hidden_feature,
                     int(self.params.bert_config.hidden_size / 2),
@@ -102,7 +102,7 @@ class TopLayer():
 
                 return new_hidden_feature
         elif self.params.hidden_dense:
-            with tf.variable_scope('hidden'):
+            with tf.compat.v1.variable_scope('hidden'):
                 hidden_feature = dense_layer(
                     self.params.bert_config.hidden_size,
                     hidden_feature, mode,
@@ -134,7 +134,7 @@ def gather_indexes(sequence_tensor, positions):
     return output_tensor
 
 
-@autograph.convert()
+@tf.function
 def _make_cudnngru(
         hidden_feature,
         hidden_size,
@@ -142,9 +142,9 @@ def _make_cudnngru(
         merge_mode='concat',
         dropout_keep_prob=1.0):
 
-    if tf.shape(hidden_feature)[0] == 0:
+    if tf.shape(input=hidden_feature)[0] == 0:
         rnn_output = tf.zeros(
-            [0, tf.shape(hidden_feature)[1], output_hidden_size])
+            [0, tf.shape(input=hidden_feature)[1], output_hidden_size])
     else:
 
         rnn_layer = keras.layers.CuDNNGRU(
@@ -154,7 +154,7 @@ def _make_cudnngru(
         rnn_output = keras.layers.Bidirectional(
             layer=rnn_layer,
             merge_mode=merge_mode)(hidden_feature)
-        rnn_output = tf.nn.dropout(rnn_output, keep_prob=dropout_keep_prob)
+        rnn_output = tf.nn.dropout(rnn_output, rate=1 - (dropout_keep_prob))
         rnn_output = keras.layers.ReLU()(rnn_output)
 
     return rnn_output
@@ -181,14 +181,14 @@ def make_cudnngru(
 
     if res_connection:
         hidden_feature_size = hidden_feature.get_shape().as_list()[-1]
-        if hidden_size != tf.shape(hidden_feature)[-1]:
-            with tf.variable_scope('hidden_gru_projection'):
-                rnn_output = tf.layers.Dense(
+        if hidden_size != tf.shape(input=hidden_feature)[-1]:
+            with tf.compat.v1.variable_scope('hidden_gru_projection'):
+                rnn_output = tf.compat.v1.layers.Dense(
                     hidden_feature_size, activation=None,
-                    kernel_initializer=tf.orthogonal_initializer())(rnn_output)
+                    kernel_initializer=tf.compat.v1.orthogonal_initializer())(rnn_output)
                 if mode == tf.estimator.ModeKeys.TRAIN:
                     rnn_output = tf.nn.dropout(
-                        rnn_output, params.dropout_keep_prob)
+                        rnn_output, 1 - (params.dropout_keep_prob))
 
         rnn_output = rnn_output + hidden_feature
 
@@ -214,7 +214,7 @@ def create_seq_smooth_label(params, labels, num_classes):
             [labels]*int(num_classes/params.label_smoothing), axis=-1)
         single_label_set = tf.stack([tf.range(
             num_classes)]*params.max_seq_len, axis=0)
-        batch_size_this_turn = tf.shape(true_labels)[0]
+        batch_size_this_turn = tf.shape(input=true_labels)[0]
         label_set = tf.broadcast_to(
             input=single_label_set, shape=[
                 batch_size_this_turn,
@@ -223,13 +223,13 @@ def create_seq_smooth_label(params, labels, num_classes):
                 single_label_set.shape.as_list()[1]])
         sample_set = tf.concat([true_labels, label_set], axis=-1)
 
-        dims = tf.shape(sample_set)
+        dims = tf.shape(input=sample_set)
         sample_set = tf.reshape(sample_set, shape=[-1, dims[-1]])
 
-        samples_index = tf.random_uniform(
-            shape=[tf.shape(sample_set)[0], 1], minval=0, maxval=tf.shape(sample_set)[1], dtype=tf.int32)
+        samples_index = tf.random.uniform(
+            shape=[tf.shape(input=sample_set)[0], 1], minval=0, maxval=tf.shape(input=sample_set)[1], dtype=tf.int32)
         flat_offsets = tf.reshape(
-            tf.range(0, tf.shape(sample_set)[0], dtype=tf.int32) * tf.shape(sample_set)[1], [-1, 1])
+            tf.range(0, tf.shape(input=sample_set)[0], dtype=tf.int32) * tf.shape(input=sample_set)[1], [-1, 1])
         flat_index = tf.reshape(samples_index+flat_offsets, [-1])
         sampled_label = tf.gather(
             tf.reshape(sample_set, [-1]), flat_index)
@@ -241,13 +241,13 @@ def create_seq_smooth_label(params, labels, num_classes):
 
 def dense_layer(hidden_size, hidden_feature, mode, dropout_keep_prob, activation):
     # simple wrapper of dense layer
-    output_layer = tf.layers.Dense(
+    output_layer = tf.compat.v1.layers.Dense(
         hidden_size, activation=activation,
-        kernel_initializer=tf.orthogonal_initializer()
+        kernel_initializer=tf.compat.v1.orthogonal_initializer()
     )
     hidden_logits = output_layer(hidden_feature)
     if mode == tf.estimator.ModeKeys.TRAIN:
         hidden_logits = tf.nn.dropout(
             hidden_logits,
-            keep_prob=dropout_keep_prob)
+            rate=1 - (dropout_keep_prob))
     return hidden_logits

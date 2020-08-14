@@ -5,6 +5,8 @@
 
 [中文文档](#Bert多任务学习)
 
+**Note: Since 0.4.0, tf version >= 2.1 is required.**
+
 ## Install
 
 ```
@@ -47,6 +49,8 @@ Please see the examples in [notebooks](notebooks/) for more details about traini
 
 
 # Bert多任务学习
+
+**注意：版本0.4.0后要求tf>=2.1**
 
 ## 安装
 

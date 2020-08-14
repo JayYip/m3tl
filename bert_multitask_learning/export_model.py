@@ -3,7 +3,6 @@ from shutil import copy2
 import argparse
 
 import tensorflow as tf
-from tensorflow.tools.graph_transforms import TransformGraph
 
 from . import modeling
 
@@ -13,18 +12,18 @@ from .params import BaseParams
 
 def optimize_graph(params):
 
-    config = tf.ConfigProto(
+    config = tf.compat.v1.ConfigProto(
         device_count={'GPU': 0}, allow_soft_placement=True)
 
     init_checkpoint = params.ckpt_dir
 
-    tf.logging.info('build graph...')
+    tf.compat.v1.logging.info('build graph...')
     # input placeholders, not sure if they are friendly to XLA
-    input_ids = tf.placeholder(
+    input_ids = tf.compat.v1.placeholder(
         tf.int32, (None, params.max_seq_len), 'input_ids')
-    input_mask = tf.placeholder(
+    input_mask = tf.compat.v1.placeholder(
         tf.int32, (None, params.max_seq_len), 'input_mask')
-    input_type_ids = tf.placeholder(
+    input_type_ids = tf.compat.v1.placeholder(
         tf.int32, (None, params.max_seq_len), 'segment_ids')
 
     jit_scope = tf.contrib.compiler.jit.experimental_jit_scope
@@ -45,14 +44,15 @@ def optimize_graph(params):
 
         output_tensors = [pred[k] for k in pred]
 
-        tvars = tf.trainable_variables()
+        tvars = tf.compat.v1.trainable_variables()
 
         (assignment_map, initialized_variable_names
          ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
 
-        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+        tf.compat.v1.train.init_from_checkpoint(
+            init_checkpoint, assignment_map)
 
-        tmp_g = tf.get_default_graph().as_graph_def()
+        tmp_g = tf.compat.v1.get_default_graph().as_graph_def()
 
     input_node_names = ['input_ids', 'input_mask', 'segment_ids']
     output_node_names = ['%s_top/%s_predict' %
@@ -69,21 +69,22 @@ def optimize_graph(params):
         'sort_by_execution_order'
     ]
 
-    with tf.Session(config=config) as sess:
-        tf.logging.info('load parameters from checkpoint...')
-        sess.run(tf.global_variables_initializer())
-        tf.logging.info('freeze...')
-        tmp_g = tf.graph_util.convert_variables_to_constants(
+    with tf.compat.v1.Session(config=config) as sess:
+        tf.compat.v1.logging.info('load parameters from checkpoint...')
+        sess.run(tf.compat.v1.global_variables_initializer())
+        tf.compat.v1.logging.info('freeze...')
+        tmp_g = tf.compat.v1.graph_util.convert_variables_to_constants(
             sess, tmp_g, [n.name[:-2] for n in output_tensors])
-        tmp_g = TransformGraph(
-            tmp_g,
-            input_node_names,
-            output_node_names,
-            transforms
-        )
+        # transform graph is disabled in tf 2.2
+        # tmp_g = TransformGraph(
+        #     tmp_g,
+        #     input_node_names,
+        #     output_node_names,
+        #     transforms
+        # )
     tmp_file = os.path.join(params.ckpt_dir, 'export_model')
-    tf.logging.info('write graph to: %s' % tmp_file)
-    with tf.gfile.GFile(tmp_file, 'wb') as f:
+    tf.compat.v1.logging.info('write graph to: %s' % tmp_file)
+    with tf.io.gfile.GFile(tmp_file, 'wb') as f:
         f.write(tmp_g.SerializeToString())
     return tmp_file
 

@@ -21,7 +21,7 @@ from itertools import tee
 
 
 def element_length_func(yield_dict):
-    return tf.shape(yield_dict['input_ids'])[0]
+    return tf.shape(input=yield_dict['input_ids'])[0]
 
 
 def train_eval_input_fn(params, mode='train'):
@@ -183,8 +183,8 @@ def to_serving_input(input_file_or_list, config, mode=PREDICT, tokenizer=None):
 
 def serving_input_fn():
     features = {
-        'input_ids': tf.placeholder(tf.int32, [None, None]),
-        'input_mask': tf.placeholder(tf.int32, [None, None]),
-        'segment_ids': tf.placeholder(tf.int32, [None, None])
+        'input_ids': tf.compat.v1.placeholder(tf.int32, [None, None]),
+        'input_mask': tf.compat.v1.placeholder(tf.int32, [None, None]),
+        'segment_ids': tf.compat.v1.placeholder(tf.int32, [None, None])
     }
     return tf.estimator.export.ServingInputReceiver(features, features)

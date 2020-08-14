@@ -459,14 +459,15 @@ def get_dummy_features(dataset_dict, feature_desc_dict):
         dummy_features -- dict of dummy tensors
     """
 
-    feature_keys = [list(d.output_shapes.keys())
+    feature_keys = [list(d.element_spec.keys())
                     for _, d in dataset_dict.items()]
     common_features_accross_problems = set(
         feature_keys[0]).intersection(*feature_keys[1:])
 
     dummy_features = {}
     for problem, problem_dataset in dataset_dict.items():
-        output_types = problem_dataset.output_types
+        output_types = {k: v.dtype for k,
+                        v in problem_dataset.element_spec.items()}
         dummy_features.update({k: tf.cast(tf.constant(shape=[1 if s is None else s for s in feature_desc_dict.get('{}_shape_value'.format(k), [])], value=0), v)
                                for k, v in output_types.items()
                                if k not in common_features_accross_problems})
@@ -519,7 +520,7 @@ def read_tfrecord(params, mode: str):
         dataset = tf.data.TFRecordDataset(
             tfrecord_path_list, num_parallel_reads=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(lambda x: tf.io.parse_single_example(
-            x, feature_desc), num_parallel_calls=tf.data.experimental.AUTOTUNE).map(
+            serialized=x, features=feature_desc), num_parallel_calls=tf.data.experimental.AUTOTUNE).map(
                 reshape_tensors_in_dataset, num_parallel_calls=tf.data.experimental.AUTOTUNE)
         dataset = dataset.map(
             lambda x: set_shape_for_dataset(x, feature_desc_dict),

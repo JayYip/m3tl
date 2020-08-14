@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.contrib import autograph
 import os
 
 from . import modeling
@@ -15,21 +14,21 @@ from .experimental_top import (
 
 def variable_summaries(var, name):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-    with tf.name_scope(name):
-        mean = tf.reduce_mean(var)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(var))
-        tf.summary.scalar('min', tf.reduce_min(var))
-        tf.summary.histogram('histogram', var)
+    with tf.compat.v1.name_scope(name):
+        mean = tf.reduce_mean(input_tensor=var)
+        tf.compat.v1.summary.scalar('mean', mean)
+        with tf.compat.v1.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(var - mean)))
+        tf.compat.v1.summary.scalar('stddev', stddev)
+        tf.compat.v1.summary.scalar('max', tf.reduce_max(input_tensor=var))
+        tf.compat.v1.summary.scalar('min', tf.reduce_min(input_tensor=var))
+        tf.compat.v1.summary.histogram('histogram', var)
 
 
-@autograph.convert()
+@tf.function
 def filter_loss(loss, features, problem):
 
-    if tf.reduce_mean(features['%s_loss_multiplier' % problem]) == 0:
+    if tf.reduce_mean(input_tensor=features['%s_loss_multiplier' % problem]) == 0:
         return_loss = 0.0
     else:
         return_loss = loss
@@ -106,7 +105,7 @@ class BertMultiTask():
 
         # add summary
         if self.params.detail_log:
-            with tf.name_scope('bert_feature_summary'):
+            with tf.compat.v1.name_scope('bert_feature_summary'):
                 for layer_ind, layer_output in enumerate(feature_dict['all']):
                     variable_summaries(
                         layer_output, layer_output.name.replace(':0', ''))
@@ -123,7 +122,7 @@ class BertMultiTask():
         else:
             multiplier_name = '%s_loss_multiplier' % problem
 
-            record_ind = tf.where(tf.cast(
+            record_ind = tf.compat.v1.where(tf.cast(
                 features[multiplier_name], tf.bool))
 
             hidden_feature_this_round = {}
@@ -199,7 +198,7 @@ class BertMultiTask():
                     )
 
                 if self.params.grid_transformer:
-                    with tf.variable_scope(top_scope_name):
+                    with tf.compat.v1.variable_scope(top_scope_name):
                         grid_layer = GridTransformer(self.params)
 
                         hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
@@ -254,7 +253,7 @@ class BertMultiTask():
                         'Label Transfer and grid transformer cannot be enabled in the same time.'
                     )
 
-                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                with tf.compat.v1.variable_scope(top_scope_name, reuse=tf.compat.v1.AUTO_REUSE):
                     layer = problem_type_layer[
                         problem_type](
                         self.params)
@@ -291,13 +290,13 @@ class BertMultiTask():
 
     def create_optimizer(self, init_lr, num_train_steps, num_warmup_steps):
         """Creates an optimizer training op."""
-        global_step = tf.train.get_or_create_global_step()
+        global_step = tf.compat.v1.train.get_or_create_global_step()
 
         learning_rate = tf.constant(
             value=init_lr, shape=[], dtype=tf.float32)
 
         # Implements linear decay of the learning rate.
-        learning_rate = tf.train.polynomial_decay(
+        learning_rate = tf.compat.v1.train.polynomial_decay(
             learning_rate,
             global_step,
             num_train_steps,
@@ -323,7 +322,7 @@ class BertMultiTask():
             learning_rate = (
                 (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate)
 
-        tf.summary.scalar('lr', learning_rate)
+        tf.compat.v1.summary.scalar('lr', learning_rate)
 
         self.learning_rate = learning_rate
 
@@ -346,9 +345,9 @@ class BertMultiTask():
             self.params.train_steps,
             self.params.num_warmup_steps)
 
-        global_step = tf.train.get_or_create_global_step()
+        global_step = tf.compat.v1.train.get_or_create_global_step()
 
-        tvars = tf.trainable_variables()
+        tvars = tf.compat.v1.trainable_variables()
 
         total_loss = 0
         hook_dict = {}
@@ -360,11 +359,11 @@ class BertMultiTask():
         hook_dict['total_training_steps'] = tf.constant(
             self.params.train_steps)
 
-        logging_hook = tf.train.LoggingTensorHook(
+        logging_hook = tf.estimator.LoggingTensorHook(
             hook_dict, every_n_iter=self.params.log_every_n_steps)
 
         grads = tf.gradients(
-            total_loss, tvars,
+            ys=total_loss, xs=tvars,
             aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
 
         if self.params.mean_gradients:
@@ -384,7 +383,7 @@ class BertMultiTask():
 
         if self.params.detail_log:
             # add grad summary
-            with tf.name_scope('var_and_grads'):
+            with tf.compat.v1.name_scope('var_and_grads'):
                 for g, v in zip(grads, tvars):
                     if g is not None:
                         variable_summaries(g, v.name.replace(':0', '-grad'))
@@ -417,7 +416,7 @@ class BertMultiTask():
             spec -- train\eval\predict spec
         """
 
-        tvars = tf.trainable_variables()
+        tvars = tf.compat.v1.trainable_variables()
         initialized_variable_names = {}
 
         if mode == tf.estimator.ModeKeys.TRAIN:
@@ -435,9 +434,9 @@ class BertMultiTask():
                         tvars, self.params.init_checkpoint)
 
                 def scaffold():
-                    init_op = tf.train.init_from_checkpoint(
+                    init_op = tf.compat.v1.train.init_from_checkpoint(
                         self.params.init_checkpoint, assignment_map)
-                    return tf.train.Scaffold(init_op)
+                    return tf.compat.v1.train.Scaffold(init_op)
 
                 if not warm_start:
                     train_scaffold = None

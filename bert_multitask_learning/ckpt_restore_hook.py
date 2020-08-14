@@ -3,24 +3,24 @@ import tensorflow as tf
 from . import modeling
 
 
-class RestoreCheckpointHook(tf.train.SessionRunHook):
+class RestoreCheckpointHook(tf.estimator.SessionRunHook):
     def __init__(self,
                  params
                  ):
-        tf.logging.info("Create RestoreCheckpointHook.")
+        tf.compat.v1.logging.info("Create RestoreCheckpointHook.")
 
         self.params = params
         self.checkpoint_path = params.init_checkpoint
 
     def begin(self):
-        tvars = tf.trainable_variables()
+        tvars = tf.compat.v1.trainable_variables()
         (assignment_map, initialized_variable_names
          ) = modeling.get_assignment_map_from_checkpoint(
             tvars, self.params.init_checkpoint)
-        tf.train.init_from_checkpoint(
+        tf.compat.v1.train.init_from_checkpoint(
             self.params.init_checkpoint, assignment_map)
 
-        self.saver = tf.train.Saver(tvars)
+        self.saver = tf.compat.v1.train.Saver(tvars)
 
     def after_create_session(self, session, coord):
 
