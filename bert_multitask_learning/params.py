@@ -14,6 +14,8 @@ class BaseParams():
         self.problem_type = {
         }
 
+        self.transformer_pretrain_model_name = 'bert-base-chinese'
+
         # specify this will make key reuse values top
         # that it, weibo_ner problem will use NER's top
         self.share_top = {
