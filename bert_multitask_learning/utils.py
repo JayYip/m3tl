@@ -8,7 +8,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
 from transformers import AutoTokenizer
 
-from .bert_preprocessing.tokenization import _is_control
 from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
 

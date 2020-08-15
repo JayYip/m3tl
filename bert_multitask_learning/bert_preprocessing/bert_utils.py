@@ -2,37 +2,6 @@ import unicodedata
 import random
 import collections
 
-from .tokenization import _is_control
-
-
-def get_dirty_text_ind(text):
-    """Performs invalid character removal and whitespace cleanup on text."""
-
-    text = [unicodedata.normalize("NFD", t) for t in text]
-    output = []
-    for char_ind, char in enumerate(text):
-        if len(char) > 1:
-            output.append(char_ind)
-            continue
-        cp = ord(char)
-        if cp == 0 or cp == 0xfffd or _is_control(char):
-            output.append(char_ind)
-
-    return output
-
-
-def tokenize_text_with_seqs(tokenizer, inputs_a, target, is_seq=False):
-    if isinstance(inputs_a, list):
-        inputs_a_str = '\t'.join([t if t != '\t' else ' ' for t in inputs_a])
-    else:
-        inputs_a_str = inputs_a
-    if is_seq:
-        tokenized_inputs, target = tokenizer.tokenize(inputs_a_str, target)
-    else:
-        tokenized_inputs = tokenizer.tokenize(inputs_a_str)
-
-    return (tokenized_inputs, target)
-
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length, rng):
     """Truncates a sequence pair in place to the maximum length."""
@@ -81,70 +50,9 @@ def truncate_seq_pair(tokens_a, tokens_b, target, max_length, rng=None, is_seq=F
     return tokens_a, tokens_b, target
 
 
-def add_special_tokens_with_seqs(
-        tokens_a, tokens_b, target, is_seq=False):
-
-    # The convention in BERT is:
-    # (a) For sequence pairs:
-    #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-    #  type_ids: 0     0  0    0    0     0       0 0     1  1  1  1   1 1
-    # (b) For single sequences:
-    #  tokens:   [CLS] the dog is hairy . [SEP]
-    #  type_ids: 0     0   0   0  0     0 0
-    #
-    # Where "type_ids" are used to indicate whether this is the first
-    # sequence or the second sequence. The embedding vectors for `type=0` and
-    # `type=1` were learned during pre-training and are added to the wordpiece
-    # embedding vector (and position vector). This is not *strictly* necessary
-    # since the [SEP] token unambiguously separates the sequences, but it makes
-    # it easier for the model to learn the concept of sequences.
-    #
-    # For classification tasks, the first vector (corresponding to [CLS]) is
-    # used as as the "sentence vector". Note that this only makes sense because
-    # the entire model is fine-tuned.
-    tokens = []
-    segment_ids = []
-
-    tokens.append("[CLS]")
-    segment_ids.append(0)
-
-    for token in tokens_a:
-        tokens.append(token)
-        segment_ids.append(0)
-    tokens.append("[SEP]")
-    segment_ids.append(0)
-
-    if is_seq:
-        target = ['[PAD]'] + target + ['[PAD]']
-
-    if tokens_b:
-        for token in tokens_b:
-            tokens.append(token)
-            segment_ids.append(1)
-        tokens.append("[SEP]")
-        segment_ids.append(1)
-
-    return (tokens, segment_ids, target)
-
-
-def create_mask_and_padding(tokens, segment_ids, target, max_length, is_seq=False, dynamic_padding=False):
-
-    input_mask = [1]*len(tokens)
-
-    if not dynamic_padding:
-        pad_list = ['[PAD]'] * (max_length - len(input_mask))
-
-        input_mask += [0]*len(pad_list)
-        segment_ids += [0]*len(pad_list)
-        tokens += pad_list
-
-        if is_seq:
-            target += pad_list
-
-    return input_mask, tokens, segment_ids, target
-
-
 def punc_augument(raw_inputs, params):
+    """This is kept just for memorial of a chunk of special time.
+    """
     for char_ind, char in enumerate(raw_inputs):
         if char in params.punc_list:
             if random.uniform(0, 1) <= params.punc_replace_prob:

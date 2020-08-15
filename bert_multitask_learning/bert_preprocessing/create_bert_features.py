@@ -6,11 +6,8 @@ import numpy as np
 import tensorflow as tf
 
 from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, PREDICT
-from .bert_utils import (add_special_tokens_with_seqs,
-                         create_instances_from_document,
-                         create_mask_and_padding, create_masked_lm_predictions,
-                         punc_augument, tokenize_text_with_seqs,
-                         truncate_seq_pair)
+from .bert_utils import (create_instances_from_document,
+                         create_masked_lm_predictions)
 
 from transformers import AutoTokenizer, PreTrainedTokenizer
 
@@ -101,7 +98,8 @@ def _create_bert_features(problem,
                 tokenized_dict, target, tokenizer.pad_token)
 
             if len(target) != len(tokenized_dict['input_ids']):
-                continue
+                raise ValueError(
+                    'Length is different for seq tag problem, inputs: {}'.format(tokenizer.decode(tokenized_dict['input_ids'])))
 
         if mode != PREDICT:
 
@@ -209,15 +207,28 @@ def create_bert_pretraining(problem,
                 tokens = instance.tokens
                 segment_ids = list(instance.segment_ids)
 
-                input_mask, tokens, segment_ids, _ = create_mask_and_padding(
-                    tokens, segment_ids, None, params.max_seq_len)
                 masked_lm_positions = list(instance.masked_lm_positions)
-                masked_lm_weights, masked_lm_labels, masked_lm_positions, _ = create_mask_and_padding(
-                    instance.masked_lm_labels, masked_lm_positions, None, params.max_predictions_per_seq)
-                input_ids = tokenizer.convert_tokens_to_ids(tokens)
-                masked_lm_ids = tokenizer.convert_tokens_to_ids(
-                    masked_lm_labels)
+
                 next_sentence_label = 1 if instance.is_random_next else 0
+
+                mask_lm_dict = tokenizer(instance.masked_lm_labels,
+                                         truncation=False,
+                                         is_pretokenized=True,
+                                         padding='max_length',
+                                         max_length=params.max_predictions_per_seq,
+                                         return_special_tokens_mask=False,
+                                         add_special_tokens=False)
+                input_ids = tokenizer.convert_tokens_to_ids(tokens)
+                input_mask = [1 for _ in input_ids]
+                masked_lm_ids = mask_lm_dict['input_ids']
+                masked_lm_weights = mask_lm_dict['attention_mask']
+                masked_lm_positions = masked_lm_positions + \
+                    masked_lm_ids[len(masked_lm_positions):]
+
+                assert len(input_ids) == len(
+                    segment_ids), (len(input_ids), len(segment_ids))
+                assert len(masked_lm_ids) == len(masked_lm_positions), (len(
+                    masked_lm_ids), len(masked_lm_positions))
 
                 yield_dict = {
                     "input_ids": input_ids,
@@ -314,7 +325,8 @@ def _create_multimodal_bert_features(problem,
                         tokenized_dict, target, tokenizer.pad_token)
 
                     if len(target) != len(tokenized_dict['input_ids']):
-                        continue
+                        raise ValueError(
+                            'Length is different for seq tag problem, inputs: {}'.format(tokenizer.decode(tokenized_dict['input_ids'])))
 
                 input_ids = tokenized_dict['input_ids']
                 segment_ids = tokenized_dict['token_type_ids']

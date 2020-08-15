@@ -304,12 +304,6 @@ class MultiModalBertModel(BertModel):
                     word_embedding_name="word_embeddings",
                     use_one_hot_embeddings=use_one_hot_embeddings)
 
-                print("Before concatenating multimodal:")
-                print("embedding shape: {}".format(
-                    self.embedding_output.shape))
-                print("segment_ids shape: {}".format(
-                    token_type_ids.shape))
-                print("input_mask shape: {}".format(input_mask.shape))
                 # multimodal embeddings
                 modal_name_list = ['image', 'others']
 
@@ -349,13 +343,6 @@ class MultiModalBertModel(BertModel):
                     token_type_ids = tf.concat(
                         [token_type_ids, modal_type_ids], axis=1)
                     input_mask = tf.concat([input_mask, modal_mask], axis=1)
-
-                print("After concatenating multimodal:")
-                print("embedding shape: {}".format(
-                    self.embedding_output.shape))
-                print("segment_ids shape: {}".format(
-                    token_type_ids.shape))
-                print("input_mask shape: {}".format(input_mask.shape))
 
                 # Add positional embeddings and token type embeddings, then layer
                 # normalize and perform dropout.
