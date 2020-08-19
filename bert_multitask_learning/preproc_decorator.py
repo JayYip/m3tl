@@ -16,7 +16,7 @@ def preprocessing_fn(func):
         problem = func.__name__
 
         tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=params.transformer_pretrain_model_name)
+            pretrained_model_name_or_path=params.transformer_tokenizer_name, cache_dir=params.cache_dir)
         example_list = func(params, mode)
 
         if isinstance(example_list, GeneratorType):

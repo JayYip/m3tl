@@ -2,7 +2,7 @@ import tensorflow as tf
 import os
 
 from . import modeling
-from .modeling import BertModel, MultiModalBertModel
+from .modeling import MultiModalBertModel
 
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (
@@ -18,7 +18,8 @@ def variable_summaries(var, name):
         mean = tf.reduce_mean(input_tensor=var)
         tf.compat.v1.summary.scalar('mean', mean)
         with tf.compat.v1.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(var - mean)))
+            stddev = tf.sqrt(tf.reduce_mean(
+                input_tensor=tf.square(var - mean)))
         tf.compat.v1.summary.scalar('stddev', stddev)
         tf.compat.v1.summary.scalar('max', tf.reduce_max(input_tensor=var))
         tf.compat.v1.summary.scalar('min', tf.reduce_min(input_tensor=var))
@@ -78,18 +79,19 @@ class BertMultiTask():
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
         model = MultiModalBertModel(
-            config=config.bert_config,
+            params=self.params,
             is_training=is_training,
             input_ids=input_ids,
             input_mask=input_mask,
             token_type_ids=segment_ids,
             use_one_hot_embeddings=config.use_one_hot_embeddings,
             features_dict=features)
+        self.model = model
 
         feature_dict = {}
         for logit_type in ['seq', 'pooled', 'all', 'embed', 'embed_table']:
             if logit_type == 'seq':
-                                # tensor, [batch_size, seq_length, hidden_size]
+                # tensor, [batch_size, seq_length, hidden_size]
                 feature_dict[logit_type] = model.get_sequence_output()
             elif logit_type == 'pooled':
                 # tensor, [batch_size, hidden_size]
@@ -417,31 +419,32 @@ class BertMultiTask():
         """
 
         tvars = tf.compat.v1.trainable_variables()
-        initialized_variable_names = {}
 
         if mode == tf.estimator.ModeKeys.TRAIN:
-            if self.params.init_checkpoint:
-                try:
-                    (assignment_map, initialized_variable_names
-                     ) = modeling.get_assignment_map_from_checkpoint(
-                        tvars, self.params.init_checkpoint)
-                except ValueError:
 
-                    with open(os.path.join(self.params.init_checkpoint, 'checkpoint'), 'w') as f:
-                        f.write('model_checkpoint_path: "bert_model.ckpt"')
-                    (assignment_map, initialized_variable_names
-                     ) = modeling.get_assignment_map_from_checkpoint(
-                        tvars, self.params.init_checkpoint)
+            if self.params.init_weight_from_huggingface:
+                # ckpt_path = os.path.join(self.params.transformer_model_name,
+                #                          'pretrained_model')
+                ckpt_path = self.params.transformer_model_name
+                (assignment_map, initialized_variable_names
+                 ) = modeling.get_assignment_map_from_keras_checkpoint(
+                    tvars, ckpt_path)
+            else:
+                ckpt_path = self.params.init_checkpoint
 
-                def scaffold():
-                    init_op = tf.compat.v1.train.init_from_checkpoint(
-                        self.params.init_checkpoint, assignment_map)
-                    return tf.compat.v1.train.Scaffold(init_op)
+                (assignment_map, initialized_variable_names
+                 ) = modeling.get_assignment_map_from_checkpoint(
+                    tvars, ckpt_path)
 
-                if not warm_start:
-                    train_scaffold = None
-                else:
-                    train_scaffold = scaffold()
+            def scaffold():
+                init_op = tf.compat.v1.train.init_from_checkpoint(
+                    ckpt_path, assignment_map)
+                return tf.compat.v1.train.Scaffold(init_op)
+
+            if not warm_start:
+                train_scaffold = None
+            else:
+                train_scaffold = scaffold()
 
             return self.create_train_spec(features,
                                           hidden_features,

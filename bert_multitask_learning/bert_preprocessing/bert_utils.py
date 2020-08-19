@@ -51,7 +51,7 @@ def truncate_seq_pair(tokens_a, tokens_b, target, max_length, rng=None, is_seq=F
 
 
 def punc_augument(raw_inputs, params):
-    """This is kept just for memorial of a chunk of special time.
+    """This code is dedicated in memory of a special time.
     """
     for char_ind, char in enumerate(raw_inputs):
         if char in params.punc_list:

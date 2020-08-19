@@ -97,7 +97,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
         first_element, _ = first_element
 
     tokenizer = AutoTokenizer.from_pretrained(
-        config.transformer_pretrain_model_name)
+        config.transformer_tokenizer_name, cache_dir=config.cache_dir)
     if isinstance(first_element, dict) and 'a' not in first_element:
         part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,
@@ -154,7 +154,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
 
 #     if tokenizer is None:
 #         tokenizer = AutoTokenizer.from_pretrained(
-#             config.transformer_pretrain_model_name)
+#             config.transformer_tokenizer_name)
 
 #     data_dict = {}
 #     for doc in inputs:

@@ -108,13 +108,13 @@ def train_bert_multitask(
     estimator = _create_estimator(
         num_gpus=num_gpus, params=params, model=model)
 
-    train_hook = RestoreCheckpointHook(params)
+    # train_hook = RestoreCheckpointHook(params)
 
     def train_input_fn(): return train_eval_input_fn(params)
     def eval_input_fn(): return train_eval_input_fn(params, mode=EVAL)
 
     train_spec = TrainSpec(
-        input_fn=train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+        input_fn=train_input_fn, max_steps=params.train_steps)
     eval_spec = EvalSpec(
         eval_input_fn, throttle_secs=params.eval_throttle_secs)
 
