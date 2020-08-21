@@ -37,7 +37,7 @@ class LabelTransferHidden(TopLayer):
 
                 top_scope_name = '%s_top' % scope_name
 
-                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                with tf.compat.v1.variable_scope(top_scope_name, reuse=tf.compat.v1.AUTO_REUSE):
                     if self.params.problem_type[problem] == 'seq_tag':
                         seq_tag = SequenceLabel(self.params)
                         seq_tag(features,
@@ -76,7 +76,7 @@ class LabelTransferHidden(TopLayer):
                 lt_hidden_size = self.params.label_transfer_gru_hidden_size
 
             input_hidden_size = seq_features.get_shape().as_list()[-1]
-            with tf.variable_scope('label_transfer_rnn'):
+            with tf.compat.v1.variable_scope('label_transfer_rnn'):
                 rnn_output = make_cudnngru(
                     seq_features,
                     lt_hidden_size,
@@ -210,7 +210,7 @@ class TaskTransformer(TopLayer):
                 scope_name = self.params.share_top[problem]
 
                 top_scope_name = '%s_top' % scope_name
-                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
+                with tf.compat.v1.variable_scope(top_scope_name, reuse=tf.compat.v1.AUTO_REUSE):
 
                     if self.params.problem_type[problem] == 'seq_tag':
                         seq_tag = SequenceLabel(self.params)
@@ -241,8 +241,8 @@ class TaskTransformer(TopLayer):
                 problem_type = self.params.problem_type[problem]
 
                 top_scope_name = '%s_top_task_attention' % scope_name
-                with tf.variable_scope(top_scope_name, reuse=tf.AUTO_REUSE):
-                    with tf.variable_scope('task_attention'):
+                with tf.compat.v1.variable_scope(top_scope_name, reuse=tf.compat.v1.AUTO_REUSE):
+                    with tf.compat.v1.variable_scope('task_attention'):
                         other_task_logits = tf.concat([
                             v for k, v in hidden_logits.items()],
                             axis=1)

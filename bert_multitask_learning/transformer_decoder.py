@@ -19,8 +19,8 @@ class TransformerDecoder(object):
         Returns:
             float tensor of shape [1, 1, length, length]
         """
-        with tf.name_scope("decoder_self_attention_mask"):
-            valid_locs = tf.matrix_band_part(tf.ones([length, length]), -1, 0)
+        with tf.compat.v1.name_scope("decoder_self_attention_mask"):
+            valid_locs = tf.linalg.band_part(tf.ones([length, length]), -1, 0)
             valid_locs = tf.reshape(valid_locs, [1, length, length])
         return valid_locs
 
@@ -84,7 +84,7 @@ class TransformerDecoder(object):
 
         all_layer_outputs = []
         for layer_idx in range(num_hidden_layers):
-            with tf.variable_scope("layer_%d" % layer_idx):
+            with tf.compat.v1.variable_scope("layer_%d" % layer_idx):
                 layer_input = prev_output
 
                 if cache is not None:
@@ -98,10 +98,10 @@ class TransformerDecoder(object):
                 else:
                     layer_cache = None
 
-                with tf.variable_scope("attention"):
+                with tf.compat.v1.variable_scope("attention"):
                     attention_heads = []
                     if add_self_attention:
-                        with tf.variable_scope("self"):
+                        with tf.compat.v1.variable_scope("self"):
                             attention_head = attention_layer_with_cache(
                                 from_tensor=layer_input,
                                 to_tensor=layer_input,
@@ -133,7 +133,7 @@ class TransformerDecoder(object):
                             layer_input, [batch_size, -1, hidden_size])
 
                     if add_enc_dec_attention:
-                        with tf.variable_scope('enc_dec_attention'):
+                        with tf.compat.v1.variable_scope('enc_dec_attention'):
                             attention_heads = []
                             attention_head = attention_layer_with_cache(
                                 from_tensor=self_attention_output,
@@ -167,8 +167,8 @@ class TransformerDecoder(object):
 
                     # Run a linear projection of `hidden_size` then add a residual
                     # with `layer_input`.
-                    with tf.variable_scope("output"):
-                        attention_output = tf.layers.dense(
+                    with tf.compat.v1.variable_scope("output"):
+                        attention_output = tf.compat.v1.layers.dense(
                             attention_output,
                             hidden_size,
                             kernel_initializer=modeling.create_initializer(
@@ -180,8 +180,8 @@ class TransformerDecoder(object):
                             attention_output + layer_input)
 
                 # The activation is only applied to the "intermediate" hidden layer.
-                with tf.variable_scope("intermediate"):
-                    intermediate_output = tf.layers.dense(
+                with tf.compat.v1.variable_scope("intermediate"):
+                    intermediate_output = tf.compat.v1.layers.dense(
                         attention_output,
                         self.params.bert_config.intermediate_size,
                         activation=modeling.gelu,
@@ -189,8 +189,8 @@ class TransformerDecoder(object):
                             initializer_range))
 
                 # Down-project back to `hidden_size` then add the residual.
-                with tf.variable_scope("output"):
-                    layer_output = tf.layers.dense(
+                with tf.compat.v1.variable_scope("output"):
+                    layer_output = tf.compat.v1.layers.dense(
                         intermediate_output,
                         hidden_size,
                         kernel_initializer=modeling.create_initializer(
@@ -218,10 +218,10 @@ class TransformerDecoder(object):
                 final_output = prev_output
 
         if num_classes:
-            dense_layer = tf.layers.Dense(
+            dense_layer = tf.compat.v1.layers.Dense(
                 num_classes,
                 activation=None,
-                kernel_initializer=tf.orthogonal_initializer()
+                kernel_initializer=tf.compat.v1.orthogonal_initializer()
             )
             logits = dense_layer(final_output)
         else:
@@ -252,12 +252,12 @@ class TransformerDecoder(object):
         if self.params.problem_type[problem_name] == 'seq2seq_text':
             embed_table = hidden_feature['embed_table']
         else:
-            embed_table = tf.get_variable(
+            embed_table = tf.compat.v1.get_variable(
                 'tag_embed_table', shape=[
                     num_classes, self.params.mask_lm_hidden_size],
-                initializer=tf.orthogonal_initializer())
+                initializer=tf.compat.v1.orthogonal_initializer())
         decoder_inputs = tf.nn.embedding_lookup(
-            embed_table, label_ids)
+            params=embed_table, ids=label_ids)
 
         # with tf.name_scope("shift_targets"):
         #     # Shift targets to the right, and remove the last element
@@ -374,7 +374,7 @@ def attention_layer_with_cache(from_tensor,
         output_tensor = tf.reshape(
             input_tensor, [batch_size, seq_length, num_attention_heads, width])
 
-        output_tensor = tf.transpose(output_tensor, [0, 2, 1, 3])
+        output_tensor = tf.transpose(a=output_tensor, perm=[0, 2, 1, 3])
         return output_tensor
 
     from_shape = modeling.get_shape_list(from_tensor, expected_rank=[2, 3])
@@ -406,7 +406,7 @@ def attention_layer_with_cache(from_tensor,
     to_tensor_2d = modeling.reshape_to_matrix(to_tensor)
 
     # `query_layer` = [B*F, N*H]
-    query_layer = tf.layers.dense(
+    query_layer = tf.compat.v1.layers.dense(
         from_tensor_2d,
         num_attention_heads * size_per_head,
         activation=query_act,
@@ -414,7 +414,7 @@ def attention_layer_with_cache(from_tensor,
         kernel_initializer=modeling.create_initializer(initializer_range))
 
     # `key_layer` = [B*T, N*H]
-    key_layer = tf.layers.dense(
+    key_layer = tf.compat.v1.layers.dense(
         to_tensor_2d,
         num_attention_heads * size_per_head,
         activation=key_act,
@@ -422,7 +422,7 @@ def attention_layer_with_cache(from_tensor,
         kernel_initializer=modeling.create_initializer(initializer_range))
 
     # `value_layer` = [B*T, N*H]
-    value_layer = tf.layers.dense(
+    value_layer = tf.compat.v1.layers.dense(
         to_tensor_2d,
         num_attention_heads * size_per_head,
         activation=value_act,
@@ -509,13 +509,13 @@ def attention_layer_with_cache(from_tensor,
         [batch_size, to_seq_length, num_attention_heads, size_per_head])
 
     # `value_layer` = [B, N, T, H]
-    value_layer = tf.transpose(value_layer, [0, 2, 1, 3])
+    value_layer = tf.transpose(a=value_layer, perm=[0, 2, 1, 3])
 
     # `context_layer` = [B, N, F, H]
     context_layer = tf.matmul(attention_probs, value_layer)
 
     # `context_layer` = [B, F, N, H]
-    context_layer = tf.transpose(context_layer, [0, 2, 1, 3])
+    context_layer = tf.transpose(a=context_layer, perm=[0, 2, 1, 3])
 
     if do_return_2d_tensor:
         # `context_layer` = [B*F, N*V]

@@ -32,4 +32,4 @@ def get_t2t_metric_op(metric_fn, predictions, features, labels,
 
     scores, weights = metric_fn(predictions, labels,
                                 weights_fn=weights_fn, **kwargs)
-    return tf.metrics.mean(scores, weights)
+    return tf.compat.v1.metrics.mean(scores, weights)

@@ -1,27 +1,22 @@
 
 
 from functools import partial
+from itertools import tee
 
+import numpy as np
+import pandas as pd
 import tensorflow as tf
+from transformers import AutoTokenizer
 
-from .bert_preprocessing.bert_utils import (add_special_tokens_with_seqs,
-                                            create_mask_and_padding,
-                                            tokenize_text_with_seqs,
-                                            truncate_seq_pair)
 from .bert_preprocessing.create_bert_features import (
     create_bert_features_generator, create_multimodal_bert_features_generator)
-from .bert_preprocessing.tokenization import FullTokenizer
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
 from .special_tokens import EVAL, PREDICT, TRAIN
 from .utils import cluster_alphnum, infer_shape_and_type_from_dict
 
-import pandas as pd
-import numpy as np
-from itertools import tee
-
 
 def element_length_func(yield_dict):
-    return tf.shape(yield_dict['input_ids'])[0]
+    return tf.shape(input=yield_dict['input_ids'])[0]
 
 
 def train_eval_input_fn(params, mode='train'):
@@ -101,7 +96,8 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
     if labels_in_input:
         first_element, _ = first_element
 
-    tokenizer = FullTokenizer(config.vocab_file)
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.transformer_tokenizer_name, cache_dir=config.cache_dir)
     if isinstance(first_element, dict) and 'a' not in first_element:
         part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,
@@ -136,55 +132,56 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
     return dataset
 
 
-def to_serving_input(input_file_or_list, config, mode=PREDICT, tokenizer=None):
-    '''A serving input function that takes input file path or
-    list of string and apply BERT preprocessing. This fn will
-    return a data dict instead of tf dataset. Used in serving.
+# def to_serving_input(input_file_or_list, config, mode=PREDICT, tokenizer=None):
+#     '''A serving input function that takes input file path or
+#     list of string and apply BERT preprocessing. This fn will
+#     return a data dict instead of tf dataset. Used in serving.
 
-    Arguments:
-        input_file_or_list {str or list} -- file path of list of str
-        config {Params} -- Params
+#     Arguments:
+#         input_file_or_list {str or list} -- file path of list of str
+#         config {Params} -- Params
 
-    Keyword Arguments:
-        mode {str} -- ModeKeys (default: {PREDICT})
-        tokenizer {tokenizer} -- Tokenizer (default: {None})
-    '''
+#     Keyword Arguments:
+#         mode {str} -- ModeKeys (default: {PREDICT})
+#         tokenizer {tokenizer} -- Tokenizer (default: {None})
+#     '''
 
-    # if is string, treat it as path to file
-    if isinstance(input_file_or_list, str):
-        inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
-    else:
-        inputs = input_file_or_list
+#     # if is string, treat it as path to file
+#     if isinstance(input_file_or_list, str):
+#         inputs = open(input_file_or_list, 'r', encoding='utf8').readlines()
+#     else:
+#         inputs = input_file_or_list
 
-    if tokenizer is None:
-        tokenizer = FullTokenizer(config.vocab_file)
+#     if tokenizer is None:
+#         tokenizer = AutoTokenizer.from_pretrained(
+#             config.transformer_tokenizer_name)
 
-    data_dict = {}
-    for doc in inputs:
-        inputs_a = cluster_alphnum(doc)
-        tokens, target = tokenize_text_with_seqs(
-            tokenizer, inputs_a, None)
+#     data_dict = {}
+#     for doc in inputs:
+#         inputs_a = cluster_alphnum(doc)
+#         tokens, target = tokenize_text_with_seqs(
+#             tokenizer, inputs_a, None)
 
-        tokens_a, tokens_b, target = truncate_seq_pair(
-            tokens, None, target, config.max_seq_len)
+#         tokens_a, tokens_b, target = truncate_seq_pair(
+#             tokens, None, target, config.max_seq_len)
 
-        tokens, segment_ids, target = add_special_tokens_with_seqs(
-            tokens_a, tokens_b, target)
+#         tokens, segment_ids, target = add_special_tokens_with_seqs(
+#             tokens_a, tokens_b, target)
 
-        input_mask, tokens, segment_ids, target = create_mask_and_padding(
-            tokens, segment_ids, target, config.max_seq_len)
+#         input_mask, tokens, segment_ids, target = create_mask_and_padding(
+#             tokens, segment_ids, target, config.max_seq_len)
 
-        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-        data_dict['input_ids'] = input_ids
-        data_dict['input_mask'] = input_mask
-        data_dict['segment_ids'] = segment_ids
-        yield data_dict
+#         input_ids = tokenizer.convert_tokens_to_ids(tokens)
+#         data_dict['input_ids'] = input_ids
+#         data_dict['input_mask'] = input_mask
+#         data_dict['segment_ids'] = segment_ids
+#         yield data_dict
 
 
-def serving_input_fn():
-    features = {
-        'input_ids': tf.placeholder(tf.int32, [None, None]),
-        'input_mask': tf.placeholder(tf.int32, [None, None]),
-        'segment_ids': tf.placeholder(tf.int32, [None, None])
-    }
-    return tf.estimator.export.ServingInputReceiver(features, features)
+# def serving_input_fn():
+#     features = {
+#         'input_ids': tf.compat.v1.placeholder(tf.int32, [None, None]),
+#         'input_mask': tf.compat.v1.placeholder(tf.int32, [None, None]),
+#         'segment_ids': tf.compat.v1.placeholder(tf.int32, [None, None])
+#     }
+#     return tf.estimator.export.ServingInputReceiver(features, features)

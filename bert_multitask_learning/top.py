@@ -21,7 +21,7 @@ class SequenceLabel(TopLayer):
 
     def make_batch_loss(self, logits, seq_labels, seq_length, crf_transition_param):
         if self.params.crf:
-            with tf.variable_scope('CRF'):
+            with tf.compat.v1.variable_scope('CRF'):
                 log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
                     logits, seq_labels, seq_length,
                     transition_params=crf_transition_param)
@@ -30,14 +30,14 @@ class SequenceLabel(TopLayer):
             # inconsistent shape might be introduced to labels
             # so we need to do some padding to make sure that
             # seq_labels has the same sequence length as logits
-            pad_len = tf.shape(logits)[1] - tf.shape(seq_labels)[1]
+            pad_len = tf.shape(input=logits)[1] - tf.shape(input=seq_labels)[1]
 
             # top, bottom, left, right
             pad_tensor = [[0, 0], [0, pad_len]]
-            seq_labels = tf.pad(seq_labels, paddings=pad_tensor)
+            seq_labels = tf.pad(tensor=seq_labels, paddings=pad_tensor)
 
             batch_loss = tf.reduce_mean(
-                tf.nn.sparse_softmax_cross_entropy_with_logits(
+                input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
                     logits=logits, labels=seq_labels), axis=1)
 
         if self.params.uncertain_weight_loss:
@@ -50,7 +50,7 @@ class SequenceLabel(TopLayer):
         if mode == tf.estimator.ModeKeys.TRAIN:
             hidden_feature = tf.nn.dropout(
                 hidden_feature,
-                keep_prob=self.params.dropout_keep_prob)
+                rate=1 - (self.params.dropout_keep_prob))
 
         if mask is None:
             num_classes = self.params.num_classes[problem_name]
@@ -66,11 +66,11 @@ class SequenceLabel(TopLayer):
             logits = logits*mask
 
         # CRF transition param
-        crf_transition_param = tf.get_variable(
+        crf_transition_param = tf.compat.v1.get_variable(
             'crf_transition', shape=[num_classes, num_classes])
 
         # sequence_weight = tf.cast(features["input_mask"], tf.float32)
-        seq_length = tf.reduce_sum(features["input_mask"], axis=-1)
+        seq_length = tf.reduce_sum(input_tensor=features["input_mask"], axis=-1)
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             seq_labels = features['%s_label_ids' % problem_name]
@@ -82,7 +82,7 @@ class SequenceLabel(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss),
+            self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
                                  tf.zeros_like(self.loss), self.loss)
             return self.loss
 
@@ -91,7 +91,7 @@ class SequenceLabel(TopLayer):
             batch_loss = self.make_batch_loss(
                 logits, seq_labels, seq_length, crf_transition_param)
 
-            seq_loss = tf.reduce_mean(batch_loss)
+            seq_loss = tf.reduce_mean(input_tensor=batch_loss)
 
             return self.eval_metric_fn(
                 features, logits, seq_loss, problem_name, features['input_mask'], pad_labels_to_logits=True)
@@ -119,11 +119,11 @@ class Classification(TopLayer):
     def create_batch_loss(self, labels, logits,  num_classes):
         if self.params.label_smoothing > 0:
             one_hot_labels = tf.one_hot(labels, depth=num_classes)
-            batch_loss = tf.losses.softmax_cross_entropy(
+            batch_loss = tf.compat.v1.losses.softmax_cross_entropy(
                 one_hot_labels, logits,
                 label_smoothing=self.params.label_smoothing)
         else:
-            batch_loss = tf.losses.sparse_softmax_cross_entropy(
+            batch_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
                 labels, logits)
 
         if self.params.uncertain_weight_loss:
@@ -136,7 +136,7 @@ class Classification(TopLayer):
         if mode == tf.estimator.ModeKeys.TRAIN:
             hidden_feature = tf.nn.dropout(
                 hidden_feature,
-                keep_prob=self.params.dropout_keep_prob)
+                rate=1 - (self.params.dropout_keep_prob))
 
         if mask is None:
             num_classes = self.params.num_classes.get(problem_name, 2)
@@ -156,14 +156,14 @@ class Classification(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss),
+            self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
                                  tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
             batch_loss = self.create_batch_loss(labels, logits, num_classes)
             # multiply with loss multiplier to make some loss as zero
-            loss = tf.reduce_mean(batch_loss)
+            loss = tf.reduce_mean(input_tensor=batch_loss)
 
             return self.eval_metric_fn(
                 features, logits, loss, problem_name, pad_labels_to_logits=False)
@@ -191,11 +191,11 @@ class MaskLM(TopLayer):
         label_ids = features['masked_lm_ids']
         label_weights = features['masked_lm_weights']
 
-        with tf.variable_scope("cls/predictions"):
+        with tf.compat.v1.variable_scope("cls/predictions"):
             # We apply one more non-linear transformation before the output layer.
             # This matrix is not used after pre-training.
-            with tf.variable_scope("transform"):
-                input_tensor = tf.layers.dense(
+            with tf.compat.v1.variable_scope("transform"):
+                input_tensor = tf.compat.v1.layers.dense(
                     input_tensor,
                     units=self.params.mask_lm_hidden_size,
                     activation=modeling.get_activation(
@@ -206,10 +206,10 @@ class MaskLM(TopLayer):
 
             # The output weights are the same as the input embeddings, but there is
             # an output-only bias for each token.
-            output_bias = tf.get_variable(
+            output_bias = tf.compat.v1.get_variable(
                 "output_bias",
                 shape=[self.params.vocab_size],
-                initializer=tf.zeros_initializer())
+                initializer=tf.compat.v1.zeros_initializer())
 
             logits = tf.matmul(input_tensor, output_weights, transpose_b=True)
             logits = tf.nn.bias_add(logits, output_bias)
@@ -233,10 +233,10 @@ class MaskLM(TopLayer):
                 # tensor has a value of 1.0 for every real prediction and 0.0 for the
                 # padding predictions.
                 per_example_loss = - \
-                    tf.reduce_sum(log_probs * one_hot_labels, axis=[-1])
+                    tf.reduce_sum(input_tensor=log_probs * one_hot_labels, axis=[-1])
                 label_weights = tf.cast(label_weights, tf.float32)
-                numerator = tf.reduce_sum(label_weights * per_example_loss)
-                denominator = tf.reduce_sum(label_weights) + 1e-5
+                numerator = tf.reduce_sum(input_tensor=label_weights * per_example_loss)
+                denominator = tf.reduce_sum(input_tensor=label_weights) + 1e-5
                 loss = numerator / denominator
 
                 if mode == tf.estimator.ModeKeys.TRAIN:
@@ -250,17 +250,17 @@ class MaskLM(TopLayer):
                         masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
                                                          [-1, masked_lm_log_probs.shape[-1]])
                         masked_lm_predictions = tf.argmax(
-                            masked_lm_log_probs, axis=-1, output_type=tf.int32)
+                            input=masked_lm_log_probs, axis=-1, output_type=tf.int32)
                         masked_lm_example_loss = tf.reshape(
                             masked_lm_example_loss, [-1])
                         masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
                         masked_lm_weights = tf.reshape(
                             masked_lm_weights, [-1])
-                        masked_lm_accuracy = tf.metrics.accuracy(
+                        masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
                             labels=masked_lm_ids,
                             predictions=masked_lm_predictions,
                             weights=masked_lm_weights)
-                        masked_lm_mean_loss = tf.metrics.mean(
+                        masked_lm_mean_loss = tf.compat.v1.metrics.mean(
                             values=masked_lm_example_loss, weights=masked_lm_weights)
 
                         return {
@@ -285,7 +285,7 @@ class PreTrain(TopLayer):
         self.params.share_top['next_sentence'] = 'next_sentence'
         mask_lm_top_result = mask_lm_top(
             features, hidden_feature, mode, problem_name)
-        with tf.variable_scope('next_sentence', reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('next_sentence', reuse=tf.compat.v1.AUTO_REUSE):
             cls = Classification(self.params)
             features['next_sentence_loss_multiplier'] = 1
             next_sentence_top_result = cls(
@@ -323,8 +323,8 @@ class Seq2Seq(TopLayer):
         decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
             max_seq_len)
 
-        batch_size = tf.shape(encoder_output)[0]
-        max_seq_len = tf.shape(encoder_output)[1]
+        batch_size = tf.shape(input=encoder_output)[0]
+        max_seq_len = tf.shape(input=encoder_output)[1]
 
         encoder_output = tf.expand_dims(encoder_output, axis=1)
         tile_dims = [1] * encoder_output.shape.ndims
@@ -337,7 +337,7 @@ class Seq2Seq(TopLayer):
         def symbols_to_logits_fn(ids, i, cache):
 
             decoder_inputs = tf.nn.embedding_lookup(
-                embedding_table, ids)
+                params=embedding_table, ids=ids)
 
             decoder_inputs = modeling.embedding_postprocessor(
                 input_tensor=decoder_inputs,
@@ -381,7 +381,7 @@ class Seq2Seq(TopLayer):
         if self.params.problem_type[problem_name] == 'seq2seq_text':
             embedding_table = hidden_feature['embed_table']
         else:
-            embedding_table = tf.get_variable(
+            embedding_table = tf.compat.v1.get_variable(
                 'tag_embed_table',
                 shape=[num_classes, hidden_size])
 
@@ -430,17 +430,17 @@ class Seq2Seq(TopLayer):
             logits = self.decoder.train_eval(
                 features, hidden_feature, mode, problem_name)
 
-            with tf.name_scope("shift_targets"):
+            with tf.compat.v1.name_scope("shift_targets"):
                 # Shift targets to the right, and remove the last element
                 shift_labels = tf.pad(
-                    labels, [[0, 0], [0, 1]])[:, 1:]
-            batch_loss = tf.losses.sparse_softmax_cross_entropy(
+                    tensor=labels, paddings=[[0, 0], [0, 1]])[:, 1:]
+            batch_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
                 shift_labels, logits)
             loss = self.create_loss(
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            loss = tf.where(tf.math.is_nan(loss), tf.zeros_like(loss), loss)
+            loss = tf.compat.v1.where(tf.math.is_nan(loss), tf.zeros_like(loss), loss)
             self.loss = loss
 
             if mode == tf.estimator.ModeKeys.TRAIN:
@@ -468,7 +468,7 @@ class MultiLabelClassification(TopLayer):
         batch_label_loss = tf.nn.sigmoid_cross_entropy_with_logits(
             labels=labels, logits=logits)
 
-        batch_loss = tf.reduce_sum(batch_label_loss, axis=1)
+        batch_loss = tf.reduce_sum(input_tensor=batch_label_loss, axis=1)
 
         if self.params.uncertain_weight_loss:
             batch_loss = self.uncertainty_weighted_loss(batch_loss)
@@ -480,7 +480,7 @@ class MultiLabelClassification(TopLayer):
         if mode == tf.estimator.ModeKeys.TRAIN:
             hidden_feature = tf.nn.dropout(
                 hidden_feature,
-                keep_prob=self.params.dropout_keep_prob)
+                rate=1 - (self.params.dropout_keep_prob))
 
         if mask is None:
             num_classes = self.params.num_classes[problem_name]
@@ -500,14 +500,14 @@ class MultiLabelClassification(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.where(tf.math.is_nan(self.loss),
+            self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
                                  tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
             batch_loss = self.create_batch_loss(labels, logits, num_classes)
             # multiply with loss multiplier to make some loss as zero
-            loss = tf.reduce_mean(batch_loss)
+            loss = tf.reduce_mean(input_tensor=batch_loss)
             prob = tf.nn.sigmoid(logits)
             prob = tf.round(prob)
             prob = tf.expand_dims(prob, -1)

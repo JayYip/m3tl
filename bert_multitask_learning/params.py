@@ -2,6 +2,9 @@ import json
 import os
 import re
 import shutil
+import logging
+
+import transformers
 
 from .modeling import BertConfig
 from .utils import EOS_TOKEN, create_path
@@ -13,6 +16,12 @@ class BaseParams():
 
         self.problem_type = {
         }
+
+        self.transformer_model_name = 'bert-base-chinese'
+        self.transformer_tokenizer_name = 'bert-base-chinese'
+        self.transformer_config_name = 'bert-base-chinese'
+        # bert config
+        self.init_checkpoint = ''
 
         # specify this will make key reuse values top
         # that it, weibo_ner problem will use NER's top
@@ -95,9 +104,6 @@ class BaseParams():
         # e.g. # of labels
         self.label_transfer_gru_hidden_size = None
 
-        # bert config
-        self.init_checkpoint = 'chinese_L-12_H-768_A-12'
-
         # pretrain hparm
         self.dupe_factor = 10
         self.short_seq_prob = 0.1
@@ -109,6 +115,7 @@ class BaseParams():
 
         self.train_problem = None
         self.tmp_file_dir = 'tmp'
+        self.cache_dir = 'models/transformers_cache'
         # get generator function for each problem
         self.read_data_fn = {}
         self.problem_assigned = False
@@ -292,21 +299,34 @@ class BaseParams():
 
         if not self.is_serve:
             create_path(self.ckpt_dir)
+
+            # two ways to init model
+            # 1. init from TF checkpoint dir. The dir has to contain bert_config.json.
+            # 2. init from huggingface checkpoint.
             self.params_path = os.path.join(self.ckpt_dir, 'params.json')
-            try:
-                shutil.copy2(os.path.join(self.init_checkpoint,
-                                          'vocab.txt'), self.ckpt_dir)
-                shutil.copy2(os.path.join(self.init_checkpoint,
-                                          'bert_config.json'), self.ckpt_dir)
-            except FileNotFoundError:
-                pass
-        self.vocab_file = os.path.join(self.ckpt_dir, 'vocab.txt')
-        self.bert_config = BertConfig.from_json_file(
-            os.path.join(self.ckpt_dir, 'bert_config.json'))
+            config_path = os.path.join(self.init_checkpoint,
+                                       'bert_config.json')
+            if os.path.exists(config_path):
+                shutil.copy2(config_path, self.ckpt_dir)
+                self.bert_config = transformers.AutoConfig.from_pretrained(
+                    config_path)
+                self.init_weight_from_huggingface = False
+            else:
+                logging.warning(
+                    '{} not exists. will load model from huggingface checkpoint.'.format(config_path))
+                # get or download config
+                self.init_weight_from_huggingface = True
+                self.bert_config = transformers.AutoConfig.from_pretrained(
+                    self.transformer_config_name)
+                json.dump(self.bert_config.__dict__, open(
+                    os.path.join(self.ckpt_dir, 'bert_config.json'), 'w'))
+
         self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
         self.bert_config_dict = self.bert_config.__dict__
-        with open(self.vocab_file, 'r', encoding='utf8') as vf:
-            self.vocab_size = len(vf.readlines())
+
+        tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.transformer_tokenizer_name, cache_dir=self.cache_dir)
+        self.vocab_size = tokenizer.vocab_size
 
     def get_problem_type(self, problem: str):
         return self.problem_type[problem]

@@ -6,8 +6,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
+from transformers import AutoTokenizer
 
-from .bert_preprocessing.tokenization import FullTokenizer, _is_control
 from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
 
@@ -136,8 +136,8 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
     if mode == 'train' and not os.path.exists(le_path):
 
         if is_seq2seq_text:
-            vocab_file = params.decode_vocab_file if params.decode_vocab_file is not None else params.vocab_file
-            label_encoder = FullTokenizer(vocab_file)
+            label_encoder = AutoTokenizer.from_pretrained(
+                params.transformer_tokenizer_name, cache_dir=params.cache_dir)
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         elif is_multi_cls:

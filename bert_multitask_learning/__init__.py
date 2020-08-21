@@ -4,7 +4,6 @@ from .metrics import *
 from .model_fn import *
 from .optimizer import *
 from .params import *
-from .bert_preprocessing.tokenization import *
 from .top_utils import *
 from .top import *
 from .experimental_top import *

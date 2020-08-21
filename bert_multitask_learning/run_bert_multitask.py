@@ -23,10 +23,7 @@ def _create_estimator(
         model = BertMultiTask(params=params)
     model_fn = model.get_model_fn(warm_start=False)
 
-    dist_trategy = tf.contrib.distribute.MirroredStrategy(
-        num_gpus=int(num_gpus),
-        cross_tower_ops=tf.contrib.distribute.AllReduceCrossDeviceOps(
-            'nccl', num_packs=int(num_gpus)))
+    dist_trategy = tf.distribute.MirroredStrategy()
 
     run_config = tf.estimator.RunConfig(
         train_distribute=dist_trategy,
@@ -111,13 +108,13 @@ def train_bert_multitask(
     estimator = _create_estimator(
         num_gpus=num_gpus, params=params, model=model)
 
-    train_hook = RestoreCheckpointHook(params)
+    # train_hook = RestoreCheckpointHook(params)
 
     def train_input_fn(): return train_eval_input_fn(params)
     def eval_input_fn(): return train_eval_input_fn(params, mode=EVAL)
 
     train_spec = TrainSpec(
-        input_fn=train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
+        input_fn=train_input_fn, max_steps=params.train_steps)
     eval_spec = EvalSpec(
         eval_input_fn, throttle_secs=params.eval_throttle_secs)
 
@@ -223,7 +220,7 @@ def predict_bert_multitask(
         print('Params problem assigned. Problem list: {0}'.format(
             params.run_problem_list))
 
-    tf.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
+    tf.compat.v1.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
     time.sleep(3)
 
     estimator = _create_estimator(num_gpus=1, params=params, model=model)

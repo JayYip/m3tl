@@ -1,20 +1,22 @@
-import os
-from sklearn.preprocessing import MultiLabelBinarizer
-from types import GeneratorType
 import logging
+import os
+from types import GeneratorType
 
-from .utils import get_or_make_label_encoder, cluster_alphnum, LabelEncoder
-from .special_tokens import TRAIN, EVAL, PREDICT
-from .read_write_tfrecord import write_single_problem_chunk_tfrecord, write_single_problem_gen_tfrecord
-from .bert_preprocessing.tokenization import FullTokenizer
+from sklearn.preprocessing import MultiLabelBinarizer
+from transformers import AutoTokenizer
+
+from .read_write_tfrecord import (write_single_problem_chunk_tfrecord,
+                                  write_single_problem_gen_tfrecord)
+from .special_tokens import EVAL, PREDICT, TRAIN
+from .utils import LabelEncoder, cluster_alphnum, get_or_make_label_encoder
 
 
 def preprocessing_fn(func):
     def wrapper(params, mode, get_data_num=False, write_tfrecord=True):
         problem = func.__name__
 
-        tokenizer = FullTokenizer(
-            vocab_file=params.vocab_file, do_lower_case=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=params.transformer_tokenizer_name, cache_dir=params.cache_dir)
         example_list = func(params, mode)
 
         if isinstance(example_list, GeneratorType):
