@@ -444,6 +444,9 @@ class BertMultiTask():
             if not warm_start:
                 train_scaffold = None
             else:
+                if not assignment_map:
+                    raise ValueError(
+                        'No variable initialized from pretrained checkpoint!')
                 train_scaffold = scaffold()
 
             return self.create_train_spec(features,

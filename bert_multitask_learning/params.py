@@ -7,7 +7,7 @@ import logging
 import transformers
 
 from .modeling import BertConfig
-from .utils import EOS_TOKEN, create_path
+from .utils import EOS_TOKEN, create_path, load_transformer_tokenizer, load_transformer_config
 
 
 class BaseParams():
@@ -17,9 +17,19 @@ class BaseParams():
         self.problem_type = {
         }
 
+        # transformers params
         self.transformer_model_name = 'bert-base-chinese'
         self.transformer_tokenizer_name = 'bert-base-chinese'
         self.transformer_config_name = 'bert-base-chinese'
+        self.transformer_loading_model = 'TFAutoModel'
+        self.transformer_loading_config = 'AutoConfig'
+
+        # multimodal params
+        self.modal_token_type_id = {
+            'text': 0,
+            'image': 2,
+            'others': 3
+        }
         # bert config
         self.init_checkpoint = ''
 
@@ -308,24 +318,24 @@ class BaseParams():
                                        'bert_config.json')
             if os.path.exists(config_path):
                 shutil.copy2(config_path, self.ckpt_dir)
-                self.bert_config = transformers.AutoConfig.from_pretrained(
-                    config_path)
+                self.bert_config = load_transformer_config(
+                    config_path, self.transformer_loading_config)
                 self.init_weight_from_huggingface = False
             else:
                 logging.warning(
                     '{} not exists. will load model from huggingface checkpoint.'.format(config_path))
                 # get or download config
                 self.init_weight_from_huggingface = True
-                self.bert_config = transformers.AutoConfig.from_pretrained(
-                    self.transformer_config_name)
+                self.bert_config = load_transformer_config(
+                    self.transformer_config_name, self.transformer_loading_config)
                 json.dump(self.bert_config.__dict__, open(
                     os.path.join(self.ckpt_dir, 'bert_config.json'), 'w'))
 
         self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
         self.bert_config_dict = self.bert_config.__dict__
 
-        tokenizer = transformers.AutoTokenizer.from_pretrained(
-            self.transformer_tokenizer_name, cache_dir=self.cache_dir)
+        tokenizer = load_transformer_tokenizer(
+            self.transformer_tokenizer_name)
         self.vocab_size = tokenizer.vocab_size
 
     def get_problem_type(self, problem: str):

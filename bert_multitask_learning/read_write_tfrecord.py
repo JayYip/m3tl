@@ -343,7 +343,8 @@ def write_tfrecord(params, replace=False):
         if len(problem_list) == 1:
             problem = problem_list[0]
             read_fn = read_data_fn_dict[problem]
-            file_dir = os.path.join(params.tmp_file_dir, problem)
+            file_dir = os.path.join(
+                params.tmp_file_dir, problem, 'train_feature_desc.json')
             if not os.path.exists(file_dir) or replace:
                 read_fn(params, TRAIN)
                 read_fn(params, EVAL)
