@@ -6,7 +6,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, BertTokenizer
+import transformers
 
 from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
@@ -136,8 +137,8 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
     if mode == 'train' and not os.path.exists(le_path):
 
         if is_seq2seq_text:
-            label_encoder = AutoTokenizer.from_pretrained(
-                params.transformer_tokenizer_name, cache_dir=params.cache_dir)
+            label_encoder = load_transformer_tokenizer(
+                params.transformer_tokenizer_name)
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         elif is_multi_cls:
@@ -146,7 +147,6 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         else:
-            print(problem)
             if isinstance(label_list[0], list):
                 label_list = [
                     item for sublist in label_list for item in sublist]
@@ -320,3 +320,59 @@ def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=
             type_dict[feature_name] = tf.string
             shape_dict[feature_name] = []
     return shape_dict, type_dict
+
+
+def load_transformer_tokenizer(tokenizer_name: str, load_module_name=None):
+    """some tokenizers cannot be loaded using AutoTokenizer. 
+
+    this function served as a util function to catch that situation.
+
+    Args:
+        tokenizer_name (str): tokenizer name
+    """
+    if load_module_name:
+        tok = getattr(transformers, load_module_name).from_pretrained(
+            tokenizer_name)
+    else:
+        try:
+            tok = AutoTokenizer.from_pretrained(tokenizer_name)
+        except (ValueError, TypeError):
+            tok = BertTokenizer.from_pretrained(tokenizer_name)
+
+    return tok
+
+
+def load_transformer_config(config_name, load_module_name=None):
+    """Some models need specify loading module
+
+    Args:
+        config_name (str): module name
+        load_module_name (str, optional): loading module name. Defaults to None.
+
+    Returns:
+        config: config
+    """
+    if load_module_name:
+        config = getattr(transformers, load_module_name).from_pretrained(
+            config_name)
+    else:
+        config = transformers.AutoConfig.from_pretrained(config_name)
+    return config
+
+
+def get_transformer_model(model, key='embeddings'):
+    """Function to extrac model name from huggingface transformer models.
+
+    Args:
+        model (Model): Huggingface transformers model
+        key (str, optional): Key to identify model. Defaults to 'embeddings'.
+
+    Returns:
+        model
+    """
+
+    model_attr_name_list = model.__dict__.keys()
+    for attr_name in model_attr_name_list:
+        attr = getattr(model, attr_name)
+        if hasattr(attr, key):
+            return attr
