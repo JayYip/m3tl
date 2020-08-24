@@ -21,14 +21,14 @@ from __future__ import print_function
 import collections
 import copy
 import json
-import math
 import re
 import six
 import tensorflow as tf
-import logging
-import os
+
 
 import transformers
+
+from .utils import get_transformer_model
 
 
 class BertConfig(object):
@@ -500,13 +500,16 @@ def assert_rank(tensor, expected_rank, name=None):
 
 
 def init_transformer(params):
-    model = transformers.TFAutoModel.from_config(params.bert_config)
+    loading_model = getattr(
+        transformers, params.transformer_loading_model)
+    model = loading_model.from_config(params.bert_config)
     return model
 
 
-def get_embedding_table_from_model(model, params):
+def get_embedding_table_from_model(model):
     model.bert.embeddings.build(1)
-    return model.bert.embeddings.word_embeddings
+    base_model = get_transformer_model(model)
+    return base_model.embeddings.word_embeddings
 
 
 class MultiModalBertModel(object):
@@ -535,7 +538,7 @@ class MultiModalBertModel(object):
         self.bert_model = init_transformer(params)
         config = self.bert_model.config
         word_embedding = get_embedding_table_from_model(
-            self.bert_model, params)
+            self.bert_model)
 
         # Perform embedding lookup on the word ids.
         (self.embedding_output, self.embedding_table) = embedding_lookup(

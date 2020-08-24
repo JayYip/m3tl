@@ -9,7 +9,7 @@ from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, PREDICT
 from .bert_utils import (create_instances_from_document,
                          create_masked_lm_predictions)
 
-from transformers import AutoTokenizer, PreTrainedTokenizer
+from transformers import PreTrainedTokenizer
 
 
 def seq_tag_label_handling(tokenized_dict, target, pad_token):
@@ -26,16 +26,26 @@ def seq_tag_label_handling(tokenized_dict, target, pad_token):
     return processed_target, tokenized_dict
 
 
-def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None):
+def pad_wrapper(inp, target_len=90):
+    if len(inp) >= target_len:
+        return inp[:target_len]
+    else:
+        return inp + [0]*(target_len - len(inp))
+
+
+def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, decoding_length=None):
     label_mask = None
     if isinstance(target, list):
         if problem_type == 'seq2seq_text':
-            # label_id = label_encoder.convert_tokens_to_ids(target)
+
+            target = [BOS_TOKEN] + target + [EOS_TOKEN]
             label_dict = label_encoder(
-                target, add_special_tokens=False)
-            label_id = [tokenizer.bos_token_id] + \
-                label_dict['input_ids'] + [tokenizer.eos_token_id]
+                target, add_special_tokens=False, is_pretokenized=True)
+            label_id = label_dict['input_ids']
             label_mask = [0] + label_dict['attention_mask'] + [0]
+            label_id = pad_wrapper(label_id, decoding_length)
+            label_mask = pad_wrapper(label_mask, decoding_length)
+
         elif problem_type == 'multi_cls':
             label_id = label_encoder.transform([target])[0]
         elif problem_type == 'seq2seq_tag':
@@ -50,8 +60,17 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None):
             label_id = label_encoder.transform(target).tolist()
             label_id = [np.int32(i) for i in label_id]
     else:
-        label_id = label_encoder.transform([target]).tolist()[0]
-        label_id = np.int32(label_id)
+        if problem_type == 'seq2seq_text':
+            target = BOS_TOKEN + target + EOS_TOKEN
+            label_dict = label_encoder(
+                target, add_special_tokens=False, is_pretokenized=False)
+            label_id = label_dict['input_ids']
+            label_mask = [0] + label_dict['attention_mask'] + [0]
+            label_id = pad_wrapper(label_id, decoding_length)
+            label_mask = pad_wrapper(label_mask, decoding_length)
+        else:
+            label_id = label_encoder.transform([target]).tolist()[0]
+            label_id = np.int32(label_id)
     return label_id, label_mask
 
 
@@ -104,7 +123,7 @@ def _create_bert_features(problem,
         if mode != PREDICT:
 
             label_id, label_mask = convert_labels_to_ids(
-                target, problem_type, label_encoder, tokenizer)
+                target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
 
         input_ids = tokenized_dict['input_ids']
         segment_ids = tokenized_dict['token_type_ids']
@@ -287,7 +306,6 @@ def _create_multimodal_bert_features(problem,
 
         modal_name_list = ['text', 'image', 'others']
 
-        max_segment_id = 0
         return_dict = {}
         for modal_name in modal_name_list:
             if modal_name not in raw_inputs:
@@ -302,16 +320,18 @@ def _create_multimodal_bert_features(problem,
 
             if modal_name == 'text':
                 # tokenize inputs, now the length is fixed, target == raw_target
-                if isinstance(raw_inputs, dict):
-                    tokens_a = raw_inputs['a']
-                    tokens_b = raw_inputs['b']
+                if isinstance(modal_inputs, dict):
+                    tokens_a = modal_inputs['a']
+                    tokens_b = modal_inputs['b']
                 else:
-                    tokens_a = raw_inputs
+                    tokens_a = modal_inputs
                     tokens_b = None
-                target = raw_target
+                target = modal_target
 
                 if isinstance(tokens_a, list):
                     is_pretokenized = True
+                else:
+                    is_pretokenized = False
                 tokenized_dict = tokenizer(
                     tokens_a, tokens_b,
                     truncation=False,
@@ -345,8 +365,7 @@ def _create_multimodal_bert_features(problem,
                     modal_inputs = np.expand_dims(modal_inputs, axis=0)
                 target = modal_target
                 segment_ids = np.zeros(
-                    modal_inputs.shape[0], dtype=np.int32) + max_segment_id + 1
-                max_segment_id = max(segment_ids)
+                    modal_inputs.shape[0], dtype=np.int32) + params.modal_token_type_id[modal_name]
                 input_mask = [1]*len(modal_inputs)
                 modal_feature_dict = {
                     '{}_input'.format(modal_name): modal_inputs,
@@ -356,7 +375,7 @@ def _create_multimodal_bert_features(problem,
             # encode labels
             if mode != PREDICT:
                 label_id, label_mask = convert_labels_to_ids(
-                    target, problem_type, label_encoder, tokenizer)
+                    target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
 
                 if target_by_modal:
                     modal_feature_dict['{}_{}_label_ids'.format(

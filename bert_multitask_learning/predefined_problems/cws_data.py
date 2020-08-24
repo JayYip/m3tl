@@ -7,7 +7,7 @@ import re
 from sklearn.model_selection import train_test_split
 
 from ..utils import filter_empty
-from .preproc_decorator import preprocessing_fn
+from ..preproc_decorator import preprocessing_fn
 
 
 def process_line_msr_pku(l):

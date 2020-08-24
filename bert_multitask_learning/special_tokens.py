@@ -1,5 +1,5 @@
-BOS_TOKEN = '[PAD]'
-EOS_TOKEN = '[SEP]'
+BOS_TOKEN = '[unused98]'
+EOS_TOKEN = '[unused99]'
 CLS_TOKEN = '[CLS]'
 SPACE_TOKEN = '[unused1]'
 UNK_TOKEN = '[UNK]'

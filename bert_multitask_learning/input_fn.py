@@ -6,13 +6,12 @@ from itertools import tee
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from transformers import AutoTokenizer
 
 from .bert_preprocessing.create_bert_features import (
     create_bert_features_generator, create_multimodal_bert_features_generator)
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
 from .special_tokens import EVAL, PREDICT, TRAIN
-from .utils import cluster_alphnum, infer_shape_and_type_from_dict
+from .utils import cluster_alphnum, infer_shape_and_type_from_dict, load_transformer_tokenizer
 
 
 def element_length_func(yield_dict):
@@ -96,8 +95,8 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
     if labels_in_input:
         first_element, _ = first_element
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        config.transformer_tokenizer_name, cache_dir=config.cache_dir)
+    tokenizer = load_transformer_tokenizer(
+        config.transformer_tokenizer_name)
     if isinstance(first_element, dict) and 'a' not in first_element:
         part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,
@@ -153,7 +152,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
 #         inputs = input_file_or_list
 
 #     if tokenizer is None:
-#         tokenizer = AutoTokenizer.from_pretrained(
+#         tokenizer = load_transformer_tokenizer(
 #             config.transformer_tokenizer_name)
 
 #     data_dict = {}

@@ -3,20 +3,19 @@ import os
 from types import GeneratorType
 
 from sklearn.preprocessing import MultiLabelBinarizer
-from transformers import AutoTokenizer
 
 from .read_write_tfrecord import (write_single_problem_chunk_tfrecord,
                                   write_single_problem_gen_tfrecord)
 from .special_tokens import EVAL, PREDICT, TRAIN
-from .utils import LabelEncoder, cluster_alphnum, get_or_make_label_encoder
+from .utils import LabelEncoder, cluster_alphnum, get_or_make_label_encoder, load_transformer_tokenizer
 
 
 def preprocessing_fn(func):
     def wrapper(params, mode, get_data_num=False, write_tfrecord=True):
         problem = func.__name__
 
-        tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=params.transformer_tokenizer_name, cache_dir=params.cache_dir)
+        tokenizer = load_transformer_tokenizer(
+            params.transformer_tokenizer_name)
         example_list = func(params, mode)
 
         if isinstance(example_list, GeneratorType):
