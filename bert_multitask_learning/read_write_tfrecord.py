@@ -8,8 +8,9 @@ import numpy as np
 import tensorflow as tf
 from joblib import Parallel, delayed
 
-from .bert_preprocessing.create_bert_features import create_bert_features, create_multimodal_bert_features
-from .special_tokens import BOS_TOKEN, EOS_TOKEN, EVAL, TRAIN
+from .bert_preprocessing.create_bert_features import (
+    create_bert_features, create_multimodal_bert_features)
+from .special_tokens import EVAL, TRAIN
 
 
 def _float_list_feature(value):

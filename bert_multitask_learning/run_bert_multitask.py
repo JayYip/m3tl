@@ -1,18 +1,16 @@
-import time
-import os
 import argparse
+import os
+import time
 
 import tensorflow as tf
+from tensorflow.estimator import (Estimator, EvalSpec, TrainSpec,
+                                  train_and_evaluate)
 
-from tensorflow.estimator import Estimator
-from tensorflow.estimator import train_and_evaluate, TrainSpec, EvalSpec
-
-from .input_fn import train_eval_input_fn, predict_input_fn
-from .model_fn import BertMultiTask
-from .params import BaseParams, DynamicBatchSizeParams
-from .ckpt_restore_hook import RestoreCheckpointHook
 from . import metrics
-from .special_tokens import TRAIN, EVAL, PREDICT
+from .input_fn import predict_input_fn, train_eval_input_fn
+from .model_fn import BertMultiTask
+from .params import DynamicBatchSizeParams
+from .special_tokens import EVAL
 
 
 def _create_estimator(
@@ -46,15 +44,17 @@ def train_bert_multitask(
         num_epochs=10,
         model_dir='',
         params=None,
-        problem_type_dict={},
-        processing_fn_dict={},
+        problem_type_dict=None,
+        processing_fn_dict=None,
         model=None):
     """Train Multi-task Bert model
 
-    About problem: 
+    About problem:
         There are two types of chaining operations can be used to chain problems.
-            - `&`. If two problems have the same inputs, they can be chained using `&`. Problems chained by `&` will be trained at the same time.
-            - `|`. If two problems don't have the same inputs, they need to be chained using `|`. Problems chained by `|` will be sampled to train at every instance.
+            - `&`. If two problems have the same inputs, they can be chained using `&`.
+                Problems chained by `&` will be trained at the same time.
+            - `|`. If two problems don't have the same inputs, they need to be chained using `|`.
+                Problems chained by `|` will be sampled to train at every instance.
 
         For example, `cws|NER|weibo_ner&weibo_cws`, one problem will be sampled at each turn, say `weibo_ner&weibo_cws`, then `weibo_ner` and `weibo_cws` will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.
 
@@ -130,8 +130,8 @@ def eval_bert_multitask(
         model_dir='',
         eval_scheme='ner',
         params=None,
-        problem_type_dict={},
-        processing_fn_dict={},
+        problem_type_dict=None,
+        processing_fn_dict=None,
         model=None):
     """Evaluate Multi-task Bert model
 
@@ -181,8 +181,8 @@ def predict_bert_multitask(
         problem='weibo_ner',
         model_dir='',
         params=None,
-        problem_type_dict={},
-        processing_fn_dict={},
+        problem_type_dict=None,
+        processing_fn_dict=None,
         model=None):
     """Evaluate Multi-task Bert model
 

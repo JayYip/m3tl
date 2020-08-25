@@ -1,13 +1,12 @@
 import logging
-import os
 from types import GeneratorType
 
 from sklearn.preprocessing import MultiLabelBinarizer
 
 from .read_write_tfrecord import (write_single_problem_chunk_tfrecord,
                                   write_single_problem_gen_tfrecord)
-from .special_tokens import EVAL, PREDICT, TRAIN
-from .utils import LabelEncoder, cluster_alphnum, get_or_make_label_encoder, load_transformer_tokenizer
+from .special_tokens import PREDICT
+from .utils import LabelEncoder, get_or_make_label_encoder, load_transformer_tokenizer
 
 
 def preprocessing_fn(func):
@@ -39,13 +38,13 @@ def preprocessing_fn(func):
 
                 if label_encoder is None:
                     return cnt, 0
-                elif isinstance(label_encoder, LabelEncoder):
+                if isinstance(label_encoder, LabelEncoder):
                     return cnt, len(label_encoder.encode_dict)
-                elif isinstance(label_encoder, MultiLabelBinarizer):
+                if isinstance(label_encoder, MultiLabelBinarizer):
                     return cnt, label_encoder.classes_.shape[0]
-                else:
+
                     # label_encoder is tokenizer
-                    return cnt, len(label_encoder.vocab)
+                return cnt, len(label_encoder.vocab)
             else:
                 # create label encoder
                 label_encoder = get_or_make_label_encoder(
@@ -83,13 +82,13 @@ def preprocessing_fn(func):
             if get_data_num:
                 if label_encoder is None:
                     return len(inputs_list), 0
-                elif isinstance(label_encoder, LabelEncoder):
+                if isinstance(label_encoder, LabelEncoder):
                     return len(inputs_list), len(label_encoder.encode_dict)
-                elif isinstance(label_encoder, MultiLabelBinarizer):
+                if isinstance(label_encoder, MultiLabelBinarizer):
                     return len(inputs_list), label_encoder.classes_.shape[0]
-                else:
-                    # label_encoder is tokenizer
-                    return len(inputs_list), len(label_encoder.vocab)
+
+                # label_encoder is tokenizer
+                return len(inputs_list), len(label_encoder.vocab)
 
             if mode == PREDICT:
                 return inputs_list, target_list, label_encoder

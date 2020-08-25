@@ -1,15 +1,13 @@
+
 import tensorflow as tf
-import os
 
 from . import modeling
+from .experimental_top import (GridTransformer, LabelTransferHidden,
+                               TaskTransformer)
 from .modeling import MultiModalBertModel
-
 from .optimizer import AdamWeightDecayOptimizer
-from .top import (
-    Seq2Seq, SequenceLabel, Classification,
-    MaskLM, PreTrain, MultiLabelClassification)
-from .experimental_top import (
-    LabelTransferHidden, GridTransformer, TaskTransformer)
+from .top import (Classification, MaskLM, MultiLabelClassification, PreTrain,
+                  Seq2Seq, SequenceLabel)
 
 
 def variable_summaries(var, name):
@@ -108,7 +106,7 @@ class BertMultiTask():
         # add summary
         if self.params.detail_log:
             with tf.compat.v1.name_scope('bert_feature_summary'):
-                for layer_ind, layer_output in enumerate(feature_dict['all']):
+                for _, layer_output in enumerate(feature_dict['all']):
                     variable_summaries(
                         layer_output, layer_output.name.replace(':0', ''))
 
@@ -257,8 +255,7 @@ class BertMultiTask():
 
                 with tf.compat.v1.variable_scope(top_scope_name, reuse=tf.compat.v1.AUTO_REUSE):
                     layer = problem_type_layer[
-                        problem_type](
-                        self.params)
+                        problem_type](self.params)
                     return_dict[problem] = layer(
                         feature_this_round,
                         hidden_feature_this_round, mode, problem)
@@ -341,7 +338,7 @@ class BertMultiTask():
 
         return optimizer
 
-    def create_train_spec(self, features, hidden_features, loss_eval_pred, mode, scaffold_fn):
+    def create_train_spec(self, loss_eval_pred, mode, scaffold_fn):
         optimizer = self.create_optimizer(
             self.params.lr,
             self.params.train_steps,
@@ -405,7 +402,7 @@ class BertMultiTask():
             scaffold=scaffold_fn)
         return output_spec
 
-    def create_spec(self, features, hidden_features, loss_eval_pred, mode, warm_start):
+    def create_spec(self, features, loss_eval_pred, mode, warm_start):
         """Function to create spec for different mode
 
         Arguments:
@@ -426,15 +423,13 @@ class BertMultiTask():
                 # ckpt_path = os.path.join(self.params.transformer_model_name,
                 #                          'pretrained_model')
                 ckpt_path = self.params.transformer_model_name
-                (assignment_map, initialized_variable_names
-                 ) = modeling.get_assignment_map_from_keras_checkpoint(
-                    tvars, ckpt_path)
+                (assignment_map, _
+                 ) = modeling.get_assignment_map_from_keras_checkpoint(tvars, ckpt_path)
             else:
                 ckpt_path = self.params.init_checkpoint
 
-                (assignment_map, initialized_variable_names
-                 ) = modeling.get_assignment_map_from_checkpoint(
-                    tvars, ckpt_path)
+                (assignment_map, _
+                 ) = modeling.get_assignment_map_from_checkpoint(tvars, ckpt_path)
 
             def scaffold():
                 init_op = tf.compat.v1.train.init_from_checkpoint(
@@ -449,16 +444,14 @@ class BertMultiTask():
                         'No variable initialized from pretrained checkpoint!')
                 train_scaffold = scaffold()
 
-            return self.create_train_spec(features,
-                                          hidden_features,
-                                          loss_eval_pred,
+            return self.create_train_spec(loss_eval_pred,
                                           mode,
                                           train_scaffold)
         elif mode == tf.estimator.ModeKeys.EVAL:
             eval_loss = {k: v[1] for k, v in loss_eval_pred.items()}
             total_eval_loss = 0
-            for k, v in eval_loss.items():
-                total_eval_loss += v
+            for _, var in eval_loss.items():
+                total_eval_loss += var
 
             eval_metric = {k: v[0] for k, v in loss_eval_pred.items()}
             total_eval_metric = {}
@@ -492,7 +485,7 @@ class BertMultiTask():
                 problem_sep_features, hidden_feature, mode)
 
             spec = self.create_spec(
-                features, hidden_feature, loss_eval_pred, mode, warm_start)
+                features, loss_eval_pred, mode, warm_start)
             return spec
 
         return model_fn

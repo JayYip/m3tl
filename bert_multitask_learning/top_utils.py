@@ -7,6 +7,7 @@ from . import modeling
 
 
 class TopLayer():
+    # pylint: disable=attribute-defined-outside-init,no-member
     def __init__(self, params):
         self.params = params
 

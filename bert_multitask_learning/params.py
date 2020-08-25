@@ -4,13 +4,13 @@ import re
 import shutil
 import logging
 
-import transformers
 
 from .modeling import BertConfig
-from .utils import EOS_TOKEN, create_path, load_transformer_tokenizer, load_transformer_config
+from .utils import create_path, load_transformer_tokenizer, load_transformer_config
 
 
 class BaseParams():
+    # pylint: disable=attribute-defined-outside-init
     def __init__(self):
         self.run_problem_list = []
 
@@ -323,7 +323,7 @@ class BaseParams():
                 self.init_weight_from_huggingface = False
             else:
                 logging.warning(
-                    '{} not exists. will load model from huggingface checkpoint.'.format(config_path))
+                    '%s not exists. will load model from huggingface checkpoint.', config_path)
                 # get or download config
                 self.init_weight_from_huggingface = True
                 self.bert_config = load_transformer_config(

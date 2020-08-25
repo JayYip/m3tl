@@ -328,7 +328,7 @@ def embedding_postprocessor(input_tensor,
         # This vocab will be small so we always do one-hot here, since it is always
         # faster for a small vocabulary.
         flat_token_type_ids = tf.reshape(token_type_ids, [-1])
-        one_hot_ids = tf.one_hot(
+        one_hot_ids = tf.one_hot(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
             flat_token_type_ids, depth=token_type_vocab_size)
         token_type_embeddings = tf.matmul(one_hot_ids, token_type_table)
         token_type_embeddings = tf.reshape(token_type_embeddings,
@@ -512,7 +512,7 @@ def get_embedding_table_from_model(model):
     return base_model.embeddings.word_embeddings
 
 
-class MultiModalBertModel(object):
+class MultiModalBertModel():
     def __init__(self,
                  params,
                  is_training,
@@ -571,24 +571,25 @@ class MultiModalBertModel(object):
                     config.hidden_size)(features_dict[input_name])
 
             # add sep embedding
-            modal_input = tf.concat(
+            modal_input = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [sep_embedding, modal_input, sep_embedding], axis=1)
             # add same type id to left and right
-            modal_type_ids = tf.concat(
+            modal_type_ids = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [tf.expand_dims(features_dict[segment_id_name][:, 0], axis=1),
                     features_dict[segment_id_name],
                     tf.expand_dims(features_dict[segment_id_name][:, 0], axis=1)], axis=1)
             # add mask
-            modal_mask = tf.concat(
+            modal_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [tf.expand_dims(features_dict[mask_name][:, 0], axis=1),
                     features_dict[mask_name],
                     tf.expand_dims(features_dict[mask_name][:, 0], axis=1)], axis=1)
             # concat to text correspondingly
-            self.embedding_output = tf.concat(
+            self.embedding_output = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [self.embedding_output, modal_input], axis=1)
-            token_type_ids = tf.concat(
+            token_type_ids = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [token_type_ids, modal_type_ids], axis=1)
-            input_mask = tf.concat([input_mask, modal_mask], axis=1)
+            input_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+                [input_mask, modal_mask], axis=1)
 
         self.sequence_output, self.pooled_output = self.bert_model(
             {'input_ids': None,

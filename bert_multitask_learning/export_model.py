@@ -54,20 +54,20 @@ def optimize_graph(params):
 
         tmp_g = tf.compat.v1.get_default_graph().as_graph_def()
 
-    input_node_names = ['input_ids', 'input_mask', 'segment_ids']
-    output_node_names = ['%s_top/%s_predict' %
-                         (params.share_top[problem], params.share_top[problem]) for problem in params.problem_list]
+    # input_node_names = ['input_ids', 'input_mask', 'segment_ids']
+    # output_node_names = ['%s_top/%s_predict' %
+    #                      (params.share_top[problem], params.share_top[problem]) for problem in params.problem_list]
 
-    transforms = [
-        'remove_nodes(op=Identity)',
-        'fold_constants(ignore_errors=true)',
-        'fold_batch_norms',
-        # 'quantize_weights',
-        # 'quantize_nodes',
-        'merge_duplicate_nodes',
-        'strip_unused_nodes',
-        'sort_by_execution_order'
-    ]
+    # transforms = [
+    #     'remove_nodes(op=Identity)',
+    #     'fold_constants(ignore_errors=true)',
+    #     'fold_batch_norms',
+    #     # 'quantize_weights',
+    #     # 'quantize_nodes',
+    #     'merge_duplicate_nodes',
+    #     'strip_unused_nodes',
+    #     'sort_by_execution_order'
+    # ]
 
     with tf.compat.v1.Session(config=config) as sess:
         tf.compat.v1.logging.info('load parameters from checkpoint...')

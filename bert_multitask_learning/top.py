@@ -6,11 +6,12 @@ from .transformer_decoder import TransformerDecoder
 
 from . import modeling
 from .top_utils import (TopLayer, gather_indexes,
-                        make_cudnngru, create_seq_smooth_label,
+                        create_seq_smooth_label,
                         dense_layer)
 
 
 class SequenceLabel(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for sequence labeling.
     It's a dense net with body output features as input with following support.
 
@@ -70,7 +71,8 @@ class SequenceLabel(TopLayer):
             'crf_transition', shape=[num_classes, num_classes])
 
         # sequence_weight = tf.cast(features["input_mask"], tf.float32)
-        seq_length = tf.reduce_sum(input_tensor=features["input_mask"], axis=-1)
+        seq_length = tf.reduce_sum(
+            input_tensor=features["input_mask"], axis=-1)
 
         if mode == tf.estimator.ModeKeys.TRAIN:
             seq_labels = features['%s_label_ids' % problem_name]
@@ -83,7 +85,7 @@ class SequenceLabel(TopLayer):
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
             self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
-                                 tf.zeros_like(self.loss), self.loss)
+                                           tf.zeros_like(self.loss), self.loss)
             return self.loss
 
         elif mode == tf.estimator.ModeKeys.EVAL:
@@ -98,7 +100,7 @@ class SequenceLabel(TopLayer):
 
         elif mode == tf.estimator.ModeKeys.PREDICT:
             if self.params.crf:
-                viterbi_sequence, viterbi_score = tf.contrib.crf.crf_decode(
+                viterbi_sequence, _ = tf.contrib.crf.crf_decode(
                     logits, crf_transition_param, seq_length)
                 self.prob = tf.identity(
                     viterbi_sequence, name='%s_predict' % scope_name)
@@ -110,6 +112,7 @@ class SequenceLabel(TopLayer):
 
 
 class Classification(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for classification.
     It's a dense net with body output features as input with following support.
 
@@ -157,7 +160,7 @@ class Classification(TopLayer):
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
             self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
-                                 tf.zeros_like(self.loss), self.loss)
+                                           tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]
@@ -174,6 +177,7 @@ class Classification(TopLayer):
 
 
 class MaskLM(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for mask language model.
     It's a dense net with body output features as input.
     Major logic is from original bert code
@@ -233,9 +237,11 @@ class MaskLM(TopLayer):
                 # tensor has a value of 1.0 for every real prediction and 0.0 for the
                 # padding predictions.
                 per_example_loss = - \
-                    tf.reduce_sum(input_tensor=log_probs * one_hot_labels, axis=[-1])
+                    tf.reduce_sum(input_tensor=log_probs *
+                                  one_hot_labels, axis=[-1])
                 label_weights = tf.cast(label_weights, tf.float32)
-                numerator = tf.reduce_sum(input_tensor=label_weights * per_example_loss)
+                numerator = tf.reduce_sum(
+                    input_tensor=label_weights * per_example_loss)
                 denominator = tf.reduce_sum(input_tensor=label_weights) + 1e-5
                 loss = numerator / denominator
 
@@ -276,6 +282,7 @@ class MaskLM(TopLayer):
 
 
 class PreTrain(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for pretrain.
     It's MaskLM + Classification(next sentence prediction)
     '''
@@ -306,6 +313,7 @@ class PreTrain(TopLayer):
 
 
 class Seq2Seq(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for seq2seq problem.
     This is basically a decoder of encoder-decoder framework.
     Here uses transformer decoder architecture with beam search support.
@@ -323,7 +331,6 @@ class Seq2Seq(TopLayer):
         decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
             max_seq_len)
 
-        batch_size = tf.shape(input=encoder_output)[0]
         max_seq_len = tf.shape(input=encoder_output)[1]
 
         encoder_output = tf.expand_dims(encoder_output, axis=1)
@@ -432,7 +439,7 @@ class Seq2Seq(TopLayer):
 
             with tf.compat.v1.name_scope("shift_targets"):
                 # Shift targets to the right, and remove the last element
-                shift_labels = tf.pad(
+                shift_labels = tf.pad(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                     tensor=labels, paddings=[[0, 0], [0, 1]])[:, 1:]
             batch_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
                 shift_labels, logits)
@@ -440,7 +447,8 @@ class Seq2Seq(TopLayer):
                 batch_loss, features['%s_loss_multiplier' % problem_name])
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            loss = tf.compat.v1.where(tf.math.is_nan(loss), tf.zeros_like(loss), loss)
+            loss = tf.compat.v1.where(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+                tf.math.is_nan(loss), tf.zeros_like(loss), loss)
             self.loss = loss
 
             if mode == tf.estimator.ModeKeys.TRAIN:
@@ -457,6 +465,7 @@ class Seq2Seq(TopLayer):
 
 
 class MultiLabelClassification(TopLayer):
+    # pylint: disable=attribute-defined-outside-init
     '''Top model for multi-class classification.
     It's a dense net with body output features as input with following support.
 
@@ -501,7 +510,7 @@ class MultiLabelClassification(TopLayer):
             # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
             # and loss will be NaN. Replacing NaN with 0 fixes the problem.
             self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
-                                 tf.zeros_like(self.loss), self.loss)
+                                           tf.zeros_like(self.loss), self.loss)
             return self.loss
         elif mode == tf.estimator.ModeKeys.EVAL:
             labels = features['%s_label_ids' % problem_name]

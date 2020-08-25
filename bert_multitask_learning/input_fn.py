@@ -3,15 +3,14 @@
 from functools import partial
 from itertools import tee
 
-import numpy as np
-import pandas as pd
 import tensorflow as tf
 
 from .bert_preprocessing.create_bert_features import (
     create_bert_features_generator, create_multimodal_bert_features_generator)
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
-from .special_tokens import EVAL, PREDICT, TRAIN
-from .utils import cluster_alphnum, infer_shape_and_type_from_dict, load_transformer_tokenizer
+from .special_tokens import PREDICT
+from .utils import (infer_shape_and_type_from_dict,
+                    load_transformer_tokenizer)
 
 
 def element_length_func(yield_dict):
