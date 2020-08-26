@@ -1,11 +1,11 @@
 import json
+from json import decoder
 import os
 import re
 import shutil
 import logging
 
 
-from .modeling import BertConfig
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
 
 
@@ -21,8 +21,18 @@ class BaseParams():
         self.transformer_model_name = 'bert-base-chinese'
         self.transformer_tokenizer_name = 'bert-base-chinese'
         self.transformer_config_name = 'bert-base-chinese'
-        self.transformer_loading_model = 'TFAutoModel'
-        self.transformer_loading_config = 'AutoConfig'
+        self.transformer_model_loading = 'TFAutoModel'
+        self.transformer_config_loading = 'AutoConfig'
+        self.transformer_tokenizer_loading = 'AutoTokenizer'
+        self.transformer_decoder_model_name = None
+        self.transformer_decoder_config_name = None
+        self.transformer_decoder_tokenizer_name = None
+        # self.transformer_decoder_model_name = "hfl/chinese-xlnet-base"
+        # self.transformer_decoder_config_name = "hfl/chinese-xlnet-base"
+        # self.transformer_decoder_tokenizer_name = "hfl/chinese-xlnet-base"
+        self.transformer_decoder_model_loading = 'TFAutoModel'
+        self.transformer_decoder_config_loading = 'AutoConfig'
+        self.transformer_decoder_tokenizer_loading = 'AutoTokenizer'
 
         # multimodal params
         self.modal_token_type_id = {
@@ -216,8 +226,12 @@ class BaseParams():
             dump_dict = json.load(f)
         for att in dump_dict:
             setattr(self, att, dump_dict[att])
-        self.bert_config = BertConfig.from_dict(self.bert_config_dict)
-        self.bert_config.num_hidden_layers = dump_dict['bert_num_hidden_layer']
+        self.bert_config = load_transformer_config(
+            self.bert_config_dict, self.transformer_config_loading)
+        if hasattr(self, 'bert_decoder_config_dict'):
+            self.bert_decoder_config = load_transformer_config(
+                self.bert_decoder_config_dict, self.transformer_decoder_config_loading
+            )
         self.assign_problem(*assign_details)
 
     def get_data_info(self, problem_list, base):
@@ -233,11 +247,9 @@ class BaseParams():
             data_info = json.load(open(json_path, 'r', encoding='utf8'))
             self.data_num_dict = data_info['data_num']
             self.num_classes = data_info['num_classes']
-            self.eos_id = data_info['eos_id']
         else:
             self.data_num_dict = {}
             self.num_classes = {}
-            self.eos_id = {}
 
         if not self.is_serve:
             # update data_num and train_steps
@@ -254,7 +266,6 @@ class BaseParams():
             data_info = {
                 'data_num': self.data_num_dict,
                 'num_classes': self.num_classes,
-                'eos_id': self.eos_id
             }
 
             json.dump(data_info, open(json_path, 'w', encoding='utf8'))
@@ -316,27 +327,52 @@ class BaseParams():
             self.params_path = os.path.join(self.ckpt_dir, 'params.json')
             config_path = os.path.join(self.init_checkpoint,
                                        'bert_config.json')
+            decoder_config_path = os.path.join(self.init_checkpoint,
+                                               'bert_decoder_config.json')
+            # bert config exists, init from existing config
             if os.path.exists(config_path):
                 shutil.copy2(config_path, self.ckpt_dir)
                 self.bert_config = load_transformer_config(
-                    config_path, self.transformer_loading_config)
+                    config_path, self.transformer_config_loading)
+                if os.path.exists(decoder_config_path):
+                    self.bert_decoder_config = load_transformer_config(
+                        decoder_config_path, self.transformer_decoder_config_loading
+                    )
+                    self.bert_decoder_config_dict = self.bert_decoder_config.to_dict()
                 self.init_weight_from_huggingface = False
             else:
+                # load config from huggingface
                 logging.warning(
                     '%s not exists. will load model from huggingface checkpoint.', config_path)
                 # get or download config
                 self.init_weight_from_huggingface = True
                 self.bert_config = load_transformer_config(
-                    self.transformer_config_name, self.transformer_loading_config)
-                json.dump(self.bert_config.__dict__, open(
+                    self.transformer_config_name, self.transformer_config_loading)
+                json.dump(self.bert_config.to_dict(), open(
                     os.path.join(self.ckpt_dir, 'bert_config.json'), 'w'))
 
-        self.bert_config.num_hidden_layers = self.bert_num_hidden_layer
-        self.bert_config_dict = self.bert_config.__dict__
+                # if decoder is specified
+                if self.transformer_decoder_model_name:
+                    self.bert_decoder_config = load_transformer_config(
+                        self.transformer_decoder_config_name, self.transformer_decoder_config_loading
+                    )
+                    self.bert_decoder_config_dict = self.bert_decoder_config.to_dict()
+                    json.dump(self.bert_decoder_config.to_dict(),
+                              open(decoder_config_path, 'w'))
+
+        self.bert_config_dict = self.bert_config.to_dict()
 
         tokenizer = load_transformer_tokenizer(
-            self.transformer_tokenizer_name)
+            self.transformer_tokenizer_name, self.transformer_tokenizer_loading)
         self.vocab_size = tokenizer.vocab_size
+        if self.transformer_decoder_tokenizer_name:
+            decoder_tokenizer = load_transformer_tokenizer(
+                self.transformer_decoder_tokenizer_name,
+                self.transformer_decoder_tokenizer_loading
+            )
+            self.decoder_vocab_size = decoder_tokenizer.vocab_size
+            self.bos_id = decoder_tokenizer.bos_token_id
+            self.eos_id = decoder_tokenizer.eos_token_id
 
     def get_problem_type(self, problem: str):
         return self.problem_type[problem]

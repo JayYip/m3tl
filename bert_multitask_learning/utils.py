@@ -1,3 +1,4 @@
+
 import os
 import pickle
 import re
@@ -6,10 +7,8 @@ import numpy as np
 import tensorflow as tf
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
-from transformers import AutoTokenizer, BertTokenizer
+from transformers import AutoTokenizer
 import transformers
-
-from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
 
 class LabelEncoder(BaseEstimator, TransformerMixin):
@@ -138,7 +137,7 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
 
         if is_seq2seq_text:
             label_encoder = load_transformer_tokenizer(
-                params.transformer_tokenizer_name)
+                params.transformer_decoder_tokenizer_name, params.transformer_decoder_tokenizer_loading)
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         elif is_multi_cls:
@@ -150,8 +149,6 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
             if isinstance(label_list[0], list):
                 label_list = [
                     item for sublist in label_list for item in sublist]
-                if is_seq2seq_tag:
-                    label_list.extend([BOS_TOKEN, EOS_TOKEN])
             label_encoder = LabelEncoder()
 
             label_encoder.fit(label_list, zero_class=zero_class)
@@ -170,13 +167,12 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
             params.num_classes[problem] = label_encoder.classes_.shape[0]
         else:
             params.num_classes[problem] = len(label_encoder.encode_dict)
-            if EOS_TOKEN in label_encoder.encode_dict:
-                params.eos_id[problem] = int(
-                    label_encoder.transform([EOS_TOKEN])[0])
     else:
-        params.num_classes[problem] = len(label_encoder.vocab)
-        params.eos_id[problem] = label_encoder.convert_tokens_to_ids(
-            [EOS_TOKEN])
+        try:
+            params.num_classes[problem] = len(label_encoder.vocab)
+        except AttributeError:
+            # models like xlnet's vocab size can only be retrieved from config instead of tokenizer
+            params.num_classes[problem] = params.bert_decoder_config.vocab_size
 
     return label_encoder
 
@@ -334,15 +330,12 @@ def load_transformer_tokenizer(tokenizer_name: str, load_module_name=None):
         tok = getattr(transformers, load_module_name).from_pretrained(
             tokenizer_name)
     else:
-        try:
-            tok = AutoTokenizer.from_pretrained(tokenizer_name)
-        except (ValueError, TypeError):
-            tok = BertTokenizer.from_pretrained(tokenizer_name)
+        tok = AutoTokenizer.from_pretrained(tokenizer_name)
 
     return tok
 
 
-def load_transformer_config(config_name, load_module_name=None):
+def load_transformer_config(config_name_or_dict, load_module_name=None):
     """Some models need specify loading module
 
     Args:
@@ -353,14 +346,32 @@ def load_transformer_config(config_name, load_module_name=None):
         config: config
     """
     if load_module_name:
-        config = getattr(transformers, load_module_name).from_pretrained(
-            config_name)
+        load_module = getattr(transformers, load_module_name)
     else:
-        config = transformers.AutoConfig.from_pretrained(config_name)
+        load_module = transformers.AutoConfig
+    if isinstance(config_name_or_dict, str):
+        config = load_module.from_pretrained(config_name_or_dict)
+    elif isinstance(config_name_or_dict, dict):
+        config = load_module.from_dict(config_name_or_dict)
+    else:
+        raise ValueError('config_name_or_dict should be str or dict')
     return config
 
 
-def get_transformer_model(model, key='embeddings'):
+def load_transformer_model(model_name_or_config, load_module_name=None):
+    if load_module_name:
+        load_module = getattr(transformers, load_module_name)
+    else:
+        load_module = transformers.TFAutoModel
+
+    if isinstance(model_name_or_config, str):
+        model = load_module.from_pretrained(model_name_or_config)
+    else:
+        model = load_module.from_config(model_name_or_config)
+    return model
+
+
+def get_transformer_main_model(model, key='embeddings'):
     """Function to extrac model name from huggingface transformer models.
 
     Args:

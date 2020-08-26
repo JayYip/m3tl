@@ -95,7 +95,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
         first_element, _ = first_element
 
     tokenizer = load_transformer_tokenizer(
-        config.transformer_tokenizer_name)
+        config.transformer_tokenizer_name, config.transformer_tokenizer_loading)
     if isinstance(first_element, dict) and 'a' not in first_element:
         part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,

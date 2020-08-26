@@ -4,11 +4,12 @@ from tensorflow import keras
 
 
 from . import modeling
+from .params import BaseParams
 
 
 class TopLayer():
     # pylint: disable=attribute-defined-outside-init,no-member
-    def __init__(self, params):
+    def __init__(self, params: BaseParams):
         self.params = params
 
     def get_train(self):
