@@ -21,6 +21,7 @@ from __future__ import print_function
 import collections
 import copy
 import json
+from json import load
 import re
 import six
 import tensorflow as tf
@@ -28,83 +29,7 @@ import tensorflow as tf
 
 import transformers
 
-from .utils import get_transformer_model
-
-
-class BertConfig(object):
-    """Configuration for `BertModel`."""
-
-    def __init__(self,
-                 vocab_size,
-                 hidden_size=768,
-                 num_hidden_layers=12,
-                 num_attention_heads=12,
-                 intermediate_size=3072,
-                 hidden_act="gelu",
-                 hidden_dropout_prob=0.1,
-                 attention_probs_dropout_prob=0.1,
-                 max_position_embeddings=512,
-                 type_vocab_size=16,
-                 initializer_range=0.02):
-        """Constructs BertConfig.
-
-        Args:
-          vocab_size: Vocabulary size of `inputs_ids` in `BertModel`.
-          hidden_size: Size of the encoder layers and the pooler layer.
-          num_hidden_layers: Number of hidden layers in the Transformer encoder.
-          num_attention_heads: Number of attention heads for each attention layer in
-            the Transformer encoder.
-          intermediate_size: The size of the "intermediate" (i.e., feed-forward)
-            layer in the Transformer encoder.
-          hidden_act: The non-linear activation function (function or string) in the
-            encoder and pooler.
-          hidden_dropout_prob: The dropout probability for all fully connected
-            layers in the embeddings, encoder, and pooler.
-          attention_probs_dropout_prob: The dropout ratio for the attention
-            probabilities.
-          max_position_embeddings: The maximum sequence length that this model might
-            ever be used with. Typically set this to something large just in case
-            (e.g., 512 or 1024 or 2048).
-          type_vocab_size: The vocabulary size of the `token_type_ids` passed into
-            `BertModel`.
-          initializer_range: The stdev of the truncated_normal_initializer for
-            initializing all weight matrices.
-        """
-        self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
-        self.num_attention_heads = num_attention_heads
-        self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
-        self.hidden_dropout_prob = hidden_dropout_prob
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.max_position_embeddings = max_position_embeddings
-        self.type_vocab_size = type_vocab_size
-        self.initializer_range = initializer_range
-
-    @classmethod
-    def from_dict(cls, json_object):
-        """Constructs a `BertConfig` from a Python dictionary of parameters."""
-        config = BertConfig(vocab_size=None)
-        for (key, value) in six.iteritems(json_object):
-            config.__dict__[key] = value
-        return config
-
-    @classmethod
-    def from_json_file(cls, json_file):
-        """Constructs a `BertConfig` from a json file of parameters."""
-        with tf.io.gfile.GFile(json_file, "r") as reader:
-            text = reader.read()
-        return cls.from_dict(json.loads(text))
-
-    def to_dict(self):
-        """Serializes this instance to a Python dictionary."""
-        output = copy.deepcopy(self.__dict__)
-        return output
-
-    def to_json_string(self):
-        """Serializes this instance to a JSON string."""
-        return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
+from .utils import get_transformer_main_model, load_transformer_model
 
 
 def gelu(input_tensor):
@@ -273,104 +198,6 @@ def embedding_lookup(input_ids,
     return (output, embedding_table)
 
 
-def embedding_postprocessor(input_tensor,
-                            use_token_type=False,
-                            token_type_ids=None,
-                            token_type_vocab_size=16,
-                            token_type_embedding_name="token_type_embeddings",
-                            use_position_embeddings=True,
-                            position_embedding_name="position_embeddings",
-                            initializer_range=0.02,
-                            max_position_embeddings=512,
-                            dropout_prob=0.1):
-    """Performs various post-processing on a word embedding tensor.
-
-    Args:
-      input_tensor: float Tensor of shape [batch_size, seq_length,
-        embedding_size].
-      use_token_type: bool. Whether to add embeddings for `token_type_ids`.
-      token_type_ids: (optional) int32 Tensor of shape [batch_size, seq_length].
-        Must be specified if `use_token_type` is True.
-      token_type_vocab_size: int. The vocabulary size of `token_type_ids`.
-      token_type_embedding_name: string. The name of the embedding table variable
-        for token type ids.
-      use_position_embeddings: bool. Whether to add position embeddings for the
-        position of each token in the sequence.
-      position_embedding_name: string. The name of the embedding table variable
-        for positional embeddings.
-      initializer_range: float. Range of the weight initialization.
-      max_position_embeddings: int. Maximum sequence length that might ever be
-        used with this model. This can be longer than the sequence length of
-        input_tensor, but cannot be shorter.
-      dropout_prob: float. Dropout probability applied to the final output tensor.
-
-    Returns:
-      float tensor with same shape as `input_tensor`.
-
-    Raises:
-      ValueError: One of the tensor shapes or input values is invalid.
-    """
-    input_shape = get_shape_list(input_tensor, expected_rank=3)
-    batch_size = input_shape[0]
-    seq_length = input_shape[1]
-    width = input_shape[2]
-
-    output = input_tensor
-
-    if use_token_type:
-        if token_type_ids is None:
-            raise ValueError("`token_type_ids` must be specified if"
-                             "`use_token_type` is True.")
-        token_type_table = tf.compat.v1.get_variable(
-            name=token_type_embedding_name,
-            shape=[token_type_vocab_size, width],
-            initializer=create_initializer(initializer_range))
-        # This vocab will be small so we always do one-hot here, since it is always
-        # faster for a small vocabulary.
-        flat_token_type_ids = tf.reshape(token_type_ids, [-1])
-        one_hot_ids = tf.one_hot(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            flat_token_type_ids, depth=token_type_vocab_size)
-        token_type_embeddings = tf.matmul(one_hot_ids, token_type_table)
-        token_type_embeddings = tf.reshape(token_type_embeddings,
-                                           [batch_size, seq_length, width])
-        output += token_type_embeddings
-
-    if use_position_embeddings:
-        assert_op = tf.compat.v1.assert_less_equal(
-            seq_length, max_position_embeddings)
-        with tf.control_dependencies([assert_op]):
-            full_position_embeddings = tf.compat.v1.get_variable(
-                name=position_embedding_name,
-                shape=[max_position_embeddings, width],
-                initializer=create_initializer(initializer_range))
-            # Since the position embedding table is a learned variable, we create it
-            # using a (long) sequence length `max_position_embeddings`. The actual
-            # sequence length might be shorter than this, for faster training of
-            # tasks that do not have long sequences.
-            #
-            # So `full_position_embeddings` is effectively an embedding table
-            # for position [0, 1, 2, ..., max_position_embeddings-1], and the current
-            # sequence has positions [0, 1, 2, ... seq_length-1], so we can just
-            # perform a slice.
-            position_embeddings = tf.slice(full_position_embeddings, [0, 0],
-                                           [seq_length, -1])
-            num_dims = len(output.shape.as_list())
-
-            # Only the last two dimensions are relevant (`seq_length` and `width`), so
-            # we broadcast among the first dimensions, which is typically just
-            # the batch size.
-            position_broadcast_shape = []
-            for _ in range(num_dims - 2):
-                position_broadcast_shape.append(1)
-            position_broadcast_shape.extend([seq_length, width])
-            position_embeddings = tf.reshape(position_embeddings,
-                                             position_broadcast_shape)
-            output += position_embeddings
-
-    output = layer_norm_and_dropout(output, dropout_prob)
-    return output
-
-
 def create_attention_mask_from_input_mask(from_tensor, to_mask):
     """Create 3D attention mask from a 2D tensor mask.
 
@@ -442,33 +269,6 @@ def get_shape_list(tensor, expected_rank=None, name=None):
     return shape
 
 
-def reshape_to_matrix(input_tensor):
-    """Reshapes a >= rank 2 tensor to a rank 2 tensor (i.e., a matrix)."""
-    ndims = input_tensor.shape.ndims
-    if ndims < 2:
-        raise ValueError("Input tensor must have at least rank 2. Shape = %s" %
-                         (input_tensor.shape))
-    if ndims == 2:
-        return input_tensor
-
-    width = input_tensor.shape[-1]
-    output_tensor = tf.reshape(input_tensor, [-1, width])
-    return output_tensor
-
-
-def reshape_from_matrix(output_tensor, orig_shape_list):
-    """Reshapes a rank 2 tensor back to its original rank >= 2 tensor."""
-    if len(orig_shape_list) == 2:
-        return output_tensor
-
-    output_shape = get_shape_list(output_tensor)
-
-    orig_dims = orig_shape_list[0:-1]
-    width = output_shape[-1]
-
-    return tf.reshape(output_tensor, orig_dims + [width])
-
-
 def assert_rank(tensor, expected_rank, name=None):
     """Raises an exception if the tensor rank is not of the expected rank.
 
@@ -500,15 +300,12 @@ def assert_rank(tensor, expected_rank, name=None):
 
 
 def init_transformer(params):
-    loading_model = getattr(
-        transformers, params.transformer_loading_model)
-    model = loading_model.from_config(params.bert_config)
-    return model
+    return load_transformer_model(params.bert_config, params.transformer_model_loading)
 
 
 def get_embedding_table_from_model(model):
     model.bert.embeddings.build(1)
-    base_model = get_transformer_model(model)
+    base_model = get_transformer_main_model(model)
     return base_model.embeddings.word_embeddings
 
 
@@ -591,7 +388,10 @@ class MultiModalBertModel():
             input_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [input_mask, modal_mask], axis=1)
 
-        self.sequence_output, self.pooled_output = self.bert_model(
+        self.input_mask = input_mask
+        self.token_type_ids = token_type_ids
+
+        self.sequence_output, self.pooled_output, self.all_encoder_layers = self.bert_model(
             {'input_ids': None,
              'inputs_embeds': self.embedding_output,
              'attention_mask': input_mask,
@@ -600,9 +400,6 @@ class MultiModalBertModel():
             training=is_training,
             output_hidden_states=True
         )
-
-        # TODO: fix all layers
-        self.all_encoder_layers = [self.sequence_output]
 
     def get_pooled_output(self):
         return self.pooled_output
@@ -632,6 +429,12 @@ class MultiModalBertModel():
 
     def get_embedding_table(self):
         return self.embedding_table
+
+    def get_input_mask(self):
+        return self.input_mask
+
+    def get_token_type_ids(self):
+        return self.token_type_ids
 
 
 def get_assignment_map_from_keras_checkpoint(tvars, init_checkpoint):

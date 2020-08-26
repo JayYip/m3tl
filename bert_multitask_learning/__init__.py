@@ -8,7 +8,6 @@ from .top_utils import *
 from .top import *
 from .experimental_top import *
 from .run_bert_multitask import *
-from .transformer_decoder import *
 from .utils import *
 from .export_model import *
 from .preproc_decorator import preprocessing_fn

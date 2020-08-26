@@ -2,8 +2,6 @@
 import tensorflow as tf
 
 from . import modeling
-from .experimental_top import (GridTransformer, LabelTransferHidden,
-                               TaskTransformer)
 from .modeling import MultiModalBertModel
 from .optimizer import AdamWeightDecayOptimizer
 from .top import (Classification, MaskLM, MultiLabelClassification, PreTrain,
@@ -85,6 +83,8 @@ class BertMultiTask():
             use_one_hot_embeddings=config.use_one_hot_embeddings,
             features_dict=features)
         self.model = model
+        features['model_input_mask'] = self.model.get_input_mask()
+        features['model_token_type_ids'] = self.model.get_token_type_ids()
 
         feature_dict = {}
         for logit_type in ['seq', 'pooled', 'all', 'embed', 'embed_table']:
@@ -161,19 +161,21 @@ class BertMultiTask():
         """
 
         if self.params.label_transfer:
-            ori_hidden_feature = {
-                'ori_'+k: v for k,
-                v in hidden_feature.items()}
-            label_transfer_layer = LabelTransferHidden(self.params)
-            hidden_feature = label_transfer_layer(
-                features, hidden_feature, mode)
-            hidden_feature.update(ori_hidden_feature)
+            raise NotImplementedError
+            # ori_hidden_feature = {
+            #     'ori_'+k: v for k,
+            #     v in hidden_feature.items()}
+            # label_transfer_layer = LabelTransferHidden(self.params)
+            # hidden_feature = label_transfer_layer(
+            #     features, hidden_feature, mode)
+            # hidden_feature.update(ori_hidden_feature)
 
         if self.params.task_transformer:
-            task_tranformer_layer = TaskTransformer(self.params)
-            task_tranformer_hidden_feature = task_tranformer_layer(
-                features, hidden_feature, mode)
-            self.params.hidden_dense = False
+            raise NotImplementedError
+            # task_tranformer_layer = TaskTransformer(self.params)
+            # task_tranformer_hidden_feature = task_tranformer_layer(
+            #     features, hidden_feature, mode)
+            # self.params.hidden_dense = False
 
         return_feature = {}
         return_hidden_feature = {}
@@ -198,14 +200,15 @@ class BertMultiTask():
                     )
 
                 if self.params.grid_transformer:
-                    with tf.compat.v1.variable_scope(top_scope_name):
-                        grid_layer = GridTransformer(self.params)
+                    raise NotImplementedError
+                    # with tf.compat.v1.variable_scope(top_scope_name):
+                    #     grid_layer = GridTransformer(self.params)
 
-                        hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
+                    #     hidden_feature_key = 'pooled' if problem_type == 'cls' else 'seq'
 
-                        hidden_feature_this_round[hidden_feature_key] = grid_layer(
-                            feature_this_round, hidden_feature_this_round, mode, problem)
-                    self.params.hidden_dense = False
+                    #     hidden_feature_this_round[hidden_feature_key] = grid_layer(
+                    #         feature_this_round, hidden_feature_this_round, mode, problem)
+                    # self.params.hidden_dense = False
                 return_hidden_feature[problem] = hidden_feature_this_round
                 return_feature[problem] = feature_this_round
         return return_feature, return_hidden_feature
@@ -418,13 +421,20 @@ class BertMultiTask():
         tvars = tf.compat.v1.trainable_variables()
 
         if mode == tf.estimator.ModeKeys.TRAIN:
-
+            init_decoder = False
             if self.params.init_weight_from_huggingface:
                 # ckpt_path = os.path.join(self.params.transformer_model_name,
                 #                          'pretrained_model')
                 ckpt_path = self.params.transformer_model_name
                 (assignment_map, _
                  ) = modeling.get_assignment_map_from_keras_checkpoint(tvars, ckpt_path)
+
+                # init decoder weight
+                if self.params.transformer_decoder_model_name:
+                    (decoder_assignment_map, _
+                     ) = modeling.get_assignment_map_from_keras_checkpoint(tvars, self.params.transformer_decoder_model_name)
+                    init_decoder = True
+
             else:
                 ckpt_path = self.params.init_checkpoint
 
@@ -434,6 +444,10 @@ class BertMultiTask():
             def scaffold():
                 init_op = tf.compat.v1.train.init_from_checkpoint(
                     ckpt_path, assignment_map)
+                if init_decoder:
+                    decoder_init_op = tf.compat.v1.train.init_from_checkpoint(
+                        self.params.transformer_decoder_model_name, decoder_assignment_map)
+                    init_op = tf.group(init_op, decoder_init_op)
                 return tf.compat.v1.train.Scaffold(init_op)
 
             if not warm_start:

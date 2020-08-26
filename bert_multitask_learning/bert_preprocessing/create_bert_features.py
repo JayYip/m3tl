@@ -5,7 +5,7 @@ from copy import copy
 import numpy as np
 import tensorflow as tf
 
-from ..special_tokens import BOS_TOKEN, EOS_TOKEN, TRAIN, PREDICT
+from ..special_tokens import PREDICT
 from .bert_utils import (create_instances_from_document,
                          create_masked_lm_predictions)
 
@@ -38,7 +38,8 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
     if isinstance(target, list):
         if problem_type == 'seq2seq_text':
 
-            target = [BOS_TOKEN] + target + [EOS_TOKEN]
+            target = [label_encoder.bos_token] + \
+                target + [label_encoder.eos_token]
             label_dict = label_encoder(
                 target, add_special_tokens=False, is_pretokenized=True)
             label_id = label_dict['input_ids']
@@ -50,7 +51,8 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             label_id = label_encoder.transform([target])[0]
         elif problem_type == 'seq2seq_tag':
             # seq2seq_tag
-            target = [BOS_TOKEN] + target + [EOS_TOKEN]
+            target = [label_encoder.bos_token] + \
+                target + [label_encoder.eos_token]
             label_dict = tokenizer(
                 target, is_pretokenized=True, add_special_tokens=False)
             label_mask = [0] + label_dict['attention_mask'] + [0]
@@ -61,7 +63,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             label_id = [np.int32(i) for i in label_id]
     else:
         if problem_type == 'seq2seq_text':
-            target = BOS_TOKEN + target + EOS_TOKEN
+            target = label_encoder.bos_token + target + label_encoder.eos_token
             label_dict = label_encoder(
                 target, add_special_tokens=False, is_pretokenized=False)
             label_id = label_dict['input_ids']
@@ -83,7 +85,6 @@ def _create_bert_features(problem,
                           problem_type,
                           is_seq):
 
-    return_dict_list = []
     for example in example_list:
         try:
             raw_inputs, raw_target = example
@@ -103,6 +104,9 @@ def _create_bert_features(problem,
 
         if isinstance(tokens_a, list):
             is_pretokenized = True
+        else:
+            is_pretokenized = False
+
         tokenized_dict = tokenizer(
             tokens_a, tokens_b,
             truncation=False,
@@ -128,13 +132,6 @@ def _create_bert_features(problem,
         input_ids = tokenized_dict['input_ids']
         segment_ids = tokenized_dict['token_type_ids']
         input_mask = tokenized_dict['attention_mask']
-
-        if not params.dynamic_padding:
-            assert len(input_ids) == params.max_seq_len
-            assert len(input_mask) == params.max_seq_len
-            assert len(segment_ids) == params.max_seq_len, segment_ids
-            if is_seq:
-                assert len(label_id) == params.max_seq_len
 
         # create return dict
         if mode != PREDICT:
@@ -283,7 +280,6 @@ def _create_multimodal_bert_features(problem,
     if problem_type == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
-    return_dict_list = []
     for example in example_list:
         try:
             raw_inputs, raw_target = example
@@ -351,7 +347,6 @@ def _create_multimodal_bert_features(problem,
                 input_ids = tokenized_dict['input_ids']
                 segment_ids = tokenized_dict['token_type_ids']
                 input_mask = tokenized_dict['attention_mask']
-                max_segment_id = max(segment_ids)
 
                 modal_feature_dict = {
                     'input_ids': input_ids,

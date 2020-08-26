@@ -1,13 +1,10 @@
 import tensorflow as tf
 
-from tensor2tensor.utils import beam_search
-
-from .transformer_decoder import TransformerDecoder
-
 from . import modeling
 from .top_utils import (TopLayer, gather_indexes,
                         create_seq_smooth_label,
                         dense_layer)
+from .utils import load_transformer_model
 
 
 class SequenceLabel(TopLayer):
@@ -319,136 +316,30 @@ class Seq2Seq(TopLayer):
     Here uses transformer decoder architecture with beam search support.
     '''
 
-    def _get_symbol_to_logit_fn(self,
-                                max_seq_len,
-                                embedding_table,
-                                token_type_ids,
-                                decoder,
-                                num_classes,
-                                encoder_output,
-                                input_mask,
-                                params):
-        decoder_self_attention_mask = decoder.get_decoder_self_attention_mask(
-            max_seq_len)
-
-        max_seq_len = tf.shape(input=encoder_output)[1]
-
-        encoder_output = tf.expand_dims(encoder_output, axis=1)
-        tile_dims = [1] * encoder_output.shape.ndims
-        tile_dims[1] = params.beam_size
-
-        encoder_output = tf.tile(encoder_output, tile_dims)
-        encoder_output = tf.reshape(encoder_output,
-                                    [-1, max_seq_len, params.bert_config.hidden_size])
-
-        def symbols_to_logits_fn(ids, i, cache):
-
-            decoder_inputs = tf.nn.embedding_lookup(
-                params=embedding_table, ids=ids)
-
-            decoder_inputs = modeling.embedding_postprocessor(
-                input_tensor=decoder_inputs,
-                use_token_type=False,
-                token_type_ids=token_type_ids,
-                token_type_vocab_size=params.bert_config.type_vocab_size,
-                token_type_embedding_name="token_type_embeddings",
-                use_position_embeddings=True,
-                position_embedding_name="position_embeddings",
-                initializer_range=params.bert_config.initializer_range,
-                max_position_embeddings=params.bert_config.max_position_embeddings,
-                dropout_prob=self.params.bert_config.hidden_dropout_prob)
-            final_decoder_input = decoder_inputs[:, -1:, :]
-            # final_decoder_input = decoder_inputs
-            self_attention_mask = decoder_self_attention_mask[:, i:i+1, :i+1]
-
-            logits = decoder.decode(
-                decoder_inputs=final_decoder_input,
-                encoder_output=encoder_output,
-                input_mask=input_mask,
-                decoder_self_attention_mask=self_attention_mask,
-                cache=cache,
-                num_classes=num_classes,
-                do_return_all_layers=False)
-
-            return logits, cache
-        return symbols_to_logits_fn
-
-    def beam_search_decode(self, features, hidden_feature, mode, problem_name):
-        # prepare inputs to attention
-        key = 'ori_seq' if self.params.label_transfer else 'seq'
-        encoder_outputs = hidden_feature[key]
-        max_seq_len = self.params.max_seq_len
-        embedding_table = hidden_feature['embed_table']
-        token_type_ids = features['segment_ids']
-        num_classes = self.params.num_classes[problem_name]
-        batch_size = modeling.get_shape_list(
-            encoder_outputs, expected_rank=3)[0]
-        hidden_size = self.params.bert_config.hidden_size
-
-        if self.params.problem_type[problem_name] == 'seq2seq_text':
-            embedding_table = hidden_feature['embed_table']
-        else:
-            embedding_table = tf.compat.v1.get_variable(
-                'tag_embed_table',
-                shape=[num_classes, hidden_size])
-
-        symbol_to_logit_fn = self._get_symbol_to_logit_fn(
-            max_seq_len=max_seq_len,
-            embedding_table=embedding_table,
-            token_type_ids=token_type_ids,
-            decoder=self.decoder,
-            num_classes=num_classes,
-            encoder_output=encoder_outputs,
-            input_mask=features['input_mask'],
-            params=self.params
-        )
-
-        # create cache for fast decode
-        cache = {
-            str(layer): {
-                "key_layer": tf.zeros([batch_size, 0, hidden_size]),
-                "value_layer": tf.zeros([batch_size, 0, hidden_size]),
-            } for layer in range(self.params.decoder_num_hidden_layers)}
-        # cache['encoder_outputs'] = encoder_outputs
-        # cache['encoder_decoder_attention_mask'] = features['input_mask']
-        initial_ids = tf.zeros([batch_size], dtype=tf.int32)
-
-        decode_ids, _, _ = beam_search.beam_search(
-            symbols_to_logits_fn=symbol_to_logit_fn,
-            initial_ids=initial_ids,
-            states=cache,
-            vocab_size=self.params.num_classes[problem_name],
-            beam_size=self.params.beam_size,
-            alpha=self.params.beam_search_alpha,
-            decode_length=self.params.decode_max_seq_len,
-            eos_id=self.params.eos_id[problem_name])
-        # Get the top sequence for each batch element
-        top_decoded_ids = decode_ids[:, 0, 1:]
-        self.prob = top_decoded_ids
-        return self.prob
-
     def __call__(self, features, hidden_feature, mode, problem_name):
-        self.decoder = TransformerDecoder(self.params)
+        self.decoder = load_transformer_model(
+            self.params.bert_decoder_config,
+            self.params.transformer_decoder_model_loading)
         scope_name = self.params.share_top[problem_name]
-
+        encoder_output = hidden_feature['seq']
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = features['%s_label_ids' % problem_name]
+            label_mask = features['{}_mask'.format(problem_name)]
+            encoder_mask = features['model_input_mask']
 
-            logits = self.decoder.train_eval(
-                features, hidden_feature, mode, problem_name)
+            batch_loss, logits = self.decoder({'input_ids': labels,
+                                               'attention_mask': label_mask,
+                                               'encoder_hidden_states': encoder_output,
+                                               'encoder_attention_mask': encoder_mask,
+                                               'labels': labels})
 
-            with tf.compat.v1.name_scope("shift_targets"):
-                # Shift targets to the right, and remove the last element
-                shift_labels = tf.pad(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-                    tensor=labels, paddings=[[0, 0], [0, 1]])[:, 1:]
-            batch_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
-                shift_labels, logits)
-            loss = self.create_loss(
-                batch_loss, features['%s_loss_multiplier' % problem_name])
-            # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
-            # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            loss = tf.compat.v1.where(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-                tf.math.is_nan(loss), tf.zeros_like(loss), loss)
+            # loss = self.create_loss(
+            #     batch_loss, features['%s_loss_multiplier' % problem_name])
+            # # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
+            # # and loss will be NaN. Replacing NaN with 0 fixes the problem.
+            # loss = tf.compat.v1.where(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            #     tf.math.is_nan(loss), tf.zeros_like(loss), loss)
+            loss = tf.reduce_mean(batch_loss)
             self.loss = loss
 
             if mode == tf.estimator.ModeKeys.TRAIN:
@@ -458,8 +349,20 @@ class Seq2Seq(TopLayer):
                     features, logits, loss, problem_name, features['%s_mask' % problem_name])
 
         else:
-            self.pred = tf.identity(self.beam_search_decode(
-                features, hidden_feature, mode, problem_name),
+            bos_id = self.params.bos_id
+            init_tensor = tf.ones(
+                (tf.shape(encoder_output)[0], 1), dtype=tf.int32) * bos_id
+            eos_id = self.params.eos_id
+            self.pred = tf.identity(self.decoder.generate(
+                input_ids=init_tensor,
+                max_length=self.params.decode_max_seq_len,
+                min_length=2,
+                early_stopping=True,
+                num_beams=self.params.beam_size,
+                bos_token_id=bos_id,
+                eos_token_id=eos_id,
+                use_cache=True
+            ),
                 name='%s_predict' % scope_name)
             return self.pred
 

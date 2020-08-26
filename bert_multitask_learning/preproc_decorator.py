@@ -14,7 +14,7 @@ def preprocessing_fn(func):
         problem = func.__name__
 
         tokenizer = load_transformer_tokenizer(
-            params.transformer_tokenizer_name)
+            params.transformer_tokenizer_name, params.transformer_tokenizer_loading)
         example_list = func(params, mode)
 
         if isinstance(example_list, GeneratorType):
@@ -43,8 +43,13 @@ def preprocessing_fn(func):
                 if isinstance(label_encoder, MultiLabelBinarizer):
                     return cnt, label_encoder.classes_.shape[0]
 
-                    # label_encoder is tokenizer
-                return cnt, len(label_encoder.vocab)
+                # label_encoder is tokenizer
+                try:
+                    return cnt, len(label_encoder.vocab)
+                except AttributeError:
+                    # models like xlnet's vocab size can only be retrieved from config instead of tokenizer
+                    return cnt, params.bert_decoder_config.vocab_size
+
             else:
                 # create label encoder
                 label_encoder = get_or_make_label_encoder(
