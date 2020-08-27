@@ -182,11 +182,11 @@ class BertMultiTask():
 
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:
-                if self.params.task_transformer:
-                    hidden_feature = task_tranformer_hidden_feature[problem]
-                problem_type = self.params.problem_type[problem]
+                # if self.params.task_transformer:
+                #     hidden_feature = task_tranformer_hidden_feature[problem]
+                # problem_type = self.params.problem_type[problem]
 
-                top_scope_name = self.get_scope_name(problem)
+                # top_scope_name = self.get_scope_name(problem)
 
                 if len(self.params.run_problem_list) > 1:
                     feature_this_round, hidden_feature_this_round = self.get_features_for_problem(
