@@ -349,7 +349,12 @@ def load_transformer_config(config_name_or_dict, load_module_name=None):
         load_module = getattr(transformers, load_module_name)
     else:
         load_module = transformers.AutoConfig
-    config = load_module.from_pretrained(config_name_or_dict)
+    if isinstance(config_name_or_dict, str):
+        config = load_module.from_pretrained(config_name_or_dict)
+    elif isinstance(config_name_or_dict, dict):
+        config = load_module.from_dict(config_name_or_dict)
+    else:
+        raise ValueError('config_name_or_dict should be str or dict')
     return config
 
 
