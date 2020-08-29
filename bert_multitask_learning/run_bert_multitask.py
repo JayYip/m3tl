@@ -12,6 +12,10 @@ from .model_fn import BertMultiTask
 from .params import DynamicBatchSizeParams
 from .special_tokens import EVAL
 
+# Fix duplicate log
+LOGGER = tf.get_logger()
+LOGGER.propagate = False
+
 
 def _create_estimator(
         num_gpus=1,
@@ -19,7 +23,7 @@ def _create_estimator(
         model=None):
     if model is None:
         model = BertMultiTask(params=params)
-    model_fn = model.get_model_fn(warm_start=False)
+    model_fn = model.get_model_fn(warm_start=True)
 
     dist_trategy = tf.distribute.MirroredStrategy()
 
