@@ -455,7 +455,8 @@ def get_assignment_map_from_keras_checkpoint(tvars, init_checkpoint):
 
     def ckpt_name_to_train_name(var_name):
         # bert/encoder/layer/9/intermediate/dense/kernel/.ATTRIBUTES/VARIABLE_VALUE
-        tmp_name = var_name.replace('/.ATTRIBUTES/VARIABLE_VALUE', '')
+        tmp_name = var_name.replace(
+            '/.ATTRIBUTES/VARIABLE_VALUE', '').replace('self_attention', 'self').replace('dense_output', 'output').replace('bert_output', 'output')
         return tmp_name.replace('layer/', 'layer_._')
     init_var_dict = {v: ckpt_name_to_train_name(v) for v, _ in init_vars}
 
