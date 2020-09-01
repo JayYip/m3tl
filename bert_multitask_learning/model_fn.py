@@ -183,7 +183,8 @@ class BertMultiTask():
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:
                 if self.params.task_transformer:
-                    hidden_feature = task_tranformer_hidden_feature[problem]
+                    # hidden_feature = task_tranformer_hidden_feature[problem]
+                    raise NotImplementedError
                 problem_type = self.params.problem_type[problem]
 
                 top_scope_name = self.get_scope_name(problem)

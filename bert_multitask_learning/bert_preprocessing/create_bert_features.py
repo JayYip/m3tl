@@ -1,6 +1,5 @@
 import logging
 import random
-from copy import copy
 
 import numpy as np
 import tensorflow as tf
@@ -10,6 +9,8 @@ from .bert_utils import (create_instances_from_document,
                          create_masked_lm_predictions)
 
 from transformers import PreTrainedTokenizer
+
+LOGGER = tf.get_logger()
 
 
 def seq_tag_label_handling(tokenized_dict, target, pad_token):
@@ -85,7 +86,7 @@ def _create_bert_features(problem,
                           problem_type,
                           is_seq):
 
-    for example in example_list:
+    for example_id, example in enumerate(example_list):
         try:
             raw_inputs, raw_target = example
         except ValueError:
@@ -149,6 +150,13 @@ def _create_bert_features(problem,
             }
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
+        if example_id < 1:
+            for raw_input_name, raw_input in raw_inputs.items():
+                LOGGER.info('{}: {}'.format(
+                    raw_input_name, str(raw_input)[:200]))
+            for return_key, return_item in return_dict.items():
+                LOGGER.info('{}: {}'.format(
+                    return_key, str(return_item)[:200]))
         yield return_dict
 
 
@@ -280,7 +288,7 @@ def _create_multimodal_bert_features(problem,
     if problem_type == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
-    for example in example_list:
+    for example_id, example in enumerate(example_list):
         try:
             raw_inputs, raw_target = example
         except ValueError:
@@ -382,6 +390,13 @@ def _create_multimodal_bert_features(problem,
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
+        if example_id < 1:
+            for raw_input_name, raw_input in raw_inputs.items():
+                LOGGER.info('{}: {}'.format(
+                    raw_input_name, str(raw_input)[:200]))
+            for return_key, return_item in return_dict.items():
+                LOGGER.info('{}: {}'.format(
+                    return_key, str(return_item)[:200]))
         yield return_dict
 
 
