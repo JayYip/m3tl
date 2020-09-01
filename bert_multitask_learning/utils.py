@@ -32,7 +32,7 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
 
         for l_ind, l in enumerate(label_set):
 
-            new_ind = l_ind + 1
+            new_ind = l_ind
 
             self.encode_dict[l] = new_ind
             self.decode_dict[new_ind] = l

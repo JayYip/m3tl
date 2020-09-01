@@ -8,7 +8,7 @@ import tensorflow as tf
 from .bert_preprocessing.create_bert_features import (
     create_bert_features_generator, create_multimodal_bert_features_generator)
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
-from .special_tokens import PREDICT
+from .special_tokens import PREDICT, TRAIN
 from .utils import (infer_shape_and_type_from_dict,
                     load_transformer_tokenizer)
 
@@ -17,7 +17,7 @@ def element_length_func(yield_dict):
     return tf.shape(input=yield_dict['input_ids'])[0]
 
 
-def train_eval_input_fn(params, mode='train'):
+def train_eval_input_fn(params, mode=TRAIN):
     '''Train and eval input function of estimator.
     This function will write and read tf record for training
     and evaluation.
@@ -31,7 +31,7 @@ def train_eval_input_fn(params, mode='train'):
         params {Params} -- Params objects
 
     Keyword Arguments:
-        mode {str} -- ModeKeys (default: {'train'})
+        mode {str} -- ModeKeys (default: {TRAIN})
 
     Returns:
         tf Dataset -- Tensorflow dataset
@@ -43,7 +43,7 @@ def train_eval_input_fn(params, mode='train'):
     dataset = tf.data.experimental.sample_from_datasets(
         [ds for _, ds in dataset_dict.items()])
 
-    if mode == 'train':
+    if mode == TRAIN:
         dataset = dataset.shuffle(params.shuffle_buffer)
 
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -55,7 +55,7 @@ def train_eval_input_fn(params, mode='train'):
                 bucket_boundaries=params.bucket_boundaries,
             ))
     else:
-        if mode == 'train':
+        if mode == TRAIN:
             dataset = dataset.batch(params.batch_size)
         else:
             dataset = dataset.batch(params.batch_size*2)

@@ -1,4 +1,4 @@
-import logging
+
 import random
 
 import numpy as np
@@ -150,10 +150,14 @@ def _create_bert_features(problem,
             }
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
-        if example_id < 1:
-            for raw_input_name, raw_input in raw_inputs.items():
-                LOGGER.info('{}: {}'.format(
-                    raw_input_name, str(raw_input)[:200]))
+
+        if example_id < 10:
+            if isinstance(raw_inputs, dict):
+                for raw_input_name, raw_input in raw_inputs.items():
+                    LOGGER.info('{}: {}'.format(
+                        raw_input_name, str(raw_input)[:200]))
+            else:
+                LOGGER.info(str(raw_inputs)[:200])
             for return_key, return_item in return_dict.items():
                 LOGGER.info('{}: {}'.format(
                     return_key, str(return_item)[:200]))
@@ -390,10 +394,14 @@ def _create_multimodal_bert_features(problem,
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
-        if example_id < 1:
-            for raw_input_name, raw_input in raw_inputs.items():
-                LOGGER.info('{}: {}'.format(
-                    raw_input_name, str(raw_input)[:200]))
+
+        if example_id < 10:
+            if isinstance(raw_inputs, dict):
+                for raw_input_name, raw_input in raw_inputs.items():
+                    LOGGER.info('{}: {}'.format(
+                        raw_input_name, str(raw_input)[:200]))
+            else:
+                LOGGER.info(str(raw_inputs)[:200])
             for return_key, return_item in return_dict.items():
                 LOGGER.info('{}: {}'.format(
                     return_key, str(return_item)[:200]))
