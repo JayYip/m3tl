@@ -127,6 +127,7 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
     is_seq2seq_text = params.problem_type[problem] == 'seq2seq_text'
     is_multi_cls = params.problem_type[problem] == 'multi_cls'
+    is_seq = params.problem_type[problem] == 'seq_tag'
 
     if mode == 'train' and not os.path.exists(le_path):
 
@@ -144,6 +145,9 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
             if isinstance(label_list[0], list):
                 label_list = [
                     item for sublist in label_list for item in sublist]
+            if is_seq:
+                label_list.append('[PAD]')
+
             label_encoder = LabelEncoder()
 
             label_encoder.fit(label_list)

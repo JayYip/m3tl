@@ -391,15 +391,19 @@ class MultiModalBertModel():
         self.input_mask = input_mask
         self.token_type_ids = token_type_ids
 
-        self.sequence_output, self.pooled_output, self.all_encoder_layers = self.bert_model(
+        outputs = self.bert_model(
             {'input_ids': None,
              'inputs_embeds': self.embedding_output,
              'attention_mask': input_mask,
              'token_type_ids': token_type_ids,
              'position_ids': input_mask},
             training=is_training,
-            output_hidden_states=True
+            output_hidden_states=True,
+            return_dict=True
         )
+        self.sequence_output = outputs.last_hidden_state
+        self.pooled_output = outputs.pooler_output
+        self.all_encoder_layers = outputs.hidden_states
 
     def get_pooled_output(self):
         return self.pooled_output
