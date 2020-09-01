@@ -2,18 +2,19 @@
 import os
 import pickle
 import re
+from typing import Union
 
 import numpy as np
 import tensorflow as tf
+import transformers
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import MultiLabelBinarizer
-from transformers import AutoTokenizer
-import transformers
+from transformers import AutoTokenizer, PreTrainedTokenizer
 
 
 class LabelEncoder(BaseEstimator, TransformerMixin):
 
-    def fit(self, y, zero_class=None):
+    def fit(self, y):
         """Fit label encoder
         Parameters
         ----------
@@ -26,15 +27,6 @@ class LabelEncoder(BaseEstimator, TransformerMixin):
         self.encode_dict = {}
         self.decode_dict = {}
         label_set = set(y)
-        if zero_class is None:
-            zero_class = '[PAD]'
-        else:
-            label_set.update(['[PAD]'])
-
-        self.encode_dict[zero_class] = 0
-        self.decode_dict[0] = zero_class
-        if zero_class in label_set:
-            label_set.remove(zero_class)
 
         label_set = sorted(list(label_set))
 
@@ -109,9 +101,14 @@ def create_path(path):
         os.makedirs(path, exist_ok=True)
 
 
-def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class=None):
-    """Simple function to create or load existing label encoder
-    If mode is train, alway create new label_encder
+def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) -> Union[LabelEncoder, MultiLabelBinarizer, PreTrainedTokenizer]:
+    """Function to unify ways to get or create label encoder for various
+    problem type.
+
+    cls: LabelEncoder
+    seq_tag: LabelEncoder
+    multi_cls: MultiLabelBinarizer
+    seq2seq_text: Tokenizer
 
     Arguments:
         problem {str} -- problem name
@@ -119,7 +116,6 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
 
     Keyword Arguments:
         label_list {list} -- label list to fit the encoder (default: {None})
-        zero_class {str} -- what to assign as 0 (default: {'O'})
 
     Returns:
         LabelEncoder -- label encoder
@@ -131,7 +127,6 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
     is_seq2seq_text = params.problem_type[problem] == 'seq2seq_text'
     is_multi_cls = params.problem_type[problem] == 'multi_cls'
-    is_seq2seq_tag = params.problem_type[problem] == 'seq2seq_tag'
 
     if mode == 'train' and not os.path.exists(le_path):
 
@@ -151,7 +146,7 @@ def get_or_make_label_encoder(params, problem, mode, label_list=None, zero_class
                     item for sublist in label_list for item in sublist]
             label_encoder = LabelEncoder()
 
-            label_encoder.fit(label_list, zero_class=zero_class)
+            label_encoder.fit(label_list)
             label_encoder.dump(le_path)
 
     else:
@@ -208,59 +203,6 @@ def cluster_alphnum(text: str) -> list:
             return_list.append(char)
             last_is_alphnum = False
     return return_list
-
-
-def split_label_fix(label_list: list, label_encoder: LabelEncoder) -> list:
-    """A function to fix splitted label. 
-    Example:
-        Apple -> App# $le
-        splited label_list: B-ORG -> B-ORG, B-ORG
-        Fixed: B-ORG, B-ORG -> B-ORG, I-ORG
-
-    Arguments:
-        label_list {list} -- label list
-        label_encoder {LabelEncoder} -- label encoder
-
-    Returns:
-        list -- fixed label list
-    """
-    bio_set = set(['B', 'I', 'O'])
-    bmes_set = set(['B', 'M', 'E', 'S'])
-
-    keys = list(label_encoder.encode_dict.keys())
-    keys = [k.upper() for k in keys]
-
-    def _get_position_key(k):
-        if '-' in k:
-            return k.split('-')[0], '-'+k.split('-')[1]
-        else:
-            return k, ''
-
-    position_keys = []
-    for k in keys:
-        position_keys.append(_get_position_key(k)[0])
-    last_label = None
-    position_keys = set(position_keys)
-    fixed_label_list = []
-    if position_keys == bio_set:
-        for l in label_list:
-            if _get_position_key(l)[0].upper() == 'B' and l == last_label:
-                fixed_label_list.append('I' + _get_position_key(l)[1])
-            else:
-                last_label = l
-                fixed_label_list.append(l)
-        return fixed_label_list
-
-    elif position_keys == bmes_set:
-        for l in label_list:
-            if _get_position_key(l)[0].upper() == 'B' and l == last_label:
-                fixed_label_list.append('M' + _get_position_key(l)[1])
-            else:
-                last_label = l
-                fixed_label_list.append(l)
-        return fixed_label_list
-    else:
-        return label_list
 
 
 def filter_empty(input_list, target_list):
