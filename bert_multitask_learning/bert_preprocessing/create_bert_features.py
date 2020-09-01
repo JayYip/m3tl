@@ -119,7 +119,7 @@ def _create_bert_features(problem,
         # check whether tokenization changed the length
         if is_seq:
             target, tokenized_dict = seq_tag_label_handling(
-                tokenized_dict, target, tokenizer.pad_token)
+                tokenized_dict, target, '[PAD]')
 
             if len(target) != len(tokenized_dict['input_ids']):
                 raise ValueError(
