@@ -1,35 +1,19 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""The main BERT model and related functions."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import collections
 import copy
 import json
-from json import load
 import re
+from json import load
+
 import six
 import tensorflow as tf
-
-
 import transformers
 
-from .utils import get_transformer_main_model, load_transformer_model
+from bert_multitask_learning.params import BaseParams
+
+from .utils import (get_embedding_table_from_model, get_transformer_main_model,
+                    load_transformer_model)
 
 
 def gelu(input_tensor):
@@ -247,12 +231,6 @@ def get_shape_list(tensor, expected_rank=None, name=None):
       be returned as python integers, and dynamic dimensions will be returned
       as tf.Tensor scalars.
     """
-    if name is None:
-        name = tensor.name
-
-    if expected_rank is not None:
-        assert_rank(tensor, expected_rank, name)
-
     shape = tensor.shape.as_list()
 
     non_static_indexes = []
@@ -299,28 +277,27 @@ def assert_rank(tensor, expected_rank, name=None):
             (name, scope_name, actual_rank, str(tensor.shape), str(expected_rank)))
 
 
-def init_transformer(params):
-    return load_transformer_model(params.bert_config, params.transformer_model_loading)
-
-
-def get_embedding_table_from_model(model):
-    model.bert.embeddings.build(1)
-    base_model = get_transformer_main_model(model)
-    return base_model.embeddings.word_embeddings
-
-
-class MultiModalBertModel():
-    def __init__(self,
-                 params,
-                 is_training,
-                 input_ids,
-                 input_mask=None,
-                 token_type_ids=None,
-                 use_one_hot_embeddings=True,
-                 features_dict=None):
+class MultiModalBertModel(tf.keras.Model):
+    def __init__(self, params: BaseParams, use_one_hot_embeddings=False):
+        super(MultiModalBertModel, self).__init__()
         self.params = params
+        self.bert_model = load_transformer_model(
+            self.params.transformer_model_name)
+        self.word_embedding = get_embedding_table_from_model(
+            self.bert_model)
+        self.use_one_hot_embeddings = use_one_hot_embeddings
 
-        input_shape = get_shape_list(input_ids, expected_rank=2)
+        # multimodal input dense
+        self.modal_name_list = ['image', 'others']
+        self.multimodal_dense = {modal_name: tf.keras.layers.Dense(
+            self.bert_model.config.hidden_size) for modal_name in self.modal_name_list}
+
+    def call(self, inputs, training):
+        features_dict = inputs
+        input_ids = features_dict['input_ids']
+        input_mask = features_dict['input_mask']
+        token_type_ids = features_dict['segment_ids']
+        input_shape = get_shape_list(input_ids)
         batch_size = input_shape[0]
         seq_length = input_shape[1]
 
@@ -332,10 +309,7 @@ class MultiModalBertModel():
             token_type_ids = tf.zeros(
                 shape=[batch_size, seq_length], dtype=tf.int32)
 
-        self.bert_model = init_transformer(params)
         config = self.bert_model.config
-        word_embedding = get_embedding_table_from_model(
-            self.bert_model)
 
         # Perform embedding lookup on the word ids.
         (self.embedding_output, self.embedding_table) = embedding_lookup(
@@ -344,18 +318,15 @@ class MultiModalBertModel():
             embedding_size=config.hidden_size,
             initializer_range=config.initializer_range,
             word_embedding_name="word_embeddings",
-            use_one_hot_embeddings=use_one_hot_embeddings,
-            embedding_table=word_embedding)
-
-        # multimodal embeddings
-        modal_name_list = ['image', 'others']
+            use_one_hot_embeddings=self.use_one_hot_embeddings,
+            embedding_table=self.word_embedding)
 
         # we need to add [SEP] embeddings around modal input
         # Since the last input_ids is always [SEP], we can use it directly
         sep_embedding = tf.expand_dims(
             self.embedding_output[:, -1, :], axis=1)
 
-        for modal_name in modal_name_list:
+        for modal_name in self.modal_name_list:
             input_name = '{}_input'.format(modal_name)
             segment_id_name = '{}_segment_ids'.format(modal_name)
             mask_name = '{}_mask'.format(modal_name)
@@ -363,9 +334,8 @@ class MultiModalBertModel():
                 continue
             # convert other modal embeddings to hidden_size
             # [batch_size, seq_length, modal_dim] -> [batch_size, seq_length, hidden_size]
-            with tf.compat.v1.variable_scope("{}_embeddings".format(modal_name)):
-                modal_input = tf.keras.layers.Dense(
-                    config.hidden_size)(features_dict[input_name])
+            modal_input = self.multimodal_dense[modal_name](
+                features_dict[input_name])
 
             # add sep embedding
             modal_input = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
@@ -388,8 +358,8 @@ class MultiModalBertModel():
             input_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [input_mask, modal_mask], axis=1)
 
-        self.input_mask = input_mask
-        self.token_type_ids = token_type_ids
+        self.model_input_mask = input_mask
+        self.model_token_type_ids = token_type_ids
 
         outputs = self.bert_model(
             {'input_ids': None,
@@ -397,13 +367,14 @@ class MultiModalBertModel():
              'attention_mask': input_mask,
              'token_type_ids': token_type_ids,
              'position_ids': input_mask},
-            training=is_training,
+            training=training,
             output_hidden_states=True,
             return_dict=True
         )
         self.sequence_output = outputs.last_hidden_state
         self.pooled_output = outputs.pooler_output
-        self.all_encoder_layers = outputs.hidden_states
+        self.all_encoder_layers = tf.stack(outputs.hidden_states, axis=1)
+        return outputs
 
     def get_pooled_output(self):
         return self.pooled_output
@@ -432,13 +403,13 @@ class MultiModalBertModel():
         return self.embedding_output
 
     def get_embedding_table(self):
-        return self.embedding_table
+        return self.word_embedding
 
     def get_input_mask(self):
-        return self.input_mask
+        return self.model_input_mask
 
     def get_token_type_ids(self):
-        return self.token_type_ids
+        return self.model_token_type_ids
 
 
 def get_assignment_map_from_keras_checkpoint(tvars, init_checkpoint):

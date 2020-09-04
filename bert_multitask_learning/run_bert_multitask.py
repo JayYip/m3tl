@@ -1,15 +1,13 @@
 import argparse
 import os
 import time
+from typing import Dict, Callable
 
 import tensorflow as tf
-from tensorflow.estimator import (Estimator, EvalSpec, TrainSpec,
-                                  train_and_evaluate)
 
-from . import metrics
 from .input_fn import predict_input_fn, train_eval_input_fn
 from .model_fn import BertMultiTask
-from .params import DynamicBatchSizeParams
+from .params import DynamicBatchSizeParams, BaseParams
 from .special_tokens import EVAL
 
 # Fix duplicate log
@@ -17,29 +15,37 @@ LOGGER = tf.get_logger()
 LOGGER.propagate = False
 
 
-def _create_estimator(
-        num_gpus=1,
-        params=DynamicBatchSizeParams(),
-        model=None):
-    if model is None:
-        model = BertMultiTask(params=params)
-    model_fn = model.get_model_fn(warm_start=True)
+def _create_keras_model(
+        mirrored_strategy: tf.distribute.MirroredStrategy,
+        params: BaseParams):
+    with mirrored_strategy.scope():
+        model = BertMultiTask(params)
+    return model
 
-    dist_trategy = tf.distribute.MirroredStrategy()
 
-    run_config = tf.estimator.RunConfig(
-        train_distribute=dist_trategy,
-        eval_distribute=dist_trategy,
-        log_step_count_steps=params.log_every_n_steps)
+def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
+                                      eval_dataset: tf.data.Dataset,
+                                      model: tf.keras.Model,
+                                      params: BaseParams,
+                                      mirrored_strategy: tf.distribute.MirroredStrategy = None):
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=params.ckpt_dir,
+        save_weights_only=True,
+        monitor='val_acc',
+        mode='max',
+        save_best_only=True)
 
-    # ws = make_warm_start_setting(params)
-
-    estimator = Estimator(
-        model_fn,
-        model_dir=params.ckpt_dir,
-        params=params,
-        config=run_config)
-    return estimator
+    with mirrored_strategy.scope():
+        model.compile()
+        model.fit(
+            x=train_dataset,
+            validation_data=eval_dataset,
+            epochs=params.train_epoch,
+            callbacks=[model_checkpoint_callback]
+        )
+    model.body.bert.summary()
+    model.top.summary()
+    model.summary()
 
 
 def train_bert_multitask(
@@ -47,10 +53,10 @@ def train_bert_multitask(
         num_gpus=1,
         num_epochs=10,
         model_dir='',
-        params=None,
-        problem_type_dict=None,
-        processing_fn_dict=None,
-        model=None):
+        params: BaseParams = None,
+        problem_type_dict: Dict[str, str] = None,
+        processing_fn_dict: Dict[str, Callable] = None,
+        model: tf.keras.Model = None):
     """Train Multi-task Bert model
 
     About problem:
@@ -109,23 +115,22 @@ def train_bert_multitask(
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
 
-    estimator = _create_estimator(
-        num_gpus=num_gpus, params=params, model=model)
+    mirrored_strategy = tf.distribute.MirroredStrategy()
 
-    # train_hook = RestoreCheckpointHook(params)
+    model = _create_keras_model(
+        mirrored_strategy=mirrored_strategy, params=params)
 
-    def train_input_fn(): return train_eval_input_fn(params)
-    def eval_input_fn(): return train_eval_input_fn(params, mode=EVAL)
+    train_dataset = train_eval_input_fn(params)
+    eval_dataset = train_eval_input_fn(params, mode=EVAL)
 
-    train_spec = TrainSpec(
-        input_fn=train_input_fn, max_steps=params.train_steps)
-    eval_spec = EvalSpec(
-        eval_input_fn, throttle_secs=params.eval_throttle_secs)
-
-    # estimator.train(
-    #     train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
-    train_and_evaluate(estimator, train_spec, eval_spec)
-    return estimator
+    _train_bert_multitask_keras_model(
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        model=model,
+        params=params,
+        mirrored_strategy=mirrored_strategy
+    )
+    return model
 
 
 def eval_bert_multitask(
@@ -151,43 +156,44 @@ def eval_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
-    if params is None:
-        params = DynamicBatchSizeParams()
-    if not params.problem_assigned:
+    raise NotImplementedError
+    # if params is None:
+    #     params = DynamicBatchSizeParams()
+    # if not params.problem_assigned:
 
-        if model_dir:
-            base_dir, dir_name = os.path.split(model_dir)
-        else:
-            base_dir, dir_name = None, None
-        # add new problem to params if problem_type_dict and processing_fn_dict provided
-        if processing_fn_dict:
-            for new_problem, new_problem_processing_fn in processing_fn_dict.items():
-                print('Adding new problem {0}, problem type: {1}'.format(
-                    new_problem, problem_type_dict[new_problem]))
-                params.add_problem(
-                    problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
-        params.assign_problem(problem, gpu=int(num_gpus),
-                              base_dir=base_dir, dir_name=dir_name)
-        params.from_json()
-    else:
-        print('Params problem assigned. Problem list: {0}'.format(
-            params.problem_list))
+    #     if model_dir:
+    #         base_dir, dir_name = os.path.split(model_dir)
+    #     else:
+    #         base_dir, dir_name = None, None
+    #     # add new problem to params if problem_type_dict and processing_fn_dict provided
+    #     if processing_fn_dict:
+    #         for new_problem, new_problem_processing_fn in processing_fn_dict.items():
+    #             print('Adding new problem {0}, problem type: {1}'.format(
+    #                 new_problem, problem_type_dict[new_problem]))
+    #             params.add_problem(
+    #                 problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
+    #     params.assign_problem(problem, gpu=int(num_gpus),
+    #                           base_dir=base_dir, dir_name=dir_name)
+    #     params.from_json()
+    # else:
+    #     print('Params problem assigned. Problem list: {0}'.format(
+    #         params.problem_list))
 
-    estimator = _create_estimator(
-        num_gpus=num_gpus, params=params, model=model)
+    # estimator = _create_estimator(
+    #     num_gpus=num_gpus, params=params, model=model)
 
-    evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
-    return evaluate_func(problem, estimator, params)
+    # evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
+    # return evaluate_func(problem, estimator, params)
 
 
 def predict_bert_multitask(
         inputs,
         problem='weibo_ner',
         model_dir='',
-        params=None,
-        problem_type_dict=None,
-        processing_fn_dict=None,
-        model=None):
+        params: BaseParams = None,
+        problem_type_dict: Dict[str, str] = None,
+        processing_fn_dict: Dict[str, Callable] = None,
+        model: tf.keras.Model = None):
     """Evaluate Multi-task Bert model
 
     Available eval_scheme:
@@ -224,12 +230,20 @@ def predict_bert_multitask(
         print('Params problem assigned. Problem list: {0}'.format(
             params.run_problem_list))
 
-    tf.compat.v1.logging.info('Checkpoint dir: %s' % params.ckpt_dir)
+    LOGGER.info('Checkpoint dir: %s', params.ckpt_dir)
     time.sleep(3)
 
-    estimator = _create_estimator(num_gpus=1, params=params, model=model)
+    mirrored_strategy = tf.distribute.MirroredStrategy()
 
-    return estimator.predict(lambda: predict_input_fn(inputs, params))
+    model = _create_keras_model(
+        mirrored_strategy=mirrored_strategy, params=params)
+
+    pred_dataset = predict_input_fn(inputs, params)
+
+    with mirrored_strategy.scope():
+        pred = model.predict(pred_dataset)
+
+    return pred
 
 
 if __name__ == '__main__':
