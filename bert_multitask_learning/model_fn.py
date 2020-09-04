@@ -4,7 +4,6 @@ from typing import Dict, Tuple
 import tensorflow as tf
 import transformers
 
-from . import modeling
 from .modeling import MultiModalBertModel
 from .params import BaseParams
 from .top import (Classification, MultiLabelClassification, PreTrain,

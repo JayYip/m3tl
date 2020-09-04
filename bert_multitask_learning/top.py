@@ -342,6 +342,14 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             1-self.params.dropout_keep_prob
         )
 
+    @tf.function
+    def empty_tensor_handling_loss(self, labels, logits):
+        if tf.equal(tf.shape(labels)[0], 0):
+            return 0.0
+        else:
+            return tf.reduce_mean(tf.keras.losses.binary_crossentropy(
+                labels, logits, from_logits=True))
+
     def call(self, inputs, mode):
         feature, hidden_feature = inputs
         hidden_feature = hidden_feature['pooled']
@@ -355,8 +363,7 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
             labels = tf.cast(labels, tf.float32)
-            loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-                labels=labels, logits=logits))
+            loss = self.empty_tensor_handling_loss(labels, logits)
             self.add_loss(loss)
         return tf.nn.sigmoid(
             logits, name='%s_predict' % self.problem_name)
