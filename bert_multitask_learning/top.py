@@ -232,7 +232,8 @@ class PreTrain(tf.keras.Model):
         shape_list = tf.concat([shape_tensor, [-1]], axis=0)
         input_tensor = tf.reshape(input_tensor, shape=shape_list)
         # set_shape to determin rank
-        input_tensor.set_shape(seq_hidden_feature.shape.as_list())
+        input_tensor.set_shape(
+            [None, None, seq_hidden_feature.shape.as_list()[-1]])
         mlm_logits = self.mlm(input_tensor)
 
         if mode != tf.estimator.ModeKeys.PREDICT:

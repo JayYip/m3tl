@@ -26,20 +26,26 @@ def _create_keras_model(
 def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
                                       eval_dataset: tf.data.Dataset,
                                       model: tf.keras.Model,
-                                      params: BaseParams):
+                                      params: BaseParams,
+                                      mirrored_strategy: tf.distribute.MirroredStrategy = None):
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=params.ckpt_dir,
         save_weights_only=True,
         monitor='val_acc',
         mode='max',
         save_best_only=True)
-    model.compile()
-    model.fit(
-        x=train_dataset,
-        validation_data=eval_dataset,
-        epochs=params.train_epoch,
-        callbacks=[model_checkpoint_callback]
-    )
+
+    with mirrored_strategy.scope():
+        model.compile()
+        model.fit(
+            x=train_dataset,
+            validation_data=eval_dataset,
+            epochs=params.train_epoch,
+            callbacks=[model_checkpoint_callback]
+        )
+    model.body.bert.summary()
+    model.top.summary()
+    model.summary()
 
 
 def train_bert_multitask(
@@ -121,7 +127,8 @@ def train_bert_multitask(
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         model=model,
-        params=params
+        params=params,
+        mirrored_strategy=mirrored_strategy
     )
     return model
 
@@ -231,7 +238,12 @@ def predict_bert_multitask(
     model = _create_keras_model(
         mirrored_strategy=mirrored_strategy, params=params)
 
-    return model.predict(predict_input_fn(inputs, params))
+    pred_dataset = predict_input_fn(inputs, params)
+
+    with mirrored_strategy.scope():
+        pred = model.predict(pred_dataset)
+
+    return pred
 
 
 if __name__ == '__main__':
