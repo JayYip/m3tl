@@ -10,20 +10,13 @@ from .top_utils import gather_indexes
 
 @tf.function
 def empty_tensor_handling_loss(labels, logits, loss_fn):
+    if tf.equal(tf.size(labels), 0):
+        return 0.0
     if tf.equal(tf.shape(labels)[0], 0):
         return 0.0
     else:
         return tf.reduce_mean(loss_fn(
             labels, logits, from_logits=True))
-
-
-@tf.function
-def empty_tensor_handling_loss_no_from_logits(labels, logits, loss_fn):
-    if tf.equal(tf.shape(labels)[0], 0):
-        return 0.0
-    else:
-        return tf.reduce_mean(loss_fn(
-            labels, logits))
 
 
 class SequenceLabel(tf.keras.Model):
