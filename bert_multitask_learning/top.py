@@ -97,111 +97,6 @@ class Classification(tf.keras.layers.Layer):
             logits, name='%s_predict' % self.problem_name)
 
 
-# class MaskLM(TopLayer):
-#     # pylint: disable=attribute-defined-outside-init
-#     '''Top model for mask language model.
-#     It's a dense net with body output features as input.
-#     Major logic is from original bert code
-#     '''
-
-#     def __call__(self, features, hidden_feature, mode, problem_name):
-#         """Get loss and log probs for the masked LM.
-
-#         DO NOT CHANGE THE VARAIBLE SCOPE.
-#         """
-#         seq_hidden_feature = hidden_feature['seq']
-#         positions = features['masked_lm_positions']
-#         input_tensor = gather_indexes(seq_hidden_feature, positions)
-#         output_weights = hidden_feature['embed_table']
-#         label_ids = features['masked_lm_ids']
-#         label_weights = features['masked_lm_weights']
-
-#         with tf.compat.v1.variable_scope("cls/predictions"):
-#             # We apply one more non-linear transformation before the output layer.
-#             # This matrix is not used after pre-training.
-#             with tf.compat.v1.variable_scope("transform"):
-#                 input_tensor = tf.compat.v1.layers.dense(
-#                     input_tensor,
-#                     units=self.params.mask_lm_hidden_size,
-#                     activation=modeling.get_activation(
-#                         self.params.mask_lm_hidden_act),
-#                     kernel_initializer=modeling.create_initializer(
-#                         self.params.mask_lm_initializer_range))
-#                 input_tensor = modeling.layer_norm(input_tensor)
-
-#             # The output weights are the same as the input embeddings, but there is
-#             # an output-only bias for each token.
-#             output_bias = tf.compat.v1.get_variable(
-#                 "output_bias",
-#                 shape=[self.params.vocab_size],
-#                 initializer=tf.compat.v1.zeros_initializer())
-
-#             logits = tf.matmul(input_tensor, output_weights, transpose_b=True)
-#             logits = tf.nn.bias_add(logits, output_bias)
-#             self.logits = logits
-#             log_probs = tf.nn.log_softmax(logits, axis=-1)
-
-#             if mode == tf.estimator.ModeKeys.PREDICT:
-#                 self.prob = log_probs
-#                 return self.prob
-
-#             else:
-
-#                 label_ids = tf.reshape(label_ids, [-1])
-#                 label_weights = tf.reshape(label_weights, [-1])
-
-#                 one_hot_labels = tf.one_hot(
-#                     label_ids, depth=self.params.vocab_size, dtype=tf.float32)
-
-#                 # The `positions` tensor might be zero-padded (if the sequence is too
-#                 # short to have the maximum number of predictions). The `label_weights`
-#                 # tensor has a value of 1.0 for every real prediction and 0.0 for the
-#                 # padding predictions.
-#                 per_example_loss = - \
-#                     tf.reduce_sum(input_tensor=log_probs *
-#                                   one_hot_labels, axis=[-1])
-#                 label_weights = tf.cast(label_weights, tf.float32)
-#                 numerator = tf.reduce_sum(
-#                     input_tensor=label_weights * per_example_loss)
-#                 denominator = tf.reduce_sum(input_tensor=label_weights) + 1e-5
-#                 loss = numerator / denominator
-
-#                 if mode == tf.estimator.ModeKeys.TRAIN:
-#                     self.loss = loss
-#                     return self.loss
-
-#                 else:
-#                     def metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
-#                                   masked_lm_weights):
-#                         """Computes the loss and accuracy of the model."""
-#                         masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
-#                                                          [-1, masked_lm_log_probs.shape[-1]])
-#                         masked_lm_predictions = tf.argmax(
-#                             input=masked_lm_log_probs, axis=-1, output_type=tf.int32)
-#                         masked_lm_example_loss = tf.reshape(
-#                             masked_lm_example_loss, [-1])
-#                         masked_lm_ids = tf.reshape(masked_lm_ids, [-1])
-#                         masked_lm_weights = tf.reshape(
-#                             masked_lm_weights, [-1])
-#                         masked_lm_accuracy = tf.compat.v1.metrics.accuracy(
-#                             labels=masked_lm_ids,
-#                             predictions=masked_lm_predictions,
-#                             weights=masked_lm_weights)
-#                         masked_lm_mean_loss = tf.compat.v1.metrics.mean(
-#                             values=masked_lm_example_loss, weights=masked_lm_weights)
-
-#                         return {
-#                             "masked_lm_accuracy": masked_lm_accuracy,
-#                             "masked_lm_loss": masked_lm_mean_loss,
-#                         }
-#                     eval_metrics = (metric_fn(
-#                         per_example_loss, log_probs, label_ids,
-#                         label_weights), loss)
-
-#                     self.eval_metrics = eval_metrics
-#                     return self.eval_metrics
-
-
 class PreTrain(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.Tensor):
         super(PreTrain, self).__init__(name=problem_name)
@@ -245,17 +140,17 @@ class PreTrain(tf.keras.Model):
             nsp_loss = empty_tensor_handling_loss(
                 nsp_labels, nsp_logits,
                 tf.keras.losses.sparse_categorical_crossentropy)
-            # mlm_loss_layer = transformers.modeling_tf_utils.TFMaskedLanguageModelingLoss()
+            mlm_loss_layer = transformers.modeling_tf_utils.TFMaskedLanguageModelingLoss()
             # mlm_loss = tf.reduce_mean(
             #     mlm_loss_layer.compute_loss(mlm_labels, mlm_logits))
 
             # add a useless from_logits argument to match the function signature of keras losses.
-            # def loss_fn_wrapper(labels, logits, from_logits=True):
-            #     return mlm_loss_layer.compute_loss(labels, logits)
+            def loss_fn_wrapper(labels, logits, from_logits=True):
+                return mlm_loss_layer.compute_loss(labels, logits)
             mlm_loss = empty_tensor_handling_loss(
                 mlm_labels,
                 mlm_logits,
-                tf.keras.losses.sparse_categorical_crossentropy
+                loss_fn_wrapper
             )
             loss = nsp_loss + mlm_loss
             self.add_loss(loss)
