@@ -1,3 +1,5 @@
+from bert_multitask_learning.special_tokens import PREDICT
+from bert_multitask_learning.params import BaseParams
 import tensorflow as tf
 
 from . import modeling
@@ -7,170 +9,74 @@ from .top_utils import (TopLayer, gather_indexes,
 from .utils import load_transformer_model
 
 
-class SequenceLabel(TopLayer):
-    # pylint: disable=attribute-defined-outside-init
-    '''Top model for sequence labeling.
-    It's a dense net with body output features as input with following support.
+class SequenceLabel(tf.keras.Model):
+    def __init__(self, params: BaseParams, problem_name: str):
+        super(SequenceLabel, self).__init__(name=problem_name)
+        self.params = params
+        self.problem_name = problem_name
+        num_classes = self.params.num_classes[self.problem_name]
+        self.dense = tf.keras.layers.Dense(num_classes, activation=None)
 
-    crf: Conditional Random Field. Take logits(output of dense layer) as input
-    hidden_gru: Take body features as input and apply rnn on it.
-    label_smoothing: Hard label smoothing. Random replace label by some prob.
-    '''
+        self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
 
-    def make_batch_loss(self, logits, seq_labels, seq_length, crf_transition_param):
-        if self.params.crf:
-            with tf.compat.v1.variable_scope('CRF'):
-                log_likelihood, _ = tf.contrib.crf.crf_log_likelihood(
-                    logits, seq_labels, seq_length,
-                    transition_params=crf_transition_param)
-                batch_loss = -log_likelihood
+    def call(self, inputs, training):
+        if len(inputs) == 2:
+            hidden_feature, labels = inputs
         else:
+            hidden_feature = inputs
+            labels = None
+        hidden_feature = self.dropout(hidden_feature)
+
+        # set shape for tensor
+        # hidden_feature.set_shape([None, None, hidden_feature.shape[-1]])
+
+        logits = self.dense(hidden_feature)
+
+        if training:
             # inconsistent shape might be introduced to labels
             # so we need to do some padding to make sure that
-            # seq_labels has the same sequence length as logits
-            pad_len = tf.shape(input=logits)[1] - tf.shape(input=seq_labels)[1]
+            # labels has the same sequence length as logits
+            pad_len = tf.shape(input=logits)[1] - tf.shape(input=labels)[1]
 
             # top, bottom, left, right
             pad_tensor = [[0, 0], [0, pad_len]]
-            seq_labels = tf.pad(tensor=seq_labels, paddings=pad_tensor)
+            labels = tf.pad(tensor=labels, paddings=pad_tensor)
 
-            batch_loss = tf.reduce_mean(
-                input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits=logits, labels=seq_labels), axis=1)
+            batch_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=logits, labels=labels)
+            loss = tf.reduce_mean(batch_loss)
+            self.add_loss(loss)
+        return tf.nn.softmax(
+            logits, name='%s_predict' % self.problem_name)
 
-        if self.params.uncertain_weight_loss:
-            batch_loss = self.uncertainty_weighted_loss(batch_loss)
-        return batch_loss
 
-    def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
-        hidden_feature = hidden_feature['seq']
-        scope_name = self.params.share_top[problem_name]
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            hidden_feature = tf.nn.dropout(
-                hidden_feature,
-                rate=1 - (self.params.dropout_keep_prob))
+class Classification(tf.keras.layers.Layer):
+    def __init__(self, params: BaseParams, problem_name: str) -> None:
+        super(Classification, self).__init__(name=problem_name)
+        self.params = params
+        self.problem_name = problem_name
+        num_classes = self.params.num_classes[self.problem_name]
+        self.dense = tf.keras.layers.Dense(num_classes, activation=None)
 
-        if mask is None:
-            num_classes = self.params.num_classes[problem_name]
+        self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
+
+    def call(self, inputs, training):
+        if len(inputs) == 2:
+            hidden_feature, labels = inputs
         else:
-            num_classes = mask.shape[0]
+            hidden_feature = inputs
+            labels = None
+        hidden_feature = self.dropout(hidden_feature)
+        logits = self.dense(hidden_feature)
 
-        # make hidden model
-        hidden_feature = self.make_hidden_model(
-            features, hidden_feature, mode, True)
-        logits = dense_layer(num_classes, hidden_feature, mode, 1.0, None)
-        self.logits = logits
-        if mask is not None:
-            logits = logits*mask
-
-        # CRF transition param
-        crf_transition_param = tf.compat.v1.get_variable(
-            'crf_transition', shape=[num_classes, num_classes])
-
-        # sequence_weight = tf.cast(features["input_mask"], tf.float32)
-        seq_length = tf.reduce_sum(
-            input_tensor=features["input_mask"], axis=-1)
-
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            seq_labels = features['%s_label_ids' % problem_name]
-            seq_labels = create_seq_smooth_label(
-                self.params, seq_labels, num_classes)
-            batch_loss = self.make_batch_loss(
-                logits, seq_labels, seq_length, crf_transition_param)
-            self.loss = self.create_loss(
-                batch_loss, features['%s_loss_multiplier' % problem_name])
-            # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
-            # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
-                                           tf.zeros_like(self.loss), self.loss)
-            return self.loss
-
-        elif mode == tf.estimator.ModeKeys.EVAL:
-            seq_labels = features['%s_label_ids' % problem_name]
-            batch_loss = self.make_batch_loss(
-                logits, seq_labels, seq_length, crf_transition_param)
-
-            seq_loss = tf.reduce_mean(input_tensor=batch_loss)
-
-            return self.eval_metric_fn(
-                features, logits, seq_loss, problem_name, features['input_mask'], pad_labels_to_logits=True)
-
-        elif mode == tf.estimator.ModeKeys.PREDICT:
-            if self.params.crf:
-                viterbi_sequence, _ = tf.contrib.crf.crf_decode(
-                    logits, crf_transition_param, seq_length)
-                self.prob = tf.identity(
-                    viterbi_sequence, name='%s_predict' % scope_name)
-            else:
-                self.prob = tf.nn.softmax(
-                    logits, name='%s_predict' % scope_name)
-
-            return self.prob
-
-
-class Classification(TopLayer):
-    # pylint: disable=attribute-defined-outside-init
-    '''Top model for classification.
-    It's a dense net with body output features as input with following support.
-
-    label_smoothing: Soft label smoothing.
-    '''
-
-    def create_batch_loss(self, labels, logits,  num_classes):
-        if self.params.label_smoothing > 0:
-            one_hot_labels = tf.one_hot(labels, depth=num_classes)
-            batch_loss = tf.compat.v1.losses.softmax_cross_entropy(
-                one_hot_labels, logits,
-                label_smoothing=self.params.label_smoothing)
-        else:
-            batch_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(
-                labels, logits)
-
-        if self.params.uncertain_weight_loss:
-            batch_loss = self.uncertainty_weighted_loss(batch_loss)
-        return batch_loss
-
-    def __call__(self, features, hidden_feature, mode, problem_name, mask=None):
-        hidden_feature = hidden_feature['pooled']
-        scope_name = self.params.share_top[problem_name]
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            hidden_feature = tf.nn.dropout(
-                hidden_feature,
-                rate=1 - (self.params.dropout_keep_prob))
-
-        if mask is None:
-            num_classes = self.params.num_classes.get(problem_name, 2)
-        else:
-            num_classes = mask.shape[0]
-        # make hidden model
-        hidden_feature = self.make_hidden_model(
-            features, hidden_feature, mode, 'pooled')
-        logits = dense_layer(num_classes, hidden_feature, mode, 1.0, None)
-        self.logits = logits
-        if mask is not None:
-            logits = logits*mask
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            labels = features['%s_label_ids' % problem_name]
-            batch_loss = self.create_batch_loss(labels, logits, num_classes)
-            self.loss = self.create_loss(
-                batch_loss, features['%s_loss_multiplier' % problem_name])
-            # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
-            # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            self.loss = tf.compat.v1.where(tf.math.is_nan(self.loss),
-                                           tf.zeros_like(self.loss), self.loss)
-            return self.loss
-        elif mode == tf.estimator.ModeKeys.EVAL:
-            labels = features['%s_label_ids' % problem_name]
-            batch_loss = self.create_batch_loss(labels, logits, num_classes)
-            # multiply with loss multiplier to make some loss as zero
-            loss = tf.reduce_mean(input_tensor=batch_loss)
-
-            return self.eval_metric_fn(
-                features, logits, loss, problem_name, pad_labels_to_logits=False)
-        elif mode == tf.estimator.ModeKeys.PREDICT:
-            prob = tf.nn.softmax(logits)
-            self.prob = tf.identity(prob, name='%s_predict' % scope_name)
-            return self.prob
+        if training:
+            labels = tf.squeeze(labels)
+            batch_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=logits, labels=labels)
+            loss = tf.reduce_mean(batch_loss)
+            self.add_loss(loss)
+        return tf.nn.softmax(
+            logits, name='%s_predict' % self.problem_name)
 
 
 class MaskLM(TopLayer):
@@ -318,7 +224,7 @@ class Seq2Seq(TopLayer):
 
     def __call__(self, features, hidden_feature, mode, problem_name):
         self.decoder = load_transformer_model(
-            self.params.bert_decoder_config,
+            self.params.transformer_decoder_model_name,
             self.params.transformer_decoder_model_loading)
         scope_name = self.params.share_top[problem_name]
         encoder_output = hidden_feature['seq']

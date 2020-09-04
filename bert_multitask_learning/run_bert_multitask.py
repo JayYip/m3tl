@@ -3,8 +3,7 @@ import os
 import time
 
 import tensorflow as tf
-from tensorflow.estimator import (Estimator, EvalSpec, TrainSpec,
-                                  train_and_evaluate)
+import transformers
 
 from . import metrics
 from .input_fn import predict_input_fn, train_eval_input_fn
@@ -17,29 +16,34 @@ LOGGER = tf.get_logger()
 LOGGER.propagate = False
 
 
-def _create_estimator(
-        num_gpus=1,
-        params=DynamicBatchSizeParams(),
-        model=None):
-    if model is None:
-        model = BertMultiTask(params=params)
-    model_fn = model.get_model_fn(warm_start=True)
+def _create_keras_model(
+        mirrored_strategy: tf.distribute.MirroredStrategy,
+        params=DynamicBatchSizeParams()):
+    # with mirrored_strategy.scope():
+    model = BertMultiTask(params)
+    optimizer, _ = transformers.optimization_tf.create_optimizer(
+        init_lr=params.lr,
+        num_train_steps=params.train_steps,
+        num_warmup_steps=params.num_warmup_steps,
+        weight_decay_rate=0.01
+    )
+    return model, optimizer
 
-    dist_trategy = tf.distribute.MirroredStrategy()
 
-    run_config = tf.estimator.RunConfig(
-        train_distribute=dist_trategy,
-        eval_distribute=dist_trategy,
-        log_step_count_steps=params.log_every_n_steps)
+def train_step(inputs, model, optimizer):
 
-    # ws = make_warm_start_setting(params)
+    with tf.GradientTape() as tape:
+        _ = model(inputs, mode=tf.estimator.ModeKeys.TRAIN)
+        loss = sum(model.losses)
 
-    estimator = Estimator(
-        model_fn,
-        model_dir=params.ckpt_dir,
-        params=params,
-        config=run_config)
-    return estimator
+    gradients = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+    return loss
+
+
+def _train_bert_multitask_keras_model(train_dataset, eval_dataset, model, optimizer):
+    model.compile()
+    model.fit(train_dataset)
 
 
 def train_bert_multitask(
@@ -109,23 +113,19 @@ def train_bert_multitask(
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
 
-    estimator = _create_estimator(
-        num_gpus=num_gpus, params=params, model=model)
+    model, optimizer = _create_keras_model(
+        mirrored_strategy=None, params=params)
 
-    # train_hook = RestoreCheckpointHook(params)
+    train_dataset = train_eval_input_fn(params)
+    eval_dataset = train_eval_input_fn(params, mode=EVAL)
 
-    def train_input_fn(): return train_eval_input_fn(params)
-    def eval_input_fn(): return train_eval_input_fn(params, mode=EVAL)
-
-    train_spec = TrainSpec(
-        input_fn=train_input_fn, max_steps=params.train_steps)
-    eval_spec = EvalSpec(
-        eval_input_fn, throttle_secs=params.eval_throttle_secs)
-
-    # estimator.train(
-    #     train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
-    train_and_evaluate(estimator, train_spec, eval_spec)
-    return estimator
+    _train_bert_multitask_keras_model(
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        model=model,
+        optimizer=optimizer
+    )
+    return model
 
 
 def eval_bert_multitask(
