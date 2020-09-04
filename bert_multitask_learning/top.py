@@ -6,6 +6,25 @@ from typing import Dict, Tuple
 
 from . import modeling
 from .utils import load_transformer_model
+from .top_utils import gather_indexes
+
+
+@tf.function
+def empty_tensor_handling_loss(labels, logits, loss_fn):
+    if tf.equal(tf.shape(labels)[0], 0):
+        return 0.0
+    else:
+        return tf.reduce_mean(loss_fn(
+            labels, logits, from_logits=True))
+
+
+@tf.function
+def empty_tensor_handling_loss_no_from_logits(labels, logits, loss_fn):
+    if tf.equal(tf.shape(labels)[0], 0):
+        return 0.0
+    else:
+        return tf.reduce_mean(loss_fn(
+            labels, logits))
 
 
 class SequenceLabel(tf.keras.Model):
@@ -40,9 +59,9 @@ class SequenceLabel(tf.keras.Model):
             pad_tensor = [[0, 0], [0, pad_len]]
             labels = tf.pad(tensor=labels, paddings=pad_tensor)
 
-            batch_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=logits, labels=labels)
-            loss = tf.reduce_mean(batch_loss)
+            loss = empty_tensor_handling_loss(
+                labels, logits,
+                tf.keras.losses.sparse_categorical_crossentropy)
             self.add_loss(loss)
         return tf.nn.softmax(
             logits, name='%s_predict' % self.problem_name)
@@ -70,9 +89,9 @@ class Classification(tf.keras.layers.Layer):
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
-            batch_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=logits, labels=labels)
-            loss = tf.reduce_mean(batch_loss)
+            loss = empty_tensor_handling_loss(
+                labels, logits,
+                tf.keras.losses.sparse_categorical_crossentropy)
             self.add_loss(loss)
         return tf.nn.softmax(
             logits, name='%s_predict' % self.problem_name)
@@ -203,17 +222,40 @@ class PreTrain(tf.keras.Model):
         nsp_logits = self.nsp(hidden_features['pooled'])
 
         # masking is done inside the model
-        mlm_logits = self.mlm(hidden_features['seq'])
+        seq_hidden_feature = hidden_features['seq']
+        positions = features['masked_lm_positions']
+
+        # gather_indexes will flatten the seq hidden_states, we need to reshape
+        # back to 3d tensor
+        input_tensor = gather_indexes(seq_hidden_feature, positions)
+        shape_tensor = tf.shape(positions)
+        shape_list = tf.concat([shape_tensor, [-1]], axis=0)
+        input_tensor = tf.reshape(input_tensor, shape=shape_list)
+        # set_shape to determin rank
+        input_tensor.set_shape(seq_hidden_feature.shape.as_list())
+        mlm_logits = self.mlm(input_tensor)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
-            nsp_labels = features['next_sentence_label_ids']
+            nsp_labels = tf.squeeze(
+                features['next_sentence_label_ids'])
             mlm_labels = features['masked_lm_ids']
+            mlm_labels.set_shape([None, None])
             # compute loss
-            nsp_loss = tf.reduce_mean(tf.keras.losses.binary_crossentropy(
-                nsp_labels, nsp_logits, from_logits=True))
-            # mlm_loss = tf.reduce_mean(transformers.modeling_tf_utils.TFMaskedLanguageModelingLoss(
-            #     labels=mlm_labels, logits=mlm_logits))
-            mlm_loss = 0
+            nsp_loss = empty_tensor_handling_loss(
+                nsp_labels, nsp_logits,
+                tf.keras.losses.sparse_categorical_crossentropy)
+            # mlm_loss_layer = transformers.modeling_tf_utils.TFMaskedLanguageModelingLoss()
+            # mlm_loss = tf.reduce_mean(
+            #     mlm_loss_layer.compute_loss(mlm_labels, mlm_logits))
+
+            # add a useless from_logits argument to match the function signature of keras losses.
+            # def loss_fn_wrapper(labels, logits, from_logits=True):
+            #     return mlm_loss_layer.compute_loss(labels, logits)
+            mlm_loss = empty_tensor_handling_loss(
+                mlm_labels,
+                mlm_logits,
+                tf.keras.losses.sparse_categorical_crossentropy
+            )
             loss = nsp_loss + mlm_loss
             self.add_loss(loss)
 
@@ -342,14 +384,6 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             1-self.params.dropout_keep_prob
         )
 
-    @tf.function
-    def empty_tensor_handling_loss(self, labels, logits):
-        if tf.equal(tf.shape(labels)[0], 0):
-            return 0.0
-        else:
-            return tf.reduce_mean(tf.keras.losses.binary_crossentropy(
-                labels, logits, from_logits=True))
-
     def call(self, inputs, mode):
         feature, hidden_feature = inputs
         hidden_feature = hidden_feature['pooled']
@@ -363,7 +397,8 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
             labels = tf.cast(labels, tf.float32)
-            loss = self.empty_tensor_handling_loss(labels, logits)
+            loss = empty_tensor_handling_loss(
+                labels, logits, tf.keras.losses.binary_crossentropy)
             self.add_loss(loss)
         return tf.nn.sigmoid(
             logits, name='%s_predict' % self.problem_name)
