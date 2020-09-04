@@ -1,36 +1,19 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""The main BERT model and related functions."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from bert_multitask_learning.params import BaseParams
+from __future__ import absolute_import, division, print_function
 
 import collections
 import copy
 import json
-from json import load
 import re
+from json import load
+
 import six
 import tensorflow as tf
-
-
 import transformers
 
-from .utils import get_transformer_main_model, load_transformer_model
+from bert_multitask_learning.params import BaseParams
+
+from .utils import (get_embedding_table_from_model, get_transformer_main_model,
+                    load_transformer_model)
 
 
 def gelu(input_tensor):
@@ -294,12 +277,6 @@ def assert_rank(tensor, expected_rank, name=None):
             (name, scope_name, actual_rank, str(tensor.shape), str(expected_rank)))
 
 
-def get_embedding_table_from_model(model):
-    model.bert.embeddings.build(1)
-    base_model = get_transformer_main_model(model)
-    return base_model.embeddings.word_embeddings
-
-
 class MultiModalBertModel(tf.keras.Model):
     def __init__(self, params: BaseParams, use_one_hot_embeddings=False):
         super(MultiModalBertModel, self).__init__()
@@ -426,7 +403,7 @@ class MultiModalBertModel(tf.keras.Model):
         return self.embedding_output
 
     def get_embedding_table(self):
-        return self.embedding_table
+        return self.word_embedding
 
     def get_input_mask(self):
         return self.model_input_mask

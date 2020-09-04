@@ -1,14 +1,15 @@
 
+from typing import Dict, Tuple
+
 import tensorflow as tf
 import transformers
 
 from . import modeling
 from .modeling import MultiModalBertModel
-from .top import (Classification, MaskLM, MultiLabelClassification, PreTrain,
-                  Seq2Seq, SequenceLabel)
 from .params import BaseParams
-
-from typing import Dict, Tuple
+from .top import (Classification, MultiLabelClassification, PreTrain,
+                  Seq2Seq, SequenceLabel)
+from .utils import get_embedding_table_from_model
 
 
 def variable_summaries(var, name):
@@ -59,7 +60,7 @@ class BertMultiTaskBody(tf.keras.Model):
                 if hidden_feature_name != 'embed_table':
                     hidden_feature_this_round[hidden_feature_name] = tf.squeeze(tf.gather(
                         hidden_feature[hidden_feature_name], record_ind, axis=0
-                    ))
+                    ), axis=1)
                     hidden_feature_this_round[hidden_feature_name].set_shape(
                         hidden_feature[hidden_feature_name].shape.as_list())
                 else:
@@ -140,7 +141,7 @@ class BertMultiTaskBody(tf.keras.Model):
 
 
 class BertMultiTaskTop(tf.keras.Model):
-    def __init__(self, params: BaseParams, name='BertMultiTaskTop'):
+    def __init__(self, params: BaseParams, name='BertMultiTaskTop', input_embeddings: tf.Tensor = None):
         super(BertMultiTaskTop, self).__init__(name=name)
         self.params = params
 
@@ -157,9 +158,11 @@ class BertMultiTaskTop(tf.keras.Model):
                 problem_type = self.params.problem_type[problem]
                 # if pretrain, return pretrain logit
                 if problem_type == 'pretrain':
-                    self.top_layer_dict[problem] = PreTrain(self.params)
-                self.top_layer_dict[problem] = problem_type_layer[problem_type](
-                    self.params, problem)
+                    self.top_layer_dict[problem] = PreTrain(
+                        self.params, problem_name=problem, input_embeddings=input_embeddings)
+                else:
+                    self.top_layer_dict[problem] = problem_type_layer[problem_type](
+                        self.params, problem)
 
     def call(self, inputs, mode):
         features, hidden_feature = inputs
@@ -178,7 +181,7 @@ class BertMultiTaskTop(tf.keras.Model):
                 if problem_type == 'pretrain':
                     pretrain = self.top_layer_dict[problem]
                     return_dict[scope_name] = pretrain(
-                        feature_this_round, hidden_feature_this_round, mode, problem)
+                        (feature_this_round, hidden_feature_this_round), mode)
                     return return_dict
 
                 if self.params.label_transfer and self.params.grid_transformer:
@@ -189,14 +192,8 @@ class BertMultiTaskTop(tf.keras.Model):
                 with tf.name_scope(problem):
                     layer = self.top_layer_dict[problem]
 
-                    if problem_type in ['cls', 'multi_cls']:
-                        inputs = [hidden_feature_this_round['pooled']]
-                    else:
-                        inputs = [hidden_feature_this_round['seq']]
-                    if not predicting:
-                        inputs.append(
-                            features[problem]['{}_label_ids'.format(problem)])
-                    return_dict[problem] = layer(inputs, training)
+                    return_dict[problem] = layer(
+                        (feature_this_round, hidden_feature_this_round), mode)
 
         if self.params.augument_mask_lm and mode == tf.estimator.ModeKeys.TRAIN:
             raise NotImplementedError
@@ -216,7 +213,12 @@ class BertMultiTask(tf.keras.Model):
         self.params = params
         # initialize body model, aka transformers
         self.body = BertMultiTaskBody(params=self.params)
-        self.top = BertMultiTaskTop(params=self.params)
+        # mlm might need word embedding from bert
+        # build sub-model
+        _ = get_embedding_table_from_model(self.body.bert.bert_model)
+        input_embeddings = self.body.bert.bert_model.bert.embeddings
+        self.top = BertMultiTaskTop(
+            params=self.params, input_embeddings=input_embeddings)
 
     def call(self, inputs, mode=tf.estimator.ModeKeys.TRAIN):
         feature_per_problem, hidden_feature_per_problem = self.body(
