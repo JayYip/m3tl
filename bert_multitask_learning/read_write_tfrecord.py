@@ -540,5 +540,5 @@ def read_tfrecord(params, mode: str):
         dataset_dict[problem] = dataset_dict[problem].map(
             lambda x: add_dummy_features_to_dataset(x, dummy_features),
             num_parallel_calls=tf.data.experimental.AUTOTUNE
-        ).repeat()
+        )
     return dataset_dict
