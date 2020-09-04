@@ -1,4 +1,3 @@
-from build.lib.bert_multitask_learning.top import Seq2Seq
 import transformers
 from bert_multitask_learning.params import BaseParams
 import tensorflow as tf
