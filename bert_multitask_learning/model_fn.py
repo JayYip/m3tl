@@ -259,3 +259,6 @@ class BertMultiTask(tf.keras.Model):
         # Return a dict mapping metric names to current value.
         # Note that it will include the loss (tracked in self.metrics).
         return return_dict
+
+    def predict_step(self, data):
+        return self(data, mode=tf.estimator.ModeKeys.PREDICT)

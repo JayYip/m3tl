@@ -43,8 +43,6 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             epochs=params.train_epoch,
             callbacks=[model_checkpoint_callback]
         )
-    model.body.bert.summary()
-    model.top.summary()
     model.summary()
 
 
@@ -234,9 +232,10 @@ def predict_bert_multitask(
     time.sleep(3)
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
-
-    model = _create_keras_model(
-        mirrored_strategy=mirrored_strategy, params=params)
+    if model is None:
+        model = _create_keras_model(
+            mirrored_strategy=mirrored_strategy, params=params)
+        model.load_weights(params.ckpt_dir)
 
     pred_dataset = predict_input_fn(inputs, params)
 
