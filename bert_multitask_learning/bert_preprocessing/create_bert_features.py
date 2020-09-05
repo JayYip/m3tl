@@ -87,9 +87,9 @@ def _create_bert_features(problem,
                           is_seq):
 
     for example_id, example in enumerate(example_list):
-        try:
+        if mode != tf.estimator.ModeKeys.PREDICT:
             raw_inputs, raw_target = example
-        except ValueError:
+        else:
             raw_inputs = example
             raw_target = None
 
@@ -293,9 +293,9 @@ def _create_multimodal_bert_features(problem,
         raise NotImplementedError('Multimodal Pretraining is not implemented')
 
     for example_id, example in enumerate(example_list):
-        try:
+        if mode != tf.estimator.ModeKeys.PREDICT:
             raw_inputs, raw_target = example
-        except ValueError:
+        else:
             raw_inputs = example
             raw_target = None
 

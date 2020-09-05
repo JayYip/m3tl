@@ -12,6 +12,8 @@ from .top_utils import gather_indexes
 def empty_tensor_handling_loss(labels, logits, loss_fn):
     if tf.equal(tf.size(labels), 0):
         return 0.0
+    if tf.equal(tf.size(tf.shape(labels)), 0):
+        return 0.0
     if tf.equal(tf.shape(labels)[0], 0):
         return 0.0
     else:
@@ -66,6 +68,8 @@ class Classification(tf.keras.layers.Layer):
         self.problem_name = problem_name
         num_classes = self.params.num_classes[self.problem_name]
         self.dense = tf.keras.layers.Dense(num_classes, activation=None)
+        self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
+            name='{}_acc'.format(self.problem_name))
 
         self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
 
@@ -85,6 +89,8 @@ class Classification(tf.keras.layers.Layer):
                 labels, logits,
                 tf.keras.losses.sparse_categorical_crossentropy)
             self.add_loss(loss)
+            acc = self.metric_fn(labels, logits)
+            self.add_metric(acc)
         return tf.nn.softmax(
             logits, name='%s_predict' % self.problem_name)
 
