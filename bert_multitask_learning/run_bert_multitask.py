@@ -41,9 +41,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
-            callbacks=[model_checkpoint_callback],
-            steps_per_epoch=1,
-            validation_steps=1,
+            callbacks=[model_checkpoint_callback]
         )
     model.summary()
 
