@@ -29,7 +29,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
                                       params: BaseParams,
                                       mirrored_strategy: tf.distribute.MirroredStrategy = None):
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=params.ckpt_dir,
+        filepath=os.path.join(params.ckpt_dir, 'model'),
         save_weights_only=True,
         monitor='val_loss',
         mode='min',
@@ -41,7 +41,9 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
-            callbacks=[model_checkpoint_callback]
+            callbacks=[model_checkpoint_callback],
+            steps_per_epoch=1,
+            validation_steps=1,
         )
     model.summary()
 
@@ -235,7 +237,7 @@ def predict_bert_multitask(
     if model is None:
         model = _create_keras_model(
             mirrored_strategy=mirrored_strategy, params=params)
-        model.load_weights(params.ckpt_dir)
+        model.load_weights(os.path.join(params.ckpt_dir, 'model'))
 
     pred_dataset = predict_input_fn(inputs, params)
 
