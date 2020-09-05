@@ -12,6 +12,8 @@ from .top_utils import gather_indexes
 def empty_tensor_handling_loss(labels, logits, loss_fn):
     if tf.equal(tf.size(labels), 0):
         return 0.0
+    if tf.equal(tf.size(tf.shape(labels)), 0):
+        return 0.0
     if tf.equal(tf.shape(labels)[0], 0):
         return 0.0
     else:
