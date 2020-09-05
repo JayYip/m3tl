@@ -16,6 +16,11 @@ LOGGER = tf.get_logger()
 def seq_tag_label_handling(tokenized_dict, target, pad_token):
     special_token_mask = tokenized_dict['special_tokens_mask']
     del tokenized_dict['special_tokens_mask']
+
+    # handle truncation
+    if 'num_truncated_tokens' in tokenized_dict:
+        target = target[:len(target) - tokenized_dict['num_truncated_tokens']]
+
     processed_target = []
     for m in special_token_mask:
         # 0 is special tokens, 1 is tokens
@@ -110,11 +115,13 @@ def _create_bert_features(problem,
 
         tokenized_dict = tokenizer(
             tokens_a, tokens_b,
-            truncation=False,
+            truncation=True,
+            max_length=params.max_seq_len,
             is_pretokenized=is_pretokenized,
             padding=False,
             return_special_tokens_mask=is_seq,
-            add_special_tokens=True)
+            add_special_tokens=True,
+            return_overflowing_tokens=True)
 
         # check whether tokenization changed the length
         if is_seq:
@@ -342,11 +349,13 @@ def _create_multimodal_bert_features(problem,
                     is_pretokenized = False
                 tokenized_dict = tokenizer(
                     tokens_a, tokens_b,
-                    truncation=False,
+                    truncation=True,
+                    max_length=params.max_seq_len,
                     is_pretokenized=is_pretokenized,
                     padding=False,
                     return_special_tokens_mask=is_seq,
-                    add_special_tokens=True)
+                    add_special_tokens=True,
+                    return_overflowing_tokens=True)
 
                 if is_seq:
                     target, tokenized_dict = seq_tag_label_handling(
