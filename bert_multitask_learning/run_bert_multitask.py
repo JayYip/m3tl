@@ -31,8 +31,8 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=params.ckpt_dir,
         save_weights_only=True,
-        monitor='val_acc',
-        mode='max',
+        monitor='val_loss',
+        mode='min',
         save_best_only=True)
 
     with mirrored_strategy.scope():

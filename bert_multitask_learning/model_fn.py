@@ -234,4 +234,28 @@ class BertMultiTask(tf.keras.Model):
             num_warmup_steps=self.params.num_warmup_steps,
             weight_decay_rate=0.01
         )
-        self.loss_fn = lambda x, y: sum(self.losses)
+
+    def train_step(self, data):
+
+        with tf.GradientTape() as tape:
+            # Forward pass
+            _ = self(data, mode=tf.estimator.ModeKeys.TRAIN)
+            # gather losses from all problems
+            loss_dict = {'{}_loss'.format(problem_name): tf.reduce_sum(top_layer.losses) for problem_name,
+                         top_layer in self.top.top_layer_dict.items()}
+            # metric_dict = {'{}_metric'.format(problem_name): tf.reduce_mean(top_layer.metrics) for problem_name,
+            #                top_layer in self.top.top_layer_dict.items()}
+            metric_dict = {m.name: m.result() for m in self.metrics}
+        # Compute gradients
+        trainable_vars = self.trainable_variables
+        gradients = tape.gradient(self.losses, trainable_vars)
+
+        # Update weights
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+
+        return_dict = metric_dict
+        return_dict.update(loss_dict)
+
+        # Return a dict mapping metric names to current value.
+        # Note that it will include the loss (tracked in self.metrics).
+        return return_dict
