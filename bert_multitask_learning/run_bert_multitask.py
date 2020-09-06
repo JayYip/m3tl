@@ -41,7 +41,8 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
-            callbacks=[model_checkpoint_callback]
+            callbacks=[model_checkpoint_callback],
+            steps_per_epoch=params.train_steps
         )
     model.summary()
 
@@ -113,13 +114,19 @@ def train_bert_multitask(
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
 
+    train_dataset = train_eval_input_fn(params)
+    eval_dataset = train_eval_input_fn(params, mode=EVAL)
+
+    # get train_steps and update params
+    train_steps = 0
+    for _ in train_dataset:
+        train_steps += 1
+    params.update_train_steps(train_steps)
+
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     model = _create_keras_model(
         mirrored_strategy=mirrored_strategy, params=params)
-
-    train_dataset = train_eval_input_fn(params)
-    eval_dataset = train_eval_input_fn(params, mode=EVAL)
 
     _train_bert_multitask_keras_model(
         train_dataset=train_dataset,
