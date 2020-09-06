@@ -37,7 +37,25 @@ def filter_loss(loss, features, problem):
 
 
 class BertMultiTaskBody(tf.keras.Model):
-    def __init__(self, params: BaseParams, name='BertMultiTaskHidden'):
+    """Model to extract bert features and dispatch corresponding rows to each problem_chunk.
+
+    for each problem chunk, we extract corresponding features
+    and hidden features for that problem. The reason behind this
+    is to save computation for downstream processing.
+    For example, we have a batch of two instances and they're from
+    problem a and b respectively:
+    Input:
+    [{'input_ids': [1,2,3], 'a_loss_multiplier': 1, 'b_loss_multiplier': 0},
+     {'input_ids': [4,5,6], 'a_loss_multiplier': 0, 'b_loss_multiplier': 1}]
+    Output:
+    {
+      'a': {'input_ids': [1,2,3], 'a_loss_multiplier': 1, 'b_loss_multiplier': 0}
+      'b': {'input_ids': [4,5,6], 'a_loss_multiplier': 0, 'b_loss_multiplier': 1}
+    }
+
+    """
+
+    def __init__(self, params: BaseParams, name='BertMultiTaskBody'):
         super(BertMultiTaskBody, self).__init__(name=name)
         self.params = params
         self.bert = MultiModalBertModel(params=self.params)
@@ -140,6 +158,9 @@ class BertMultiTaskBody(tf.keras.Model):
 
 
 class BertMultiTaskTop(tf.keras.Model):
+    """Model to create top layer, aka classification layer, for each problem.
+    """
+
     def __init__(self, params: BaseParams, name='BertMultiTaskTop', input_embeddings: tf.Tensor = None):
         super(BertMultiTaskTop, self).__init__(name=name)
         self.params = params
@@ -163,11 +184,11 @@ class BertMultiTaskTop(tf.keras.Model):
                     self.top_layer_dict[problem] = problem_type_layer[problem_type](
                         self.params, problem)
 
-    def call(self, inputs, mode):
+    def call(self,
+             inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
+             mode: str) -> Dict[str, tf.Tensor]:
         features, hidden_feature = inputs
         return_dict = {}
-        training = (mode == tf.estimator.ModeKeys.TRAIN)
-        predicting = (mode == tf.estimator.ModeKeys.PREDICT)
 
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:

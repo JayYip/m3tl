@@ -4,6 +4,9 @@ from . import modeling
 
 
 class RestoreCheckpointHook(tf.estimator.SessionRunHook):
+    """Deprecated
+    """
+
     def __init__(self,
                  params
                  ):

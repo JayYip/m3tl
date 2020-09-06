@@ -2,30 +2,26 @@
 
 from functools import partial
 from itertools import tee
+from typing import List, Union
 
 import tensorflow as tf
 
 from .bert_preprocessing.create_bert_features import (
     create_bert_features_generator, create_multimodal_bert_features_generator)
+from .params import BaseParams
 from .read_write_tfrecord import read_tfrecord, write_tfrecord
 from .special_tokens import PREDICT, TRAIN
-from .utils import (infer_shape_and_type_from_dict,
-                    load_transformer_tokenizer)
+from .utils import infer_shape_and_type_from_dict, load_transformer_tokenizer
 
 
 def element_length_func(yield_dict):
     return tf.shape(input=yield_dict['input_ids'])[0]
 
 
-def train_eval_input_fn(params, mode=TRAIN):
-    '''Train and eval input function of estimator.
+def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
+    '''
     This function will write and read tf record for training
     and evaluation.
-
-    Usage:
-        def train_input_fn(): return train_eval_input_fn(params)
-        estimator.train(
-            train_input_fn, max_steps=params.train_steps, hooks=[train_hook])
 
     Arguments:
         params {Params} -- Params objects
@@ -63,7 +59,10 @@ def train_eval_input_fn(params, mode=TRAIN):
     return dataset
 
 
-def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=False):
+def predict_input_fn(input_file_or_list: Union[str, List[str]],
+                     params: BaseParams,
+                     mode=PREDICT,
+                     labels_in_input=False) -> tf.data.Dataset:
     '''Input function that takes a file path or list of string and 
     convert it to tf.dataset
 
@@ -73,7 +72,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
 
     Arguments:
         input_file_or_list {str or list} -- file path or list of string
-        config {Params} -- Params object
+        params {Params} -- Params object
 
     Keyword Arguments:
         mode {str} -- ModeKeys (default: {PREDICT})
@@ -95,11 +94,11 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
         first_element, _ = first_element
 
     tokenizer = load_transformer_tokenizer(
-        config.transformer_tokenizer_name, config.transformer_tokenizer_loading)
+        params.transformer_tokenizer_name, params.transformer_tokenizer_loading)
     if isinstance(first_element, dict) and 'a' not in first_element:
         part_fn = partial(create_multimodal_bert_features_generator, problem='',
                           label_encoder=None,
-                          params=config,
+                          params=params,
                           tokenizer=tokenizer,
                           mode=mode,
                           problem_type='cls',
@@ -107,7 +106,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
     else:
         part_fn = partial(create_bert_features_generator, problem='',
                           label_encoder=None,
-                          params=config,
+                          params=params,
                           tokenizer=tokenizer,
                           mode=mode,
                           problem_type='cls',
@@ -122,7 +121,7 @@ def predict_input_fn(input_file_or_list, config, mode=PREDICT, labels_in_input=F
         gen, output_types=output_type, output_shapes=output_shapes)
 
     dataset = dataset.padded_batch(
-        config.batch_size,
+        params.batch_size,
         output_shapes
     )
     # dataset = dataset.batch(config.batch_size*2)

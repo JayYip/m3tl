@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import logging
+from typing import Callable, List, Tuple
 
 
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
@@ -139,19 +140,36 @@ class BaseParams():
         self.read_data_fn = {}
         self.problem_assigned = False
 
-    def add_problem(self, problem_name, problem_type='cls', processing_fn=None, share_top=None):
-        if problem_type not in ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain']:
+    def add_problem(self, problem_name: str, problem_type='cls', processing_fn: Callable = None):
+        """Add problems.
+
+        Args:
+            problem_name (str): problem name. 
+            problem_type (str, optional): One of the following problem types:
+                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain']. 
+                Defaults to 'cls'.
+            processing_fn (Callable, optional): preprocessing function. Defaults to None.
+
+        Raises:
+            ValueError: unexpected problem_type
+        """
+
+        if problem_type not in [
+                'cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain']:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
-                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain'], problem_type))
+                ['cls', 'seq_tag', 'seq2seq_tag',
+                    'seq2seq_text', 'multi_cls', 'pretrain'],
+                problem_type))
 
         self.problem_type[problem_name] = problem_type
         self.read_data_fn[problem_name] = processing_fn
-        if share_top is not None:
-            self.share_top[problem_name] = share_top
-        else:
-            self.share_top[problem_name] = problem_name
 
-    def assign_problem(self, flag_string: str, gpu=2, base_dir=None, dir_name=None, is_serve=False):
+    def assign_problem(self,
+                       flag_string: str,
+                       gpu=2,
+                       base_dir: str = None,
+                       dir_name: str = None,
+                       is_serve=False):
         """Assign the actual run problem to param. This function will
         do the following things:
 
@@ -201,6 +219,8 @@ class BaseParams():
             self.lr = self.init_lr * gpu
 
     def to_json(self):
+        """Save the params as json files. Please note that processing_fn is not saved.
+        """
         dump_dict = {}
         for att_name, att in vars(self).items():
             try:
@@ -212,7 +232,17 @@ class BaseParams():
         with open(self.params_path, 'w', encoding='utf8') as f:
             json.dump(dump_dict, f)
 
-    def from_json(self, json_path=None):
+    def from_json(self, json_path: str = None):
+        """Load json file as params. 
+
+        json_path could not be None if the problem is not assigned to params
+
+        Args:
+            json_path (str, optional): Path to json file. Defaults to None.
+
+        Raises:
+            AttributeError
+        """
         try:
             params_path = json_path if json_path is not None else self.params_path
         except AttributeError:
@@ -233,7 +263,7 @@ class BaseParams():
             )
         self.assign_problem(*assign_details)
 
-    def get_data_info(self, problem_list, base):
+    def get_data_info(self, problem_list: List[str], base: str):
         '''Get number of data, number of classes of data and eos_id of data.
 
         Arguments:
@@ -270,13 +300,14 @@ class BaseParams():
             json.dump(data_info, open(json_path, 'w', encoding='utf8'))
         return json_path
 
-    def parse_problem_string(self, flag_string):
+    def parse_problem_string(self, flag_string: str) -> Tuple[List[str], List[List[str]]]:
         '''Parse problem string
         Example:
             cws|POS|weibo_ner&weibo_cws
 
             self.run_problem_list = [{cws:seq_tag}, {POS:seq_tag}, {weibo_ner:seq_tag, weibo_cws:seq_tag}]
             problem_list = [cws, POS, weibo_ner, weibo_cws]
+            problem_chunk = [[cws], [POS], [weibo_ner, weibo_cws]]
 
         Arguments:
             flag_string {str} -- problem string
@@ -310,7 +341,7 @@ class BaseParams():
         problem_list = sorted(re.split(r'[&|]', flag_string))
         return problem_list, problem_chunk
 
-    def prepare_dir(self, base_dir, dir_name, problem_list):
+    def prepare_dir(self, base_dir: str, dir_name: str, problem_list: List[str]):
         base = base_dir if base_dir is not None else 'models'
 
         dir_name = dir_name if dir_name is not None else '_'.join(
@@ -373,7 +404,7 @@ class BaseParams():
             self.bos_id = decoder_tokenizer.bos_token_id
             self.eos_id = decoder_tokenizer.eos_token_id
 
-    def get_problem_type(self, problem: str):
+    def get_problem_type(self, problem: str) -> str:
         return self.problem_type[problem]
 
     def update_train_steps(self, train_steps: int) -> None:

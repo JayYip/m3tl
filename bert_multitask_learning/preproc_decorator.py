@@ -1,5 +1,6 @@
 import logging
 from types import GeneratorType
+from typing import Callable
 
 from sklearn.preprocessing import MultiLabelBinarizer
 
@@ -9,7 +10,31 @@ from .special_tokens import PREDICT
 from .utils import LabelEncoder, get_or_make_label_encoder, load_transformer_tokenizer
 
 
-def preprocessing_fn(func):
+def preprocessing_fn(func: Callable):
+    """Usually used as a decorator.
+
+    The input and output signature of decorated function should be:
+    func(params: bert_multitask_learning.BaseParams,
+         mode: str) -> Union[Generator[X, y], Tuple[List[X], List[y]]]
+
+    Where X can be:
+    - Dicitionary of 'a' and 'b' texts: {'a': 'a test', 'b': 'b test'}
+    - Text: 'a test'
+    - Dicitionary of modalities: {'text': 'a test', 'image': np.array([1,2,3])}
+
+    Where y can be:
+    - Text or scalar: 'label_a'
+    - List of text or scalar: ['label_a', 'label_a1'] (for seq2seq and seq_tag)
+
+    This decorator will do the following things:
+    - load tokenizer
+    - call func, save as example_list
+    - create label_encoder and count the number of rows of example_list
+    - create bert features from example_list and write tfrecord
+
+    Args:
+        func (Callable): preprocessing function for problem
+    """
     def wrapper(params, mode, get_data_num=False, write_tfrecord=True):
         problem = func.__name__
 
