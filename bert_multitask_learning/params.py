@@ -1,5 +1,4 @@
 import json
-from json import decoder
 import os
 import re
 import shutil
@@ -376,6 +375,22 @@ class BaseParams():
 
     def get_problem_type(self, problem: str):
         return self.problem_type[problem]
+
+    def update_train_steps(self, train_steps: int) -> None:
+        """If the batch_size is dynamic, we have to loop through the tf.data.Dataset
+        to get the accurate number of training steps. In this case, we need a function to
+        update the train_steps which will be used to calculate learning rate schedule.
+
+        WARNING: updating should be called before the model is compiled! 
+
+        Args:
+            train_steps (int): new number of train_steps
+        """
+        logging.info('Updating train_steps from {0} to {1}'.format(
+            self.train_steps, train_steps))
+
+        self.train_steps = train_steps
+        self.num_warmup_steps = int(self.train_steps)
 
 
 class CRFParams(BaseParams):
