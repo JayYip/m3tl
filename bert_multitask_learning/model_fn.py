@@ -248,6 +248,10 @@ class BertMultiTask(tf.keras.Model):
 
     def compile(self):
         super(BertMultiTask, self).compile()
+        logger = tf.get_logger()
+        logger.info('Initial lr: {}'.format(self.params.lr))
+        logger.info('Train steps: {}'.format(self.params.train_steps))
+        logger.info('Warmup steps: {}'.format(self.params.num_warmup_steps))
         self.optimizer, self.lr_scheduler = transformers.optimization_tf.create_optimizer(
             init_lr=self.params.lr,
             num_train_steps=self.params.train_steps,
