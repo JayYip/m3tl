@@ -195,12 +195,11 @@ class BertMultiTaskTop(tf.keras.Model):
                 feature_this_round = features[problem]
                 hidden_feature_this_round = hidden_feature[problem]
                 problem_type = self.params.problem_type[problem]
-                scope_name = self.params.share_top[problem]
 
                 # if pretrain, return pretrain logit
                 if problem_type == 'pretrain':
                     pretrain = self.top_layer_dict[problem]
-                    return_dict[scope_name] = pretrain(
+                    return_dict[problem] = pretrain(
                         (feature_this_round, hidden_feature_this_round), mode)
                     return return_dict
 

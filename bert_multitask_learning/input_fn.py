@@ -36,8 +36,19 @@ def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
 
     dataset_dict = read_tfrecord(params=params, mode=mode)
 
+    # make sure the order is correct
+    dataset_dict_keys = list(dataset_dict.keys())
+    dataset_list = [dataset_dict[key] for key in dataset_dict_keys]
+    weight_list = [params.problem_sampling_weight_dict[key]
+                   for key in dataset_dict_keys]
+
+    logger = tf.get_logger()
+    logger.info('sampling weights: ')
+    for problem_chunk_name, weight in params.problem_sampling_weight_dict.items():
+        logger.info('{0}: {1}'.format(problem_chunk_name, weight))
+
     dataset = tf.data.experimental.sample_from_datasets(
-        [ds for _, ds in dataset_dict.items()])
+        datasets=dataset_list, weights=weight_list)
 
     if mode == TRAIN:
         dataset = dataset.shuffle(params.shuffle_buffer)
