@@ -248,7 +248,7 @@ class BertMultiTask(tf.keras.Model):
 
     def compile(self):
         super(BertMultiTask, self).compile()
-        self.optimizer, _ = transformers.optimization_tf.create_optimizer(
+        self.optimizer, self.lr_scheduler = transformers.optimization_tf.create_optimizer(
             init_lr=self.params.lr,
             num_train_steps=self.params.train_steps,
             num_warmup_steps=self.params.num_warmup_steps,
