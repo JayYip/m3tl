@@ -215,6 +215,8 @@ class BaseParams():
                     dup_fac = 1
             self.train_steps = int((
                 self.data_num * self.train_epoch * dup_fac) / (self.batch_size*max(1, gpu)))
+            self.train_steps_per_epoch = int(
+                self.train_steps / self.train_epoch)
             self.num_warmup_steps = int(0.1 * self.train_steps)
 
             # linear scale learing rate
@@ -409,7 +411,7 @@ class BaseParams():
     def get_problem_type(self, problem: str) -> str:
         return self.problem_type[problem]
 
-    def update_train_steps(self, train_steps: int) -> None:
+    def update_train_steps(self, train_steps_per_epoch: int, epoch: int = None) -> None:
         """If the batch_size is dynamic, we have to loop through the tf.data.Dataset
         to get the accurate number of training steps. In this case, we need a function to
         update the train_steps which will be used to calculate learning rate schedule.
@@ -419,10 +421,16 @@ class BaseParams():
         Args:
             train_steps (int): new number of train_steps
         """
+        if epoch:
+            train_steps = train_steps_per_epoch * epoch
+        else:
+            train_steps = train_steps_per_epoch * self.train_epoch
+
         logging.info('Updating train_steps from {0} to {1}'.format(
             self.train_steps, train_steps))
 
         self.train_steps = train_steps
+        self.train_steps_per_epoch = train_steps_per_epoch
         self.num_warmup_steps = int(self.train_steps)
 
     def get_problem_chunk(self, as_str=True) -> Union[List[str], List[List[str]]]:
