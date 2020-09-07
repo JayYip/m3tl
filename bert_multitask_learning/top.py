@@ -32,14 +32,14 @@ class SequenceLabel(tf.keras.Model):
         self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
 
     def call(self, inputs, mode):
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
         feature, hidden_feature = inputs
         hidden_feature = hidden_feature['seq']
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = feature['{}_label_ids'.format(self.problem_name)]
         else:
             labels = None
-
-        hidden_feature = self.dropout(hidden_feature)
+        hidden_feature = self.dropout(hidden_feature, training)
 
         logits = self.dense(hidden_feature)
 
@@ -74,13 +74,14 @@ class Classification(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
 
     def call(self, inputs, mode):
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
         feature, hidden_feature = inputs
         hidden_feature = hidden_feature['pooled']
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = feature['{}_label_ids'.format(self.problem_name)]
         else:
             labels = None
-        hidden_feature = self.dropout(hidden_feature)
+        hidden_feature = self.dropout(hidden_feature, training)
         logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
@@ -279,6 +280,7 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         )
 
     def call(self, inputs, mode):
+        training = (mode == tf.estimator.ModeKeys.TRAIN)
         feature, hidden_feature = inputs
         hidden_feature = hidden_feature['pooled']
         if mode != tf.estimator.ModeKeys.PREDICT:
@@ -286,7 +288,7 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         else:
             labels = None
         hidden_feature = self.dropout(hidden_feature)
-        logits = self.dense(hidden_feature)
+        logits = self.dense(hidden_feature, training)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
