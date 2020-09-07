@@ -431,7 +431,7 @@ class BaseParams():
 
         self.train_steps = train_steps
         self.train_steps_per_epoch = train_steps_per_epoch
-        self.num_warmup_steps = int(self.train_steps)
+        self.num_warmup_steps = int(self.train_steps * 0.1)
 
     def get_problem_chunk(self, as_str=True) -> Union[List[str], List[List[str]]]:
 
