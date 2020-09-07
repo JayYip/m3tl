@@ -3,8 +3,8 @@ import os
 import re
 import shutil
 import logging
-from typing import Callable, List, Tuple
-
+from typing import Callable, List, Tuple, Dict, Union
+from collections import defaultdict
 
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
 
@@ -202,6 +202,8 @@ class BaseParams():
         self.prepare_dir(base_dir, dir_name, self.problem_list)
 
         self.get_data_info(self.problem_list, self.ckpt_dir)
+
+        self.set_data_sampling_strategy()
 
         if not is_serve:
             self.shuffle_buffer = min([200000, self.data_num])
@@ -422,6 +424,64 @@ class BaseParams():
 
         self.train_steps = train_steps
         self.num_warmup_steps = int(self.train_steps)
+
+    def get_problem_chunk(self, as_str=True) -> Union[List[str], List[List[str]]]:
+
+        if as_str:
+            res_list = []
+            for problem_list in self.problem_chunk:
+                res_list.append('_'.join(sorted(problem_list)))
+            return res_list
+        else:
+            return self.problem_chunk
+
+    def set_data_sampling_strategy(self,
+                                   sampling_strategy='data_balanced',
+                                   sampling_strategy_fn: Callable = None) -> Dict[str, float]:
+        """Set data sampling strategy for multi-task learning.
+
+        'data_balanced' and 'problem_balanced' is implemented by default.
+        data_balanced: sampling weight equals to number of rows of that problem chunk.
+        problem_balanced: sampling weight equals to 1 for every problem chunk.
+
+        Args:
+            sampling_strategy (str, optional): sampling strategy. Defaults to 'data_balanced'.
+            sampling_strategy_fn (Callable, optional): function to create weight dict. Defaults to None.
+
+        Raises:
+            NotImplementedError: sampling_strategy_fn is not implemented yet
+            ValueError: invalid sampling_strategy provided
+
+        Returns:
+            Dict[str, float]: sampling weight for each problem_chunk
+        """
+        if sampling_strategy_fn:
+            logging.info(
+                'sampling_strategy_fn is provided, sampling_strategy arg will be ignored.')
+            raise NotImplementedError
+
+        problem_chunk_data_num = defaultdict(float)
+        if sampling_strategy == 'data_balanced':
+            problem_chunk = self.get_problem_chunk(as_str=False)
+            for problem_list in problem_chunk:
+                str_per_chunk = '_'.join(sorted(problem_list))
+                for problem in problem_list:
+                    problem_chunk_data_num[str_per_chunk] += self.data_num_dict[problem]
+        elif sampling_strategy == 'problem_balanced':
+            problem_chunk = self.get_problem_chunk(as_str=True)
+            for str_per_chunk in problem_chunk:
+                problem_chunk_data_num[str_per_chunk] = 1
+        else:
+            raise ValueError(
+                'sampling strategy {} is not implemented by default. '
+                'please provide sampling_strategy_fn.'.format(sampling_strategy))
+
+        # devided by sum to get sampling prob
+        sum_across_problems = sum(
+            [v for _, v in problem_chunk_data_num.items()])
+        self.problem_sampling_weight_dict = {
+            k: v / sum_across_problems for k, v in problem_chunk_data_num.items()}
+        return self.problem_sampling_weight_dict
 
 
 class CRFParams(BaseParams):

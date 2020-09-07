@@ -11,6 +11,7 @@ from joblib import Parallel, delayed
 from .bert_preprocessing.create_bert_features import (
     create_bert_features, create_multimodal_bert_features)
 from .special_tokens import EVAL, TRAIN
+from .params import BaseParams
 
 
 def _float_list_feature(value):
@@ -495,7 +496,7 @@ def add_dummy_features_to_dataset(example, dummy_features):
     return example
 
 
-def read_tfrecord(params, mode: str):
+def read_tfrecord(params: BaseParams, mode: str):
     """Read and parse TFRecord for every problem
 
     The returned dataset is parsed, reshaped, to_dense tensors
@@ -535,8 +536,7 @@ def read_tfrecord(params, mode: str):
 
     # add dummy features
     dummy_features = get_dummy_features(dataset_dict, all_feature_desc_dict)
-    for problem_list in params.problem_chunk:
-        problem = '_'.join(sorted(problem_list))
+    for problem in params.get_problem_chunk(as_str=True):
         dataset_dict[problem] = dataset_dict[problem].map(
             lambda x: add_dummy_features_to_dataset(x, dummy_features),
             num_parallel_calls=tf.data.experimental.AUTOTUNE
