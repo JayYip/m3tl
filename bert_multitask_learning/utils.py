@@ -120,8 +120,7 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
     Returns:
         LabelEncoder -- label encoder
     """
-    if label_list is None:
-        return None
+
     problem_path = params.ckpt_dir
     create_path(problem_path)
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
