@@ -283,8 +283,6 @@ class MultiModalBertModel(tf.keras.Model):
         self.params = params
         self.bert_model = load_transformer_model(
             self.params.transformer_model_name)
-        self.word_embedding = get_embedding_table_from_model(
-            self.bert_model)
         self.use_one_hot_embeddings = use_one_hot_embeddings
 
         # multimodal input dense
@@ -311,15 +309,8 @@ class MultiModalBertModel(tf.keras.Model):
 
         config = self.bert_model.config
 
-        # Perform embedding lookup on the word ids.
-        (self.embedding_output, self.embedding_table) = embedding_lookup(
-            input_ids=input_ids,
-            vocab_size=config.vocab_size,
-            embedding_size=config.hidden_size,
-            initializer_range=config.initializer_range,
-            word_embedding_name="word_embeddings",
-            use_one_hot_embeddings=self.use_one_hot_embeddings,
-            embedding_table=self.word_embedding)
+        self.embedding_output = tf.gather(
+            get_embedding_table_from_model(self.bert_model), input_ids)
 
         # we need to add [SEP] embeddings around modal input
         # Since the last input_ids is always [SEP], we can use it directly
@@ -403,7 +394,7 @@ class MultiModalBertModel(tf.keras.Model):
         return self.embedding_output
 
     def get_embedding_table(self):
-        return self.word_embedding
+        return get_embedding_table_from_model(self.bert_model)
 
     def get_input_mask(self):
         return self.model_input_mask

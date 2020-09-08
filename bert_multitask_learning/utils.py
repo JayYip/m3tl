@@ -336,6 +336,5 @@ def get_transformer_main_model(model, key='embeddings'):
 
 
 def get_embedding_table_from_model(model):
-    model.bert.embeddings.build(1)
     base_model = get_transformer_main_model(model)
     return base_model.embeddings.word_embeddings
