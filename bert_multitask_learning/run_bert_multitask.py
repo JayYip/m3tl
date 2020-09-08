@@ -35,13 +35,16 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
         mode='min',
         save_best_only=True)
 
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+        log_dir=params.ckpt_dir)
+
     with mirrored_strategy.scope():
         model.compile()
         model.fit(
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
-            callbacks=[model_checkpoint_callback],
+            callbacks=[model_checkpoint_callback, tensorboard_callback],
             steps_per_epoch=params.train_steps_per_epoch
         )
     model.summary()

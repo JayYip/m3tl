@@ -287,8 +287,8 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             labels = feature['{}_label_ids'.format(self.problem_name)]
         else:
             labels = None
-        hidden_feature = self.dropout(hidden_feature)
-        logits = self.dense(hidden_feature, training)
+        hidden_feature = self.dropout(hidden_feature, training)
+        logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
