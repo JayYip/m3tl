@@ -164,6 +164,25 @@ class BaseParams():
         self.problem_type[problem_name] = problem_type
         self.read_data_fn[problem_name] = processing_fn
 
+    def add_multiple_problems(self, problem_type_dict: Dict[str, str], processing_fn_dict: Dict[str, Callable] = None):
+        """add multiple problems.
+        processing_fn_dict is optional, if it's not provided, processing fn will be set as None.
+
+        Args:
+            problem_type_dict (Dict[str, str]): problem type dict
+            processing_fn_dict (Dict[str, Callable], optional): problem type fn. Defaults to None.
+        """
+        # add new problem to params if problem_type_dict and processing_fn_dict provided
+        for new_problem, problem_type in problem_type_dict.items():
+            print('Adding new problem {0}, problem type: {1}'.format(
+                new_problem, problem_type_dict[new_problem]))
+            if processing_fn_dict:
+                new_problem_processing_fn = processing_fn_dict[new_problem]
+            else:
+                new_problem_processing_fn = None
+            self.add_problem(
+                problem_name=new_problem, problem_type=problem_type, processing_fn=new_problem_processing_fn)
+
     def assign_problem(self,
                        flag_string: str,
                        gpu=2,
