@@ -129,10 +129,10 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
     is_seq = params.problem_type[problem] == 'seq_tag'
     is_pretrain = params.problem_type[problem] == 'pretrain'
 
-    if mode == 'train' and not os.path.exists(le_path):
-        if is_pretrain:
-            return None
+    if is_pretrain:
+        return None
 
+    if mode == 'train' and not os.path.exists(le_path):
         if is_seq2seq_text:
             label_encoder = load_transformer_tokenizer(
                 params.transformer_decoder_tokenizer_name, params.transformer_decoder_tokenizer_loading)
