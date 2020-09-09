@@ -50,6 +50,9 @@ def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
     dataset = tf.data.experimental.sample_from_datasets(
         datasets=dataset_list, weights=weight_list)
 
+    first_example = next(dataset.as_numpy_iterator())
+    output_shapes, _ = infer_shape_and_type_from_dict(first_example)
+
     if mode == TRAIN:
         dataset = dataset.shuffle(params.shuffle_buffer)
 
@@ -63,9 +66,9 @@ def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
             ))
     else:
         if mode == TRAIN:
-            dataset = dataset.batch(params.batch_size)
+            dataset = dataset.padded_batch(params.batch_size, output_shapes)
         else:
-            dataset = dataset.batch(params.batch_size*2)
+            dataset = dataset.padded_batch(params.batch_size*2, output_shapes)
 
     return dataset
 
