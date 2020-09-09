@@ -284,5 +284,37 @@ class BertMultiTask(tf.keras.Model):
         # Note that it will include the loss (tracked in self.metrics).
         return return_dict
 
+    def test_step(self, data):
+        """The logic for one evaluation step.
+
+        This method can be overridden to support custom evaluation logic.
+        This method is called by `Model.make_test_function`.
+
+        This function should contain the mathemetical logic for one step of
+        evaluation.
+        This typically includes the forward pass, loss calculation, and metrics
+        updates.
+
+        Configuration details for *how* this logic is run (e.g. `tf.function` and
+        `tf.distribute.Strategy` settings), should be left to
+        `Model.make_test_function`, which can also be overridden.
+
+        Arguments:
+        data: A nested structure of `Tensor`s.
+
+        Returns:
+        A `dict` containing values that will be passed to
+        `tf.keras.callbacks.CallbackList.on_train_batch_end`. Typically, the
+        values of the `Model`'s metrics are returned.
+        """
+
+        y_pred = self(data, mode=tf.estimator.ModeKeys.EVAL)
+        # Updates stateful loss metrics.
+        self.compiled_loss(
+            None, y_pred, None, regularization_losses=self.losses)
+
+        self.compiled_metrics.update_state(None, y_pred, None)
+        return {m.name: m.result() for m in self.metrics}
+
     def predict_step(self, data):
         return self(data, mode=tf.estimator.ModeKeys.PREDICT)
