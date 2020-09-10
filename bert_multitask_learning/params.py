@@ -188,7 +188,7 @@ class BaseParams():
                        gpu=2,
                        base_dir: str = None,
                        dir_name: str = None,
-                       is_serve=False):
+                       predicting=False):
         """Assign the actual run problem to param. This function will
         do the following things:
 
@@ -210,9 +210,9 @@ class BaseParams():
                 will be created automatically (default: {None})
         """
         self.assigned_details = (
-            flag_string, gpu, base_dir, dir_name, is_serve)
+            flag_string, gpu, base_dir, dir_name, predicting)
         self.problem_assigned = True
-        self.is_serve = is_serve
+        self.predicting = predicting
 
         self.problem_list, self.problem_chunk = self.parse_problem_string(
             flag_string)
@@ -224,7 +224,7 @@ class BaseParams():
 
         self.set_data_sampling_strategy()
 
-        if not is_serve:
+        if not predicting:
             self.shuffle_buffer = min([200000, self.data_num])
             for problem in self.problem_list:
                 if self.problem_type[problem] == 'pretrain':
@@ -273,6 +273,8 @@ class BaseParams():
                 'Either json_path should not be None or problem is assigned.')
         if self.problem_assigned:
             assign_details = self.assigned_details
+        else:
+            assign_details = None
 
         with open(params_path, 'r', encoding='utf8') as f:
             dump_dict = json.load(f)
@@ -284,7 +286,8 @@ class BaseParams():
             self.bert_decoder_config = load_transformer_config(
                 self.bert_decoder_config_dict, self.transformer_decoder_config_loading
             )
-        self.assign_problem(*assign_details)
+        if assign_details:
+            self.assign_problem(*assign_details)
 
     def get_data_info(self, problem_list: List[str], base: str):
         '''Get number of data, number of classes of data and eos_id of data.
@@ -303,7 +306,7 @@ class BaseParams():
             self.data_num_dict = {}
             self.num_classes = {}
 
-        if not self.is_serve:
+        if not self.predicting:
             # update data_num and train_steps
             self.data_num = 0
             for problem in problem_list:
@@ -365,44 +368,93 @@ class BaseParams():
         return problem_list, problem_chunk
 
     def prepare_dir(self, base_dir: str, dir_name: str, problem_list: List[str]):
+        """prepare model checkpoint dir. this function will copy or save transformers' configs
+        and tokenizers to params.ckpt_dir
+
+        Args:
+            base_dir (str): base_dir of params.ckpt_dir. same as os.path.dirname(params.ckpt_dir). bad naming
+            dir_name (str): dir_name, same as os.path.basename(params.ckpt_dir). bad naming
+            problem_list (List[str]): [description]
+        """
         base = base_dir if base_dir is not None else 'models'
 
         dir_name = dir_name if dir_name is not None else '_'.join(
             problem_list)+'_ckpt'
         self.ckpt_dir = os.path.join(base, dir_name)
 
-        if not self.is_serve:
+        # we need to make sure all configs, tokenizers are in ckpt_dir
+        # configs
+        from_config_path = os.path.join(self.init_checkpoint,
+                                        'bert_config')
+        from_decoder_config_path = os.path.join(self.init_checkpoint,
+                                                'bert_decoder_config')
+        to_config_path = os.path.join(self.ckpt_dir, 'bert_config')
+        to_decoder_config_path = os.path.join(
+            self.ckpt_dir, 'bert_decoder_config')
+
+        # tokenizers
+        from_tokenizer_path = os.path.join(self.init_checkpoint, 'tokenizer')
+        to_tokenizer_path = os.path.join(self.ckpt_dir, 'tokenizer')
+
+        from_decoder_tokenizer_path = os.path.join(
+            self.init_checkpoint, 'decoder_tokenizer')
+        to_decoder_tokenizer_path = os.path.join(
+            self.ckpt_dir, 'decoder_tokenizer')
+
+        self.params_path = os.path.join(self.ckpt_dir, 'params.json')
+
+        if not self.predicting:
             create_path(self.ckpt_dir)
 
             # two ways to init model
-            # 1. init from TF checkpoint dir. The dir has to contain bert_config.json.
+            # 1. init from TF checkpoint dir created by bert-multitask-learning.
             # 2. init from huggingface checkpoint.
-            self.params_path = os.path.join(self.ckpt_dir, 'params.json')
-            config_path = os.path.join(self.init_checkpoint,
-                                       'bert_config.json')
-            decoder_config_path = os.path.join(self.init_checkpoint,
-                                               'bert_decoder_config.json')
+
             # bert config exists, init from existing config
-            if os.path.exists(config_path):
-                shutil.copy2(config_path, self.ckpt_dir)
+            if os.path.exists(from_config_path):
+                # copy config
+                shutil.copy2(from_config_path, to_config_path)
                 self.bert_config = load_transformer_config(
-                    config_path, self.transformer_config_loading)
-                if os.path.exists(decoder_config_path):
+                    to_config_path, self.transformer_config_loading)
+
+                # copy tokenizer
+                shutil.copy2(from_tokenizer_path, to_tokenizer_path)
+
+                # copy decoder config
+                if os.path.exists(from_decoder_config_path):
+                    shutil.copy2(from_decoder_config_path,
+                                 to_decoder_config_path)
                     self.bert_decoder_config = load_transformer_config(
-                        decoder_config_path, self.transformer_decoder_config_loading
+                        from_decoder_config_path, self.transformer_decoder_config_loading
                     )
                     self.bert_decoder_config_dict = self.bert_decoder_config.to_dict()
+                # copy decoder tokenizer
+                if os.path.exists(from_decoder_tokenizer_path):
+                    shutil.copy2(from_decoder_tokenizer_path,
+                                 to_decoder_tokenizer_path)
+
                 self.init_weight_from_huggingface = False
             else:
                 # load config from huggingface
                 logging.warning(
-                    '%s not exists. will load model from huggingface checkpoint.', config_path)
+                    '%s not exists. will load model from huggingface checkpoint.', from_config_path)
                 # get or download config
                 self.init_weight_from_huggingface = True
                 self.bert_config = load_transformer_config(
                     self.transformer_config_name, self.transformer_config_loading)
-                json.dump(self.bert_config.to_dict(), open(
-                    os.path.join(self.ckpt_dir, 'bert_config.json'), 'w'))
+                self.bert_config.save_pretrained(to_config_path)
+
+                # save tokenizer
+                tokenizer = load_transformer_tokenizer(
+                    self.transformer_tokenizer_name, self.transformer_tokenizer_loading)
+                tokenizer.save_pretrained(to_tokenizer_path)
+                # save_pretrained method of tokenizer saves the config as tokenizer_config.json, which will cause
+                # OSError if use tokenizer.from_pretrained directly. we need to manually rename the json file
+                try:
+                    os.rename(os.path.join(to_tokenizer_path, 'tokenizer_config.json'), os.path.join(
+                        to_tokenizer_path, 'config.json'))
+                except:
+                    pass
 
                 # if decoder is specified
                 if self.transformer_decoder_model_name:
@@ -410,8 +462,29 @@ class BaseParams():
                         self.transformer_decoder_config_name, self.transformer_decoder_config_loading
                     )
                     self.bert_decoder_config_dict = self.bert_decoder_config.to_dict()
-                    json.dump(self.bert_decoder_config.to_dict(),
-                              open(decoder_config_path, 'w'))
+                    self.bert_decoder_config.save_pretrained(
+                        to_decoder_config_path)
+                    decoder_tokenizer = load_transformer_tokenizer(
+                        self.transformer_decoder_tokenizer_name, self.transformer_decoder_tokenizer_loading)
+                    decoder_tokenizer.save_pretrained(
+                        to_decoder_tokenizer_path)
+                    try:
+                        os.rename(os.path.join(to_decoder_tokenizer_path, 'tokenizer_config.json'), os.path.join(
+                            to_decoder_tokenizer_path, 'config.json'))
+                    except:
+                        pass
+        else:
+            self.bert_config = load_transformer_config(to_config_path)
+            if os.path.exists(to_decoder_config_path):
+                self.bert_decoder_config = load_transformer_config(
+                    to_decoder_config_path)
+
+        self.transformer_config_name = to_config_path
+        # set value if and only if decoder is assigned
+        self.transformer_decoder_config_name = to_decoder_config_path if self.transformer_decoder_config_name is not None else None
+        self.transformer_tokenizer_name = to_tokenizer_path
+        # set value if and only if decoder is assigned
+        self.transformer_decoder_tokenizer_name = to_decoder_tokenizer_path if self.transformer_decoder_tokenizer_name is not None else None
 
         self.bert_config_dict = self.bert_config.to_dict()
 

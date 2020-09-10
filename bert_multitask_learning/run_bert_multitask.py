@@ -4,7 +4,6 @@ import time
 from typing import Dict, Callable
 
 import tensorflow as tf
-from zmq.devices import proxysteerabledevice
 
 from .input_fn import predict_input_fn, train_eval_input_fn
 from .model_fn import BertMultiTask
@@ -228,9 +227,9 @@ def predict_bert_multitask(
         if problem_type_dict:
             params.add_multiple_problems(
                 problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
+        params.from_json(os.path.join(model_dir, 'params.json'))
         params.assign_problem(problem, gpu=1,
-                              base_dir=base_dir, dir_name=dir_name)
-        params.from_json()
+                              base_dir=base_dir, dir_name=dir_name, predicting=True)
     else:
         print('Params problem assigned. Problem list: {0}'.format(
             params.run_problem_list))
