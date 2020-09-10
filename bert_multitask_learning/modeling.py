@@ -281,8 +281,11 @@ class MultiModalBertModel(tf.keras.Model):
     def __init__(self, params: BaseParams, use_one_hot_embeddings=False):
         super(MultiModalBertModel, self).__init__()
         self.params = params
-        self.bert_model = load_transformer_model(
-            self.params.transformer_model_name)
+        if self.params.init_weight_from_huggingface:
+            self.bert_model = load_transformer_model(
+                self.params.transformer_model_name)
+        else:
+            self.bert_model = load_transformer_model(self.params.bert_config)
         self.use_one_hot_embeddings = use_one_hot_embeddings
 
         # multimodal input dense

@@ -33,7 +33,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
         save_weights_only=True,
         monitor='val_acc',
         mode='auto',
-        save_best_only=True)
+        save_best_only=False)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=params.ckpt_dir)
@@ -44,8 +44,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
-            callbacks=[model_checkpoint_callback, tensorboard_callback],
-            steps_per_epoch=params.train_steps_per_epoch
+            callbacks=[model_checkpoint_callback, tensorboard_callback]
         )
     model.summary()
 
@@ -107,12 +106,9 @@ def train_bert_multitask(
         base_dir, dir_name = None, None
     params.train_epoch = num_epochs
     # add new problem to params if problem_type_dict and processing_fn_dict provided
-    if processing_fn_dict:
-        for new_problem, new_problem_processing_fn in processing_fn_dict.items():
-            print('Adding new problem {0}, problem type: {1}'.format(
-                new_problem, problem_type_dict[new_problem]))
-            params.add_problem(
-                problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
+    if problem_type_dict:
+        params.add_multiple_problems(
+            problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
     params.assign_problem(problem, gpu=int(num_gpus),
                           base_dir=base_dir, dir_name=dir_name)
     params.to_json()
@@ -203,7 +199,8 @@ def predict_bert_multitask(
         params: BaseParams = None,
         problem_type_dict: Dict[str, str] = None,
         processing_fn_dict: Dict[str, Callable] = None,
-        model: tf.keras.Model = None):
+        model: tf.keras.Model = None,
+        return_model=False):
     """Evaluate Multi-task Bert model
 
     Available eval_scheme:
@@ -227,15 +224,12 @@ def predict_bert_multitask(
         else:
             base_dir, dir_name = None, None
         # add new problem to params if problem_type_dict and processing_fn_dict provided
-        if processing_fn_dict:
-            for new_problem, new_problem_processing_fn in processing_fn_dict.items():
-                print('Adding new problem {0}, problem type: {1}'.format(
-                    new_problem, problem_type_dict[new_problem]))
-                params.add_problem(
-                    problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
+        if problem_type_dict:
+            params.add_multiple_problems(
+                problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
+        params.from_json(os.path.join(model_dir, 'params.json'))
         params.assign_problem(problem, gpu=1,
-                              base_dir=base_dir, dir_name=dir_name)
-        params.from_json()
+                              base_dir=base_dir, dir_name=dir_name, predicting=True)
     else:
         print('Params problem assigned. Problem list: {0}'.format(
             params.run_problem_list))
@@ -254,6 +248,8 @@ def predict_bert_multitask(
     with mirrored_strategy.scope():
         pred = model.predict(pred_dataset)
 
+    if return_model:
+        return pred, model
     return pred
 
 
