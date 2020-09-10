@@ -7,6 +7,8 @@ from . import modeling
 from .utils import load_transformer_model
 from .top_utils import gather_indexes
 
+from functools import partial
+
 
 @tf.function
 def empty_tensor_handling_loss(labels, logits, loss_fn):
@@ -86,9 +88,15 @@ class Classification(tf.keras.layers.Layer):
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
+            # convert labels to one-hot to use label_smoothing
+            one_hot_labels = tf.one_hot(
+                labels, depth=self.params.num_classes[self.problem_name])
+            loss_fn = partial(tf.keras.losses.categorical_crossentropy,
+                              from_logits=True, label_smoothing=self.params.label_smoothing)
+
             loss = empty_tensor_handling_loss(
-                labels, logits,
-                tf.keras.losses.sparse_categorical_crossentropy)
+                one_hot_labels, logits,
+                loss_fn)
             self.add_loss(loss)
             acc = self.metric_fn(labels, logits)
             self.add_metric(acc)
@@ -302,3 +310,21 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             self.add_loss(loss)
         return tf.nn.sigmoid(
             logits, name='%s_predict' % self.problem_name)
+
+
+class MultimodalPretrain(tf.keras.Model):
+    """Multimodal pretrain top layer.
+
+    This includes following tasks:
+    - Multi-modal MLM
+    - Cross modal alignment
+
+    """
+
+    def __init__(self, params: BaseParams, problem_name: str) -> None:
+        super(MultimodalPretrain, self).__init__(name=problem_name)
+        self.params = params
+        self.problem_name = problem_name
+
+    def call(self, input, mode):
+        pass
