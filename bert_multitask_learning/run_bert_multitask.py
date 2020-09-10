@@ -31,9 +31,9 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(params.ckpt_dir, 'model'),
         save_weights_only=True,
-        monitor='val_acc',
+        monitor='val_mean_acc',
         mode='auto',
-        save_best_only=False)
+        save_best_only=True)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=params.ckpt_dir)
@@ -48,6 +48,17 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             steps_per_epoch=params.train_steps_per_epoch
         )
     model.summary()
+
+
+def tune_bert_multitask(problem='weibo_ner',
+                                num_gpus=1,
+                                num_epochs=10,
+                                model_dir='',
+                                params: BaseParams = None,
+                                problem_type_dict: Dict[str, str] = None,
+                                processing_fn_dict: Dict[str, Callable] = None,
+                                model: tf.keras.Model = None):
+    pass
 
 
 def train_bert_multitask(
