@@ -162,9 +162,13 @@ class Seq2Seq(tf.keras.Model):
         super(Seq2Seq, self).__init__(name=problem_name)
         self.params = params
         self.problem_name = problem_name
-        self.decoder = load_transformer_model(
-            self.params.transformer_decoder_model_name,
-            self.params.transformer_decoder_model_loading)
+        if self.params.init_weight_from_huggingface:
+            self.decoder = load_transformer_model(
+                self.params.transformer_decoder_model_name,
+                self.params.transformer_decoder_model_loading)
+        else:
+            self.decoder = load_transformer_model(
+                self.params.bert_decoder_config, self.params.transformer_decoder_model_loading)
 
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
