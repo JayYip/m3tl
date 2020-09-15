@@ -1,10 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import collections
-import copy
-import json
 import re
-from json import load
 
 import six
 import tensorflow as tf
@@ -12,7 +9,7 @@ import transformers
 
 from bert_multitask_learning.params import BaseParams
 
-from .utils import (get_embedding_table_from_model, get_transformer_main_model,
+from .utils import (get_embedding_table_from_model,
                     load_transformer_model)
 
 
@@ -286,6 +283,8 @@ class MultiModalBertModel(tf.keras.Model):
                 self.params.transformer_model_name)
         else:
             self.bert_model = load_transformer_model(self.params.bert_config)
+            self.bert_model(tf.convert_to_tensor(
+                transformers.file_utils.DUMMY_INPUTS))
         self.use_one_hot_embeddings = use_one_hot_embeddings
 
         # multimodal input dense

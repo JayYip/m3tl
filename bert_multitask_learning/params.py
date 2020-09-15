@@ -478,6 +478,7 @@ class BaseParams():
             if os.path.exists(to_decoder_config_path):
                 self.bert_decoder_config = load_transformer_config(
                     to_decoder_config_path)
+            self.init_weight_from_huggingface = False
 
         self.transformer_config_name = to_config_path
         # set value if and only if decoder is assigned
