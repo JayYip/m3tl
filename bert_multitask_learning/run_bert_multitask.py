@@ -140,6 +140,36 @@ def train_bert_multitask(
     return model
 
 
+def trim_checkpoint_for_prediction(problem: str,
+                                       input_dir: str,
+                                       output_dir: str,
+                                       problem_type_dict: Dict[str, str] = None):
+    """Minimize checkpoint size for prediction.
+
+    Since the original checkpoint contains optimizer's variable,
+        for instance, if the use adam, the checkpoint size will 
+        be three times of the size of model weights. This function 
+        will remove those unused variables in prediction to save space.
+
+    Args:
+        problem (str): problem
+        input_dir (str): input dir
+        output_dir (str): output dir
+        problem_type_dict (Dict[str, str], optional): problem type dict. Defaults to None.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    base_dir, dir_name = os.path.split(output_dir)
+    params = DynamicBatchSizeParams()
+    params.from_json(os.path.join(input_dir, 'params.json'))
+    params.add_multiple_problems(problem_type_dict=problem_type_dict)
+    params.assign_problem(problem, base_dir=base_dir,
+                          dir_name=dir_name, predicting=True)
+    model = BertMultiTask(params)
+    model.load_weights(os.path.join(input_dir, 'model'))
+    model.save_weights(os.path.join(params.ckpt_dir, 'model'))
+    params.to_json()
+
+
 def eval_bert_multitask(
         problem='weibo_ner',
         num_gpus=1,
