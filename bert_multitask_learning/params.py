@@ -302,6 +302,12 @@ class BaseParams():
             data_info = json.load(open(json_path, 'r', encoding='utf8'))
             self.data_num_dict = data_info['data_num']
             self.num_classes = data_info['num_classes']
+        elif self.predicting:
+            data_info = {
+                'data_num': self.data_num_dict,
+                'num_classes': self.num_classes,
+            }
+            return json.dump(data_info, open(json_path, 'w', encoding='utf8'))
         else:
             self.data_num_dict = {}
             self.num_classes = {}
