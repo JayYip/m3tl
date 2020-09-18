@@ -40,6 +40,11 @@ class BaseParams():
             'image': 2,
             'others': 3
         }
+        self.model_type_id = {
+            'text': 0,
+            'image': 1,
+            'others': 2
+        }
         # bert config
         self.init_checkpoint = ''
 
@@ -309,8 +314,10 @@ class BaseParams():
             }
             return json.dump(data_info, open(json_path, 'w', encoding='utf8'))
         else:
-            self.data_num_dict = {}
-            self.num_classes = {}
+            if not hasattr(self, 'data_num_dict'):
+                self.data_num_dict = {}
+            if not hasattr(self, 'num_classes'):
+                self.num_classes = {}
 
         if not self.predicting:
             # update data_num and train_steps

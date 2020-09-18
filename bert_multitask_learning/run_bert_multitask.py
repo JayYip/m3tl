@@ -2,6 +2,7 @@ import argparse
 import os
 import time
 from typing import Dict, Callable
+from shutil import copytree, ignore_patterns
 
 import tensorflow as tf
 
@@ -141,9 +142,9 @@ def train_bert_multitask(
 
 
 def trim_checkpoint_for_prediction(problem: str,
-                                       input_dir: str,
-                                       output_dir: str,
-                                       problem_type_dict: Dict[str, str] = None):
+                                   input_dir: str,
+                                   output_dir: str,
+                                   problem_type_dict: Dict[str, str] = None):
     """Minimize checkpoint size for prediction.
 
     Since the original checkpoint contains optimizer's variable,
@@ -157,7 +158,9 @@ def trim_checkpoint_for_prediction(problem: str,
         output_dir (str): output dir
         problem_type_dict (Dict[str, str], optional): problem type dict. Defaults to None.
     """
-    os.makedirs(output_dir, exist_ok=True)
+    # os.makedirs(output_dir, exist_ok=True)
+    copytree(input_dir, output_dir, ignore=ignore_patterns(
+        'checkpoint', '*.index', '*.data-000*'))
     base_dir, dir_name = os.path.split(output_dir)
     params = DynamicBatchSizeParams()
     params.from_json(os.path.join(input_dir, 'params.json'))
