@@ -292,6 +292,12 @@ class MultiModalBertModel(tf.keras.Model):
         self.multimodal_dense = {modal_name: tf.keras.layers.Dense(
             self.bert_model.config.hidden_size) for modal_name in self.modal_name_list}
 
+        # multimodal modal type embedding
+        # this might raise no gradients warning if it's unimodal
+        # variable: [3, 768]
+        self.modal_type_embedding = tf.keras.layers.Embedding(input_dim=len(
+            self.modal_name_list)+1, output_dim=self.bert_model.config.hidden_size)
+
     def call(self, inputs, training):
         features_dict = inputs
         input_ids = features_dict['input_ids']
@@ -314,10 +320,15 @@ class MultiModalBertModel(tf.keras.Model):
         self.embedding_output = tf.gather(
             get_embedding_table_from_model(self.bert_model), input_ids)
 
+        # for multimodal
+        modal_type_ids = tf.zeros_like(input_ids)
+
         # we need to add [SEP] embeddings around modal input
         # Since the last input_ids is always [SEP], we can use it directly
         sep_embedding = tf.expand_dims(
             self.embedding_output[:, -1, :], axis=1)
+
+        is_multimodal = False
 
         for modal_name in self.modal_name_list:
             input_name = '{}_input'.format(modal_name)
@@ -325,6 +336,9 @@ class MultiModalBertModel(tf.keras.Model):
             mask_name = '{}_mask'.format(modal_name)
             if input_name not in features_dict:
                 continue
+
+            is_multimodal = True
+
             # convert other modal embeddings to hidden_size
             # [batch_size, seq_length, modal_dim] -> [batch_size, seq_length, hidden_size]
             modal_input = self.multimodal_dense[modal_name](
@@ -334,7 +348,7 @@ class MultiModalBertModel(tf.keras.Model):
             modal_input = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [sep_embedding, modal_input, sep_embedding], axis=1)
             # add same type id to left and right
-            modal_type_ids = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+            modal_segment_ids = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [tf.expand_dims(features_dict[segment_id_name][:, 0], axis=1),
                     features_dict[segment_id_name],
                     tf.expand_dims(features_dict[segment_id_name][:, 0], axis=1)], axis=1)
@@ -343,20 +357,33 @@ class MultiModalBertModel(tf.keras.Model):
                 [tf.expand_dims(features_dict[mask_name][:, 0], axis=1),
                     features_dict[mask_name],
                     tf.expand_dims(features_dict[mask_name][:, 0], axis=1)], axis=1)
+            # add modal type
+            this_modal_type_ids = tf.ones_like(
+                modal_segment_ids) * self.params.model_type_id[modal_name]
+
             # concat to text correspondingly
             self.embedding_output = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [self.embedding_output, modal_input], axis=1)
             token_type_ids = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-                [token_type_ids, modal_type_ids], axis=1)
+                [token_type_ids, modal_segment_ids], axis=1)
             input_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [input_mask, modal_mask], axis=1)
+            modal_type_ids = tf.concat(
+                [modal_type_ids, this_modal_type_ids], axis=1)
+
 
         self.model_input_mask = input_mask
         self.model_token_type_ids = token_type_ids
+        self.model_modal_type_ids = modal_type_ids
+
+        word_embedding = self.embedding_output
+        if is_multimodal:
+            word_embedding = word_embedding + \
+                self.modal_type_embedding(modal_type_ids)
 
         outputs = self.bert_model(
             {'input_ids': None,
-             'inputs_embeds': self.embedding_output,
+             'inputs_embeds': word_embedding,
              'attention_mask': input_mask,
              'token_type_ids': token_type_ids,
              'position_ids': input_mask},

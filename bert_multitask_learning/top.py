@@ -188,7 +188,8 @@ class Seq2Seq(tf.keras.Model):
             label_mask = features['{}_mask'.format(self.problem_name)]
             encoder_mask = features['model_input_mask']
 
-            batch_loss, logits = self.decoder({'input_ids': labels,
+            # batch_loss, logits, hidden_states of all layers
+            batch_loss, logits, _ = self.decoder({'input_ids': labels,
                                                'attention_mask': label_mask,
                                                'encoder_hidden_states': encoder_output,
                                                'encoder_attention_mask': encoder_mask,
