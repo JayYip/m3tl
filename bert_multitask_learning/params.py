@@ -45,6 +45,7 @@ class BaseParams():
             'image': 1,
             'others': 2
         }
+        self.enable_modal_type = False
         # bert config
         self.init_checkpoint = ''
 
