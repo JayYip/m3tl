@@ -12,6 +12,8 @@ from bert_multitask_learning.params import BaseParams
 from .utils import (get_embedding_table_from_model,
                     load_transformer_model)
 
+LOGGER = tf.get_logger()
+
 
 def gelu(input_tensor):
     """Gaussian Error Linear Unit.
@@ -295,8 +297,11 @@ class MultiModalBertModel(tf.keras.Model):
         # multimodal modal type embedding
         # this might raise no gradients warning if it's unimodal
         # variable: [3, 768]
-        self.modal_type_embedding = tf.keras.layers.Embedding(input_dim=len(
-            self.modal_name_list)+1, output_dim=self.bert_model.config.hidden_size)
+        if self.params.enable_modal_type:
+            self.modal_type_embedding = tf.keras.layers.Embedding(input_dim=len(
+                self.modal_name_list)+1, output_dim=self.bert_model.config.hidden_size)
+
+        self.enable_modal_type = self.params.enable_modal_type
 
     def call(self, inputs, training):
         features_dict = inputs
@@ -320,15 +325,16 @@ class MultiModalBertModel(tf.keras.Model):
         self.embedding_output = tf.gather(
             get_embedding_table_from_model(self.bert_model), input_ids)
 
-        # for multimodal
-        modal_type_ids = tf.zeros_like(input_ids)
-
         # we need to add [SEP] embeddings around modal input
         # Since the last input_ids is always [SEP], we can use it directly
         sep_embedding = tf.expand_dims(
             self.embedding_output[:, -1, :], axis=1)
 
-        is_multimodal = False
+        if self.enable_modal_type:
+            # for multimodal
+            modal_type_ids = tf.zeros_like(input_ids)
+        else:
+            modal_type_ids = None
 
         for modal_name in self.modal_name_list:
             input_name = '{}_input'.format(modal_name)
@@ -337,7 +343,9 @@ class MultiModalBertModel(tf.keras.Model):
             if input_name not in features_dict:
                 continue
 
-            is_multimodal = True
+            if not self.enable_modal_type:
+                LOGGER.warning('Seems there\'s a multimodal inputs but params.enable_modal_type is '
+                               'not set to be True.')
 
             # convert other modal embeddings to hidden_size
             # [batch_size, seq_length, modal_dim] -> [batch_size, seq_length, hidden_size]
@@ -358,8 +366,9 @@ class MultiModalBertModel(tf.keras.Model):
                     features_dict[mask_name],
                     tf.expand_dims(features_dict[mask_name][:, 0], axis=1)], axis=1)
             # add modal type
-            this_modal_type_ids = tf.ones_like(
-                modal_segment_ids) * self.params.model_type_id[modal_name]
+            if self.enable_modal_type:
+                this_modal_type_ids = tf.ones_like(
+                    modal_segment_ids) * self.params.model_type_id[modal_name]
 
             # concat to text correspondingly
             self.embedding_output = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
@@ -368,16 +377,17 @@ class MultiModalBertModel(tf.keras.Model):
                 [token_type_ids, modal_segment_ids], axis=1)
             input_mask = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
                 [input_mask, modal_mask], axis=1)
-            modal_type_ids = tf.concat(
-                [modal_type_ids, this_modal_type_ids], axis=1)
-
+            if self.enable_modal_type:
+                modal_type_ids = tf.concat(
+                    [modal_type_ids, this_modal_type_ids], axis=1)
 
         self.model_input_mask = input_mask
         self.model_token_type_ids = token_type_ids
-        self.model_modal_type_ids = modal_type_ids
+        if self.enable_modal_type:
+            self.model_modal_type_ids = modal_type_ids
 
         word_embedding = self.embedding_output
-        if is_multimodal:
+        if self.enable_modal_type:
             word_embedding = word_embedding + \
                 self.modal_type_embedding(modal_type_ids)
 
@@ -471,3 +481,11 @@ def get_assignment_map_from_keras_checkpoint(tvars, init_checkpoint):
             initialized_variable_names[graph_var_name + ":0"] = 1
 
     return (assignment_map, initialized_variable_names)
+
+
+class MultiModalPretrainInputs(tf.keras.Model):
+    def __init__(self, params: BaseParams):
+        super(MultiModalPretrainInputs, self).__init__()
+
+    def call(self, input, training):
+        pass
