@@ -46,15 +46,6 @@ class SequenceLabel(tf.keras.Model):
         logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
-            # inconsistent shape might be introduced to labels
-            # so we need to do some padding to make sure that
-            # labels has the same sequence length as logits
-            pad_len = tf.shape(input=logits)[1] - tf.shape(input=labels)[1]
-
-            # top, bottom, left, right
-            pad_tensor = [[0, 0], [0, pad_len]]
-            labels = tf.pad(tensor=labels, paddings=pad_tensor)
-
             loss = empty_tensor_handling_loss(
                 labels, logits,
                 tf.keras.losses.sparse_categorical_crossentropy)
