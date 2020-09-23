@@ -2,6 +2,8 @@ import transformers
 from bert_multitask_learning.params import BaseParams
 import tensorflow as tf
 from typing import Dict, Tuple
+from tensorflow_addons.layers.crf import CRF
+from tensorflow_addons.text.crf import crf_log_likelihood
 
 from . import modeling
 from .utils import load_transformer_model
@@ -32,8 +34,30 @@ class SequenceLabel(tf.keras.Model):
         self.dense = tf.keras.layers.Dense(num_classes, activation=None)
 
         self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
-        self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
-            name='{}_acc'.format(self.problem_name))
+
+        if self.params.crf:
+            self.crf = CRF(num_classes)
+            self.metric_fn = tf.keras.metrics.Accuracy(
+                name='{}_acc'.format(self.problem_name)
+            )
+        else:
+            self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
+                name='{}_acc'.format(self.problem_name))
+
+    def return_crf_result(self, labels: tf.Tensor, logits: tf.Tensor, mode: str, input_mask: tf.Tensor):
+        viterbi_decoded, potentials, sequence_length, chain_kernel = self.crf(
+            logits, input_mask)
+        if mode != tf.estimator.ModeKeys.PREDICT:
+            loss = -crf_log_likelihood(potentials,
+                                       labels, sequence_length, chain_kernel)[0]
+            loss = tf.reduce_mean(loss)
+            self.add_loss(loss)
+            acc = self.metric_fn(
+                labels, viterbi_decoded, sample_weight=input_mask)
+            self.add_metric(acc)
+
+        # make the crf prediction has the same shape as non-crf prediction
+        return tf.one_hot(viterbi_decoded, name='%s_predict' % self.problem_name, depth=self.params.num_classes[self.problem_name])
 
     def call(self, inputs, mode):
         training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -46,6 +70,9 @@ class SequenceLabel(tf.keras.Model):
         hidden_feature = self.dropout(hidden_feature, training)
 
         logits = self.dense(hidden_feature)
+
+        if self.params.crf:
+            return self.return_crf_result(labels, logits, mode, feature['model_input_mask'])
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             loss = empty_tensor_handling_loss(
