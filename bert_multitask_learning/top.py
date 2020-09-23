@@ -32,6 +32,8 @@ class SequenceLabel(tf.keras.Model):
         self.dense = tf.keras.layers.Dense(num_classes, activation=None)
 
         self.dropout = tf.keras.layers.Dropout(1-params.dropout_keep_prob)
+        self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
+            name='{}_acc'.format(self.problem_name))
 
     def call(self, inputs, mode):
         training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -50,6 +52,9 @@ class SequenceLabel(tf.keras.Model):
                 labels, logits,
                 tf.keras.losses.sparse_categorical_crossentropy)
             self.add_loss(loss)
+            acc = self.metric_fn(
+                labels, logits, sample_weight=feature['model_input_mask'])
+            self.add_metric(acc)
         return tf.nn.softmax(
             logits, name='%s_predict' % self.problem_name)
 
