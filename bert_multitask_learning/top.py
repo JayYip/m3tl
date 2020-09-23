@@ -45,6 +45,7 @@ class SequenceLabel(tf.keras.Model):
                 name='{}_acc'.format(self.problem_name))
 
     def return_crf_result(self, labels: tf.Tensor, logits: tf.Tensor, mode: str, input_mask: tf.Tensor):
+        input_mask.set_shape([None, None])
         viterbi_decoded, potentials, sequence_length, chain_kernel = self.crf(
             logits, input_mask)
         if mode != tf.estimator.ModeKeys.PREDICT:

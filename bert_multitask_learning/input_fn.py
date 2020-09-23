@@ -60,6 +60,7 @@ def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
                 element_length_func=element_length_func,
                 bucket_batch_sizes=params.bucket_batch_sizes,
                 bucket_boundaries=params.bucket_boundaries,
+                pad_to_bucket_boundary=True
             ))
     else:
         first_example = next(dataset.as_numpy_iterator())
