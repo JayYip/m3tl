@@ -69,10 +69,10 @@ class SequenceLabel(tf.keras.Model):
             labels = None
         hidden_feature = self.dropout(hidden_feature, training)
 
-        logits = self.dense(hidden_feature)
-
         if self.params.crf:
-            return self.return_crf_result(labels, logits, mode, feature['model_input_mask'])
+            return self.return_crf_result(labels, hidden_feature, mode, feature['model_input_mask'])
+
+        logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             loss = empty_tensor_handling_loss(
