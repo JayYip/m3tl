@@ -2,7 +2,7 @@
 
 from functools import partial
 from itertools import tee
-from typing import List, Union
+from typing import List, Union, Dict
 
 import tensorflow as tf
 
@@ -14,8 +14,10 @@ from .special_tokens import PREDICT, TRAIN
 from .utils import infer_shape_and_type_from_dict, load_transformer_tokenizer
 
 
-def element_length_func(yield_dict):
-    return tf.shape(input=yield_dict['input_ids'])[0]
+def element_length_func(yield_dict: Dict[str, tf.Tensor]):
+    max_length = tf.reduce_max(
+        [tf.shape(t)[0] for t in yield_dict.values() if len(t.shape) > 0])
+    return max_length
 
 
 def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
