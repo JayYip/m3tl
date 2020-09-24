@@ -345,8 +345,13 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = tf.squeeze(labels)
             labels = tf.cast(labels, tf.float32)
+            # use weighted loss
+            label_weights = self.params.multi_cls_positive_weight
+
+            def _loss_fn_wrapper(x, y, from_logits=True):
+                return tf.nn.weighted_cross_entropy_with_logits(x, y, pos_weight=label_weights, name='{}_loss'.format(self.problem_name))
             loss = empty_tensor_handling_loss(
-                labels, logits, tf.keras.losses.binary_crossentropy)
+                labels, logits, _loss_fn_wrapper)
             self.add_loss(loss)
             f1 = self.metric_fn(labels, logits)
             self.add_metric(f1)

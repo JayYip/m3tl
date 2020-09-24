@@ -90,6 +90,7 @@ class BaseParams():
         self.hidden_dense = False
         # threshold to calculate metrics for multi_cls
         self.multi_cls_threshold = 0.5
+        self.multi_cls_positive_weight = 1.0
 
         # seq2seq
         self.decoder_num_hidden_layers = 3
