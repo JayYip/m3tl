@@ -318,6 +318,8 @@ class BertMultiTask(tf.keras.Model):
             None, y_pred, None, regularization_losses=self.losses)
 
         self.compiled_metrics.update_state(None, y_pred, None)
+        self.mean_acc.update_state(
+            [m.result() for m in self.metrics if 'mean_acc' not in m.name])
         return {m.name: m.result() for m in self.metrics}
 
     def predict_step(self, data):
