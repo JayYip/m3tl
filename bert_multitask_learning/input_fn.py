@@ -15,8 +15,7 @@ from .utils import infer_shape_and_type_from_dict, load_transformer_tokenizer
 
 
 def element_length_func(yield_dict: Dict[str, tf.Tensor]):
-    max_length = tf.reduce_max(
-        [tf.shape(t)[0] for t in yield_dict.values() if len(t.shape) > 0])
+    max_length = tf.shape(yield_dict['input_ids'])[0]
     return max_length
 
 
@@ -61,8 +60,7 @@ def train_eval_input_fn(params: BaseParams, mode=TRAIN) -> tf.data.Dataset:
             tf.data.experimental.bucket_by_sequence_length(
                 element_length_func=element_length_func,
                 bucket_batch_sizes=params.bucket_batch_sizes,
-                bucket_boundaries=params.bucket_boundaries,
-                pad_to_bucket_boundary=True
+                bucket_boundaries=params.bucket_boundaries
             ))
     else:
         first_example = next(dataset.as_numpy_iterator())

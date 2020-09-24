@@ -66,6 +66,15 @@ class SequenceLabel(tf.keras.Model):
         hidden_feature = hidden_feature['seq']
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = feature['{}_label_ids'.format(self.problem_name)]
+            # sometimes the length of labels dose not equal to length of inputs
+            # that's caused by tf.data.experimental.bucket_by_sequence_length in multi problem scenario
+            pad_len = tf.shape(input=hidden_feature)[
+                1] - tf.shape(input=labels)[1]
+
+            # top, bottom, left, right
+            pad_tensor = [[0, 0], [0, pad_len]]
+            labels = tf.pad(tensor=labels, paddings=pad_tensor)
+
         else:
             labels = None
         hidden_feature = self.dropout(hidden_feature, training)
