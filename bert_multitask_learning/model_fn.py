@@ -258,6 +258,7 @@ class BertMultiTask(tf.keras.Model):
             num_warmup_steps=self.params.num_warmup_steps,
             weight_decay_rate=0.01
         )
+        self.mean_acc = tf.keras.metrics.Mean(name='mean_acc')
 
     def train_step(self, data):
 
@@ -277,8 +278,11 @@ class BertMultiTask(tf.keras.Model):
         # Update weights
         self.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
+        self.mean_acc.update_state([v for v in metric_dict.values()])
+
         return_dict = metric_dict
         return_dict.update(loss_dict)
+        return_dict[self.mean_acc.name] = self.mean_acc.result()
 
         # Return a dict mapping metric names to current value.
         # Note that it will include the loss (tracked in self.metrics).

@@ -32,7 +32,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(params.ckpt_dir, 'model'),
         save_weights_only=True,
-        monitor='val_loss',
+        monitor='val_mean_acc',
         mode='auto',
         save_best_only=False)
 
