@@ -88,6 +88,8 @@ class BaseParams():
         self.crf = False
         self.bert_num_hidden_layer = 12
         self.hidden_dense = False
+        # threshold to calculate metrics for multi_cls
+        self.multi_cls_threshold = 0.5
 
         # seq2seq
         self.decoder_num_hidden_layers = 3

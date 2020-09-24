@@ -4,6 +4,7 @@ import tensorflow as tf
 from typing import Dict, Tuple
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
+import tensorflow_addons as tfa
 
 from . import modeling
 from .utils import load_transformer_model
@@ -324,6 +325,11 @@ class MultiLabelClassification(tf.keras.layers.Layer):
         self.dropout = tf.keras.layers.Dropout(
             1-self.params.dropout_keep_prob
         )
+        self.metric_fn = tfa.metrics.F1Score(
+            num_classes=self.params.num_classes[problem_name],
+            threshold=self.params.multi_cls_threshold,
+            average='macro',
+            name='{}_f1'.format(problem_name))
 
     def call(self, inputs, mode):
         training = (mode == tf.estimator.ModeKeys.TRAIN)
@@ -342,6 +348,9 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             loss = empty_tensor_handling_loss(
                 labels, logits, tf.keras.losses.binary_crossentropy)
             self.add_loss(loss)
+            f1 = self.metric_fn(labels, logits)
+            self.add_metric(f1)
+
         return tf.nn.sigmoid(
             logits, name='%s_predict' % self.problem_name)
 
