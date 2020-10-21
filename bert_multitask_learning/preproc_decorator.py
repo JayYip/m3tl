@@ -116,9 +116,14 @@ def preprocessing_fn(func: Callable):
                     return len(inputs_list), len(label_encoder.encode_dict)
                 if isinstance(label_encoder, MultiLabelBinarizer):
                     return len(inputs_list), label_encoder.classes_.shape[0]
-
-                # label_encoder is tokenizer
-                return len(inputs_list), len(label_encoder.vocab)
+                if hasattr(label_encoder, 'vocab'):
+                    # label_encoder is tokenizer
+                    return len(inputs_list), len(label_encoder.vocab)
+                elif hasattr(params, 'decoder_vocab_size'):
+                    return len(inputs_list), params.decoder_vocab_size
+                else:
+                    raise ValueError('Cannot determine num of classes for problem {0}.'
+                                     'This is usually caused by {1} dose not has attribute vocab. In this case, you should manually specify vocab size to params: params.decoder_vocab_size = 32000'.format(problem, type(label_encoder).__name__))
 
             if mode == PREDICT:
                 return inputs_list, target_list, label_encoder

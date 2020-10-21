@@ -26,6 +26,29 @@ def empty_tensor_handling_loss(labels, logits, loss_fn):
             labels, logits, from_logits=True))
 
 
+@tf.function
+def nan_loss_handling(loss):
+    if tf.math.is_nan(loss):
+        return 0.0
+    else:
+        return loss
+
+
+@tf.function
+def create_dummy_if_empty(inp_tensor: tf.Tensor) -> tf.Tensor:
+    shape_tensor = tf.shape(inp_tensor)
+    if tf.equal(shape_tensor[0], 0):
+        data_type = inp_tensor.dtype
+        dummy_shape_first_dim = tf.convert_to_tensor([1], dtype=tf.int32)
+        dummy_shape = tf.concat(
+            [dummy_shape_first_dim, shape_tensor[1:]], axis=0)
+        dummy_tensor = tf.zeros(dummy_shape, dtype=data_type)
+        tf.print(tf.shape(dummy_tensor))
+        return dummy_tensor
+    else:
+        return inp_tensor
+
+
 class SequenceLabel(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str):
         super(SequenceLabel, self).__init__(name=problem_name)
@@ -47,12 +70,15 @@ class SequenceLabel(tf.keras.Model):
 
     def return_crf_result(self, labels: tf.Tensor, logits: tf.Tensor, mode: str, input_mask: tf.Tensor):
         input_mask.set_shape([None, None])
+        logits = create_dummy_if_empty(logits)
+        input_mask = create_dummy_if_empty(input_mask)
         viterbi_decoded, potentials, sequence_length, chain_kernel = self.crf(
             logits, input_mask)
         if mode != tf.estimator.ModeKeys.PREDICT:
             loss = -crf_log_likelihood(potentials,
                                        labels, sequence_length, chain_kernel)[0]
             loss = tf.reduce_mean(loss)
+            loss = nan_loss_handling(loss)
             self.add_loss(loss)
             acc = self.metric_fn(
                 labels, viterbi_decoded, sample_weight=input_mask)
@@ -224,10 +250,10 @@ class Seq2Seq(tf.keras.Model):
 
             # batch_loss, logits, hidden_states of all layers
             batch_loss, logits, _ = self.decoder({'input_ids': labels,
-                                               'attention_mask': label_mask,
-                                               'encoder_hidden_states': encoder_output,
-                                               'encoder_attention_mask': encoder_mask,
-                                               'labels': labels})
+                                                  'attention_mask': label_mask,
+                                                  'encoder_hidden_states': encoder_output,
+                                                  'encoder_attention_mask': encoder_mask,
+                                                  'labels': labels})
 
             # loss = self.create_loss(
             #     batch_loss, features['%s_loss_multiplier' % problem_name])
@@ -315,7 +341,7 @@ class Seq2Seq(tf.keras.Model):
 #             return self.pred
 
 
-class MultiLabelClassification(tf.keras.layers.Layer):
+class MultiLabelClassification(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str) -> None:
         super(MultiLabelClassification, self).__init__(name=problem_name)
         self.params = params
@@ -353,6 +379,8 @@ class MultiLabelClassification(tf.keras.layers.Layer):
             loss = empty_tensor_handling_loss(
                 labels, logits, _loss_fn_wrapper)
             self.add_loss(loss)
+            labels = create_dummy_if_empty(labels)
+            logits = create_dummy_if_empty(logits)
             f1 = self.metric_fn(labels, logits)
             self.add_metric(f1)
 
