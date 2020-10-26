@@ -47,7 +47,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             target = [label_encoder.bos_token] + \
                 target + [label_encoder.eos_token]
             label_dict = label_encoder(
-                target, add_special_tokens=False, is_pretokenized=True)
+                target, add_special_tokens=False, is_split_into_words=True)
             label_id = label_dict['input_ids']
             label_mask = [0] + label_dict['attention_mask'] + [0]
             label_id = pad_wrapper(label_id, decoding_length)
@@ -60,7 +60,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             target = [label_encoder.bos_token] + \
                 target + [label_encoder.eos_token]
             label_dict = tokenizer(
-                target, is_pretokenized=True, add_special_tokens=False)
+                target, is_split_into_words=True, add_special_tokens=False)
             label_mask = [0] + label_dict['attention_mask'] + [0]
             label_id = label_encoder.transform(target).tolist()
             label_id = [np.int32(i) for i in label_id]
@@ -71,7 +71,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
         if problem_type == 'seq2seq_text':
             target = label_encoder.bos_token + target + label_encoder.eos_token
             label_dict = label_encoder(
-                target, add_special_tokens=False, is_pretokenized=False)
+                target, add_special_tokens=False, is_split_into_words=False)
             label_id = label_dict['input_ids']
             label_mask = [0] + label_dict['attention_mask'] + [0]
             label_id = pad_wrapper(label_id, decoding_length)
@@ -109,15 +109,15 @@ def _create_bert_features(problem,
         target = raw_target
 
         if isinstance(tokens_a, list):
-            is_pretokenized = True
+            is_split_into_words = True
         else:
-            is_pretokenized = False
+            is_split_into_words = False
 
         tokenized_dict = tokenizer(
             tokens_a, tokens_b,
             truncation=True,
             max_length=params.max_seq_len,
-            is_pretokenized=is_pretokenized,
+            is_split_into_words=is_split_into_words,
             padding=False,
             return_special_tokens_mask=is_seq,
             add_special_tokens=True,
@@ -248,7 +248,7 @@ def create_bert_pretraining(problem,
 
                 mask_lm_dict = tokenizer(instance.masked_lm_labels,
                                          truncation=False,
-                                         is_pretokenized=True,
+                                         is_split_into_words=True,
                                          padding='max_length',
                                          max_length=params.max_predictions_per_seq,
                                          return_special_tokens_mask=False,
@@ -344,14 +344,14 @@ def _create_multimodal_bert_features(problem,
                 target = modal_target
 
                 if isinstance(tokens_a, list):
-                    is_pretokenized = True
+                    is_split_into_words = True
                 else:
-                    is_pretokenized = False
+                    is_split_into_words = False
                 tokenized_dict = tokenizer(
                     tokens_a, tokens_b,
                     truncation=True,
                     max_length=params.max_seq_len,
-                    is_pretokenized=is_pretokenized,
+                    is_split_into_words=is_split_into_words,
                     padding=False,
                     return_special_tokens_mask=is_seq,
                     add_special_tokens=True,

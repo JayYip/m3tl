@@ -266,6 +266,26 @@ class Seq2Seq(tf.keras.Model):
         decoder_lable = tf.concat([decoder_lable, batch_eos_ids], axis=1)
         return decoder_lable
 
+    def generate(self, encoder_output: TFBaseModelOutput) -> TFSeq2SeqLMOutput:
+        bos_id = self.params.bos_id
+        init_tensor = tf.ones(
+            (tf.shape(encoder_output.last_hidden_state)[0], 1), dtype=tf.int32) * bos_id
+
+        past_key_values = None
+        decoder_input_ids = init_tensor
+        for _ in range(self.params.decode_max_seq_len):
+            pred: TFSeq2SeqLMOutput = self.decoder({'decoder_input_ids': decoder_input_ids,
+                                                    'encoder_outputs': encoder_output,
+                                                    'use_cache': False,
+                                                    'past_key_values': past_key_values}, return_dict=True)
+            past_key_values = pred.past_key_values
+            pred_token = tf.cast(tf.expand_dims(
+                tf.argmax(pred.logits[:, -1, :], axis=-1), axis=1), tf.int32)
+            decoder_input_ids = tf.concat(
+                [decoder_input_ids, pred_token], axis=1)
+
+        return pred
+
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
              mode: str):
@@ -303,20 +323,24 @@ class Seq2Seq(tf.keras.Model):
             return tf.nn.softmax(logits)
 
         else:
-            bos_id = self.params.bos_id
-            init_tensor = tf.ones(
-                (tf.shape(encoder_output)[0], 1), dtype=tf.int32) * bos_id
-            eos_id = self.params.eos_id
-            pred = self.decoder.generate(
-                input_ids=init_tensor,
-                max_length=self.params.decode_max_seq_len,
-                min_length=2,
-                early_stopping=True,
-                num_beams=self.params.beam_size,
-                bos_token_id=bos_id,
-                eos_token_id=eos_id,
-                use_cache=True
-            )
+            # create encoder outputs
+            encoder_output = TFBaseModelOutput(
+                last_hidden_state=hidden_features['seq'],
+                hidden_states=hidden_features['all'])
+
+            pred = self.generate(encoder_output)
+
+            pred = tf.argmax(pred.logits, axis=-1)
+            # pred = self.decoder.generate(
+            #     input_ids=init_tensor,
+            #     max_length=self.params.decode_max_seq_len,
+            #     min_length=2,
+            #     early_stopping=True,
+            #     num_beams=self.params.beam_size,
+            #     bos_token_id=bos_id,
+            #     eos_token_id=eos_id,
+            #     use_cache=True
+            # )
             return pred
 
 
