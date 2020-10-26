@@ -18,7 +18,7 @@ def seq_tag_label_handling(tokenized_dict, target, pad_token):
     del tokenized_dict['special_tokens_mask']
 
     # handle truncation
-    if 'num_truncated_tokens' in tokenized_dict:
+    if tokenized_dict.get('num_truncated_tokens', 0) > 0:
         target = target[:len(target) - tokenized_dict['num_truncated_tokens']]
 
     processed_target = []
