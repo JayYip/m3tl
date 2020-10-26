@@ -170,15 +170,16 @@ class BertMultiTaskTop(tf.keras.Model):
             'cls': Classification,
             'seq2seq_tag': Seq2Seq,
             'seq2seq_text': Seq2Seq,
-            'multi_cls': MultiLabelClassification
+            'multi_cls': MultiLabelClassification,
+            'pretrain': PreTrain
         }
         self.top_layer_dict = {}
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:
                 problem_type = self.params.problem_type[problem]
                 # if pretrain, return pretrain logit
-                if problem_type == 'pretrain':
-                    self.top_layer_dict[problem] = PreTrain(
+                if problem_type in ('pretrain', 'seq2seq_text'):
+                    self.top_layer_dict[problem] = problem_type_layer[problem_type](
                         self.params, problem_name=problem, input_embeddings=input_embeddings)
                 else:
                     self.top_layer_dict[problem] = problem_type_layer[problem_type](

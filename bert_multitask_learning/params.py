@@ -7,6 +7,7 @@ from typing import Callable, List, Tuple, Dict, Union
 from collections import defaultdict
 
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
+from .special_tokens import BOS_TOKEN, EOS_TOKEN
 
 
 class BaseParams():
@@ -514,6 +515,17 @@ class BaseParams():
                 self.transformer_decoder_tokenizer_name,
                 self.transformer_decoder_tokenizer_loading
             )
+
+            # if set bos and eos
+            if decoder_tokenizer.bos_token is None:
+                decoder_tokenizer.add_special_tokens({'bos_token': BOS_TOKEN})
+
+            if decoder_tokenizer.eos_token is None:
+                decoder_tokenizer.add_special_tokens({'eos_token': EOS_TOKEN})
+
+            # overwrite tokenizer
+            decoder_tokenizer.save_pretrained(to_decoder_tokenizer_path)
+
             self.decoder_vocab_size = decoder_tokenizer.vocab_size
             self.bos_id = decoder_tokenizer.bos_token_id
             self.eos_id = decoder_tokenizer.eos_token_id

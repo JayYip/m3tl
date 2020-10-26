@@ -1,16 +1,24 @@
-import transformers
-from bert_multitask_learning.params import BaseParams
-import tensorflow as tf
+import logging
+from functools import partial
 from typing import Dict, Tuple
+
+import tensorflow as tf
+import tensorflow_addons as tfa
+import transformers
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
-import tensorflow_addons as tfa
+from transformers.modeling_tf_outputs import (TFBaseModelOutput,
+                                              TFBaseModelOutputWithPast,
+                                              TFSeq2SeqLMOutput,
+                                              TFSeq2SeqModelOutput)
+from transformers.modeling_tf_utils import TFSharedEmbeddings
+
+from bert_multitask_learning.params import BaseParams
 
 from . import modeling
-from .utils import load_transformer_model
 from .top_utils import gather_indexes
-
-from functools import partial
+from .transformers_tf_bart import TFBartForConditionalGeneration
+from .utils import load_transformer_model
 
 
 @tf.function
@@ -226,34 +234,63 @@ class PreTrain(tf.keras.Model):
 
 
 class Seq2Seq(tf.keras.Model):
-    def __init__(self, params: BaseParams, problem_name: str):
+    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer):
         super(Seq2Seq, self).__init__(name=problem_name)
         self.params = params
         self.problem_name = problem_name
-        if self.params.init_weight_from_huggingface:
-            self.decoder = load_transformer_model(
-                self.params.transformer_decoder_model_name,
-                self.params.transformer_decoder_model_loading)
-        else:
-            self.decoder = load_transformer_model(
-                self.params.bert_decoder_config, self.params.transformer_decoder_model_loading)
+        # if self.params.init_weight_from_huggingface:
+        #     self.decoder = load_transformer_model(
+        #         self.params.transformer_decoder_model_name,
+        #         self.params.transformer_decoder_model_loading)
+        # else:
+        #     self.decoder = load_transformer_model(
+        #         self.params.bert_decoder_config, self.params.transformer_decoder_model_loading)
+
+        # TODO: better implementation
+        logging.warning(
+            'Seq2Seq model is not well supported yet. Bugs are expected.')
+        config = self.params.bert_decoder_config
+        # some hacky approach to share embeddings from encoder to decoder
+        word_embedding_weight = input_embeddings.word_embeddings
+        share_embedding_layer = TFSharedEmbeddings(
+            vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
+        share_embedding_layer.build([1])
+        share_embedding_layer.weight = word_embedding_weight
+        self.decoder = TFBartForConditionalGeneration(
+            config=config, embedding_layer=share_embedding_layer)
+
+    def _seq2seq_label_shift_right(self, labels: tf.Tensor, eos_id: int) -> tf.Tensor:
+        batch_eos_ids = tf.fill([tf.shape(labels)[0], 1], eos_id)
+        batch_eos_ids = tf.cast(batch_eos_ids, dtype=tf.int64)
+        decoder_lable = labels[:, 1:]
+        decoder_lable = tf.concat([decoder_lable, batch_eos_ids], axis=1)
+        return decoder_lable
 
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
              mode: str):
         features, hidden_features = inputs
-        encoder_output = hidden_features['seq']
         if mode != tf.estimator.ModeKeys.PREDICT:
             labels = features['%s_label_ids' % self.problem_name]
             label_mask = features['{}_mask'.format(self.problem_name)]
             encoder_mask = features['model_input_mask']
 
-            # batch_loss, logits, hidden_states of all layers
-            batch_loss, logits, _ = self.decoder({'input_ids': labels,
-                                                  'attention_mask': label_mask,
-                                                  'encoder_hidden_states': encoder_output,
-                                                  'encoder_attention_mask': encoder_mask,
-                                                  'labels': labels})
+            # create encoder outputs
+            encoder_output = TFBaseModelOutput(
+                last_hidden_state=hidden_features['seq'],
+                hidden_states=hidden_features['all'])
+            # remove first token as decoder label
+            eos_id = self.params.eos_id if self.params.eos_id is None else 1
+            decoder_lable = self._seq2seq_label_shift_right(
+                labels, 1)
+
+            return_dict: TFSeq2SeqLMOutput = self.decoder({'decoder_input_ids': labels,
+                                                           'decoder_attention_mask': label_mask,
+                                                           'encoder_outputs': encoder_output,
+                                                           'attention_mask': encoder_mask,
+                                                           'labels': decoder_lable}, return_dict=True)
+            batch_loss = return_dict.loss
+            logits = return_dict.logits
 
             # loss = self.create_loss(
             #     batch_loss, features['%s_loss_multiplier' % problem_name])
