@@ -275,10 +275,7 @@ class Seq2Seq(tf.keras.Model):
         decoder_input_ids = init_tensor
         for _ in range(self.params.decode_max_seq_len):
             pred: TFSeq2SeqLMOutput = self.decoder({'decoder_input_ids': decoder_input_ids,
-                                                    'encoder_outputs': encoder_output,
-                                                    'use_cache': False,
-                                                    'past_key_values': past_key_values}, return_dict=True)
-            past_key_values = pred.past_key_values
+                                                    'encoder_outputs': encoder_output}, return_dict=True)
             pred_token = tf.cast(tf.expand_dims(
                 tf.argmax(pred.logits[:, -1, :], axis=-1), axis=1), tf.int32)
             decoder_input_ids = tf.concat(
