@@ -7,17 +7,22 @@ import tensorflow_addons as tfa
 import transformers
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
+from transformers import BartConfig
 from transformers.modeling_tf_outputs import (TFBaseModelOutput,
                                               TFBaseModelOutputWithPast,
                                               TFSeq2SeqLMOutput,
                                               TFSeq2SeqModelOutput)
-from transformers.modeling_tf_utils import TFSharedEmbeddings
+from transformers.modeling_tf_utils import (TFPreTrainedModel,
+                                            TFSharedEmbeddings)
 
 from bert_multitask_learning.params import BaseParams
 
 from . import modeling
 from .top_utils import gather_indexes
-from .transformers_tf_bart import TFBartDecoder, TFBartForConditionalGeneration, causal_attention_mask, invert_mask
+from .transformers_tf_bart import (TFBartDecoder,
+                                   TFBartDecoderForConditionalGeneration,
+                                   TFBartForConditionalGeneration,
+                                   causal_attention_mask, invert_mask)
 from .utils import load_transformer_model
 
 
@@ -256,8 +261,10 @@ class Seq2Seq(tf.keras.Model):
             vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
         self.share_embedding_layer.build([1])
         self.share_embedding_layer.weight = word_embedding_weight
-        self.decoder = TFBartDecoder(
-            config=config, embed_tokens=self.share_embedding_layer)
+        # self.decoder = TFBartDecoder(
+        #     config=config, embed_tokens=self.share_embedding_layer)
+        self.decoder = TFBartDecoderForConditionalGeneration(
+            config=config, embedding_layer=self.share_embedding_layer)
 
         self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
             name='{}_acc'.format(self.problem_name))
@@ -269,115 +276,44 @@ class Seq2Seq(tf.keras.Model):
         decoder_lable = tf.concat([decoder_lable, batch_eos_ids], axis=1)
         return decoder_lable
 
-    @ tf.function(autograph=True)
-    def generate(self, encoder_last_hidden_state: tf.Tensor, attention_mask: tf.Tensor) -> TFSeq2SeqLMOutput:
-        bos_id = self.params.bos_id
-        init_tensor = tf.ones(
-            (tf.shape(encoder_last_hidden_state)[0], 1), dtype=tf.int32) * bos_id
-
-        past_key_values = None
-        decoder_input_ids = init_tensor
-        return_logits = tf.zeros(
-            [tf.shape(init_tensor)[0], 1, self.vocab_size])
-
-        for _ in tf.range(self.params.decode_max_seq_len):
-
-            tf.autograph.experimental.set_loop_options(shape_invariants=[
-                (return_logits, tf.TensorShape([None, None, self.vocab_size])),
-                (decoder_input_ids, tf.TensorShape([None, None]))
-            ])
-
-            intermediate_prediction: TFBaseModelOutputWithPast = self.decoder(input_ids=decoder_input_ids,
-                                                                              encoder_hidden_states=encoder_last_hidden_state,
-                                                                              encoder_padding_mask=attention_mask,
-                                                                              decoder_padding_mask=None,
-                                                                              decoder_causal_mask=None,
-                                                                              use_cache=False,
-                                                                              training=False,
-                                                                              return_dict=True)
-            last_hidden_state_for_last_token = intermediate_prediction.last_hidden_state[
-                :, -1, :]
-            logits = self.share_embedding_layer(
-                last_hidden_state_for_last_token, mode='linear')
-            pred_token = tf.cast(tf.expand_dims(
-                tf.argmax(logits, axis=-1), axis=1), tf.int32)
-            decoder_input_ids = tf.concat(
-                [decoder_input_ids, pred_token], axis=1)
-
-        return decoder_input_ids
-
-    def train(self,
-              encoder_last_hidden_state: tf.Tensor,
-              decoder_input_ids: tf.Tensor,
-              encoder_mask: tf.Tensor,
-              decoder_mask: tf.Tensor,
-              mode: str):
-
-        is_training = mode == tf.estimator.ModeKeys.TRAIN
-
-        decoder_label = self._seq2seq_label_shift_right(
-            decoder_input_ids, self.params.eos_id)
-
-        # create causual mask, aka, look-ahead mask
-        causal_mask = causal_attention_mask(
-            self.params.decode_max_seq_len, self.params.decode_max_seq_len, tf.float32)
-
-        bart_decoder_mask = invert_mask(decoder_mask)
-
-        decoder_output: TFBaseModelOutputWithPast = self.decoder(
-            input_ids=decoder_input_ids,
-            encoder_hidden_states=encoder_last_hidden_state,
-            encoder_padding_mask=encoder_mask,
-            decoder_padding_mask=bart_decoder_mask,
-            decoder_causal_mask=causal_mask,
-            return_dict=True,
-            use_cache=False,
-            training=is_training
-        )
-
-        last_hidden_state = decoder_output.last_hidden_state
-
-        logits = self.share_embedding_layer(last_hidden_state, mode='linear')
-
-        loss = empty_tensor_handling_loss(
-            decoder_label, logits, tf.keras.losses.sparse_categorical_crossentropy)
-
-        self.add_loss(loss)
-
-        acc = self.metric_fn(decoder_label, logits)
-        self.add_metric(acc)
-        return tf.argmax(logits, axis=-1)
-
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
              mode: str):
         features, hidden_features = inputs
         encoder_mask = features['model_input_mask']
-        # create encoder outputs
-        encoder_output = TFBaseModelOutput(
-            last_hidden_state=hidden_features['seq'],
-            hidden_states=hidden_features['all'])
-        if mode != tf.estimator.ModeKeys.PREDICT:
-            labels = features['%s_label_ids' % self.problem_name]
-            label_mask = features['{}_mask'.format(self.problem_name)]
 
-            pred = self.train(encoder_last_hidden_state=hidden_features['seq'],
-                              decoder_input_ids=labels, encoder_mask=encoder_mask, decoder_mask=label_mask, mode=mode)
-
-            return pred
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            input_ids = None
+            decoder_padding_mask = None
         else:
-            pred = self.generate(hidden_features['seq'], encoder_mask)
-            # pred = self.decoder.generate(
-            #     input_ids=init_tensor,
-            #     max_length=self.params.decode_max_seq_len,
-            #     min_length=2,
-            #     early_stopping=True,
-            #     num_beams=self.params.beam_size,
-            #     bos_token_id=bos_id,
-            #     eos_token_id=eos_id,
-            #     use_cache=True
-            # )
-            return pred
+            input_ids = features['%s_label_ids' % self.problem_name]
+            decoder_padding_mask = features['{}_mask'.format(
+                self.problem_name)]
+
+        decoder_output = self.decoder(input_ids=input_ids,
+                                      encoder_hidden_states=hidden_features['seq'],
+                                      encoder_padding_mask=encoder_mask,
+                                      decoder_padding_mask=decoder_padding_mask,
+                                      bos_id=self.params.bos_id,
+                                      eos_id=self.params.eos_id,
+                                      decode_max_length=self.params.decode_max_seq_len,
+                                      num_beams=3,
+                                      temperature=1.0,
+                                      repetition_penalty=1.0,
+                                      pad_token_id=0,
+                                      mode=mode)
+
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return decoder_output
+        else:
+            loss = decoder_output.loss
+            logits = decoder_output.logits
+            self.add_loss(loss)
+            decoder_label = self._seq2seq_label_shift_right(
+                features['%s_label_ids' % self.problem_name], eos_id=self.params.eos_id)
+            acc = self.metric_fn(decoder_label, logits)
+            self.add_metric(acc)
+            return logits
 
 
 class MultiLabelClassification(tf.keras.Model):

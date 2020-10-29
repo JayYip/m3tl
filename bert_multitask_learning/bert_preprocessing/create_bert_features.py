@@ -49,7 +49,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             label_dict = label_encoder(
                 target, add_special_tokens=False, is_split_into_words=True)
             label_id = label_dict['input_ids']
-            label_mask = [1] + label_dict['attention_mask'] + [1]
+            label_mask = label_dict['attention_mask']
             label_id = pad_wrapper(label_id, decoding_length)
             label_mask = pad_wrapper(label_mask, decoding_length)
 
@@ -61,7 +61,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
                 target + [label_encoder.eos_token]
             label_dict = tokenizer(
                 target, is_split_into_words=True, add_special_tokens=False)
-            label_mask = [1] + label_dict['attention_mask'] + [1]
+            label_mask = label_dict['attention_mask']
             label_id = label_encoder.transform(target).tolist()
             label_id = [np.int32(i) for i in label_id]
         else:
@@ -73,7 +73,7 @@ def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, d
             label_dict = label_encoder(
                 target, add_special_tokens=False, is_split_into_words=False)
             label_id = label_dict['input_ids']
-            label_mask = [1] + label_dict['attention_mask'] + [1]
+            label_mask = label_dict['attention_mask']
             label_id = pad_wrapper(label_id, decoding_length)
             label_mask = pad_wrapper(label_mask, decoding_length)
         else:

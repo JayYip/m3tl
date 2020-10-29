@@ -20,6 +20,7 @@
 # Public API
 
 
+from .tf_encoder_decoder_generate import TFEncoderDecoderGenerationMixin
 from transformers.modeling_tf_utils import *
 import math
 import random
@@ -1280,3 +1281,133 @@ class TFBartForConditionalGeneration(TFPretrainedBartModel):
             logits, (-1, shape_list(logits)[2])), active_loss)
         labels = tf.boolean_mask(melted_labels, active_loss)
         return loss_fn(labels, reduced_logits)
+
+
+@tf.function
+def empty_tensor_handling_loss(labels, logits, loss_fn):
+    if tf.equal(tf.size(labels), 0):
+        return 0.0
+    if tf.equal(tf.size(tf.shape(labels)), 0):
+        return 0.0
+    if tf.equal(tf.shape(labels)[0], 0):
+        return 0.0
+    else:
+        return tf.reduce_mean(loss_fn(
+            labels, logits, from_logits=True))
+
+
+class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDecoderGenerationMixin):
+    base_model_prefix = "model"
+    authorized_missing_keys = [
+        r"final_logits_bias",
+        r"encoder\.version",
+        r"decoder\.version",
+        "model.encoder.embed_tokens.weight",
+        "model.decoder.embed_tokens.weight",
+    ]
+
+    # [MOD]: add embedding_layer kwarg
+    def __init__(self, config: BartConfig, embedding_layer=None, *args, **kwargs):
+        super().__init__(config, *args, **kwargs)
+
+        self.share_embedding_layer = embedding_layer
+        self.decoder = TFBartDecoder(
+            config=config, embed_tokens=self.share_embedding_layer)
+        self.use_cache = config.use_cache
+
+    def _seq2seq_label_shift_right(self, labels: tf.Tensor, eos_id: int) -> tf.Tensor:
+        batch_eos_ids = tf.fill([tf.shape(labels)[0], 1], eos_id)
+        batch_eos_ids = tf.cast(batch_eos_ids, dtype=tf.int64)
+        decoder_lable = labels[:, 1:]
+        decoder_lable = tf.concat([decoder_lable, batch_eos_ids], axis=1)
+        return decoder_lable
+
+    def get_output_embeddings(self) -> tf.keras.layers.Layer:
+        return self.share_embedding_layer
+
+    @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
+    @replace_return_docstrings(output_type=TFSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
+    def call(
+        self,
+            input_ids,
+            encoder_hidden_states,
+            encoder_padding_mask,
+            decoder_padding_mask,
+            bos_id=None,
+            eos_id=None,
+            decode_max_length=None,
+            num_beams=3,
+            temperature=1.0,
+            repetition_penalty=1.0,
+            pad_token_id=0,
+            mode=tf.estimator.ModeKeys.TRAIN
+    ):
+        """
+        Returns:
+
+        Examples::
+
+            # Mask filling only works for bart-large
+            from transformers import BartTokenizer, TFBartForConditionalGeneration
+            import tensorflow as tf
+            mname = 'facebook/bart-large'
+            tokenizer = BartTokenizer.from_pretrained(mname)
+            TXT = "My friends are <mask> but they eat too many carbs."
+            model = TFBartForConditionalGeneration.from_pretrained(mname)
+            batch = tokenizer([TXT], return_tensors='tf')
+            logits = model(inputs=batch.input_ids, return_dict=True).logits
+            probs = tf.nn.softmax(logits[0])
+            # probs[5] is associated with the mask token
+        """
+        is_training = mode == tf.estimator.ModeKeys.TRAIN
+        is_predict = mode == tf.estimator.ModeKeys.PREDICT
+
+        if not is_predict:
+            decoder_label = self._seq2seq_label_shift_right(
+                input_ids, eos_id)
+
+            # create causual mask, aka, look-ahead mask
+            causal_mask = causal_attention_mask(
+                decode_max_length, decode_max_length, tf.float32)
+
+            bart_decoder_mask = invert_mask(decoder_padding_mask)
+
+            decoder_output: TFBaseModelOutputWithPast = self.decoder(
+                input_ids=input_ids,
+                encoder_hidden_states=encoder_hidden_states,
+                encoder_padding_mask=encoder_padding_mask,
+                decoder_padding_mask=bart_decoder_mask,
+                decoder_causal_mask=causal_mask,
+                return_dict=True,
+                use_cache=False,
+                training=is_training
+            )
+            last_hidden_state = decoder_output.last_hidden_state
+
+            logits = self.share_embedding_layer(
+                last_hidden_state, mode='linear')
+
+            loss = empty_tensor_handling_loss(
+                decoder_label, logits, tf.keras.losses.sparse_categorical_crossentropy)
+
+            return TFSeq2SeqLMOutput(
+                loss=loss,
+                logits=logits
+            )
+
+        # predict
+        pred = self.encoder_decoder_generate(
+            input_ids=None,
+            max_length=decode_max_length,
+            min_length=2,
+            do_sample=True,
+            early_stopping=True,
+            num_beams=num_beams,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_id,
+            eos_token_id=eos_id,
+            use_cache=True
+        )
+        return pred
