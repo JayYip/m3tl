@@ -221,6 +221,8 @@ class TFEncoderDecoderGenerationMixin:
         if input_ids is not None:
             # overriden by the input batch_size
             batch_size = shape_list(input_ids)[0]
+        elif encoder_outputs is not None:
+            batch_size = shape_list(encoder_outputs[0])[0]
         else:
             batch_size = 1
 
@@ -283,7 +285,7 @@ class TFEncoderDecoderGenerationMixin:
 
         # create attention mask if necessary
         # TODO (PVP): this should later be handled by the forward fn() in each model in the future see PR 3140
-        if (attention_mask is None) and (pad_token_id is not None) and (pad_token_id in input_ids.numpy()):
+        if (attention_mask is None) and (pad_token_id is not None):
             attention_mask = tf.cast(tf.math.not_equal(
                 input_ids, pad_token_id), dtype=tf.int32)
         elif attention_mask is None:
@@ -315,10 +317,6 @@ class TFEncoderDecoderGenerationMixin:
             assert (
                 decoder_start_token_id is not None
             ), "decoder_start_token_id or bos_token_id has to be defined for encoder-decoder generation"
-            assert hasattr(
-                self, "get_encoder"), "{} should have a 'get_encoder' function defined".format(self)
-            assert callable(self.get_encoder), "{} should be a method".format(
-                self.get_encoder)
 
             # get encoder and store encoder outputs
             # [MOD]: change

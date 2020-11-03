@@ -1315,6 +1315,12 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
             config=config, embed_tokens=self.share_embedding_layer)
         self.use_cache = config.use_cache
 
+    def set_bos_id(self, bos_id: int):
+        setattr(self, 'bos_id', bos_id)
+
+    def set_eos_id(self, eos_id: int):
+        setattr(self, 'eos_id', eos_id)
+
     def _seq2seq_label_shift_right(self, labels: tf.Tensor, eos_id: int) -> tf.Tensor:
         batch_eos_ids = tf.fill([tf.shape(labels)[0], 1], eos_id)
         batch_eos_ids = tf.cast(batch_eos_ids, dtype=tf.int64)
@@ -1325,6 +1331,9 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
     def get_output_embeddings(self) -> tf.keras.layers.Layer:
         return self.share_embedding_layer
 
+    def prepare_inputs_for_generation(self, input_ids, past, attention_mask, use_cache):
+        return {'input_ids': input_ids, 'encoder_hidden_states': past[0], 'encoder_padding_mask': attention_mask, 'decoder_padding_mask': None, 'mode': tf.estimator.ModeKeys.PREDICT}
+
     @add_start_docstrings_to_callable(BART_INPUTS_DOCSTRING)
     @replace_return_docstrings(output_type=TFSeq2SeqLMOutput, config_class=_CONFIG_FOR_DOC)
     def call(
@@ -1333,13 +1342,7 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
             encoder_hidden_states,
             encoder_padding_mask,
             decoder_padding_mask,
-            bos_id=None,
-            eos_id=None,
             decode_max_length=None,
-            num_beams=3,
-            temperature=1.0,
-            repetition_penalty=1.0,
-            pad_token_id=0,
             mode=tf.estimator.ModeKeys.TRAIN
     ):
         """
@@ -1364,7 +1367,7 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
 
         if not is_predict:
             decoder_label = self._seq2seq_label_shift_right(
-                input_ids, eos_id)
+                input_ids, self.eos_id)
 
             # create causual mask, aka, look-ahead mask
             causal_mask = causal_attention_mask(
@@ -1372,33 +1375,49 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
 
             bart_decoder_mask = invert_mask(decoder_padding_mask)
 
-            decoder_output: TFBaseModelOutputWithPast = self.decoder(
-                input_ids=input_ids,
-                encoder_hidden_states=encoder_hidden_states,
-                encoder_padding_mask=encoder_padding_mask,
-                decoder_padding_mask=bart_decoder_mask,
-                decoder_causal_mask=causal_mask,
-                return_dict=True,
-                use_cache=False,
-                training=is_training
-            )
-            last_hidden_state = decoder_output.last_hidden_state
+        else:
+            decoder_label = None
+            causal_mask = None
+            bart_decoder_mask = None
 
-            logits = self.share_embedding_layer(
-                last_hidden_state, mode='linear')
+        decoder_output: TFBaseModelOutputWithPast = self.decoder(
+            input_ids=input_ids,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_padding_mask=encoder_padding_mask,
+            decoder_padding_mask=bart_decoder_mask,
+            decoder_causal_mask=causal_mask,
+            return_dict=True,
+            use_cache=False,
+            training=is_training
+        )
+        last_hidden_state = decoder_output.last_hidden_state
 
+        logits = self.share_embedding_layer(
+            last_hidden_state, mode='linear')
+
+        if not is_predict:
             loss = empty_tensor_handling_loss(
                 decoder_label, logits, tf.keras.losses.sparse_categorical_crossentropy)
+        else:
+            loss = None
 
-            return TFSeq2SeqLMOutput(
-                loss=loss,
-                logits=logits
-            )
+        return TFSeq2SeqLMOutput(
+            loss=loss,
+            logits=logits
+        )
 
-        # predict
+    def generate(self,
+                 input_ids=None,
+                 max_length=15,
+                 num_beams=3,
+                 temperature=1.0,
+                 repetition_penalty=1.0,
+                 pad_token_id=0,
+                 eos_token_id=None,
+                 encoder_hidden_states: tf.Tensor = None):
         pred = self.encoder_decoder_generate(
-            input_ids=None,
-            max_length=decode_max_length,
+            input_ids=input_ids,
+            max_length=max_length,
             min_length=2,
             do_sample=True,
             early_stopping=True,
@@ -1406,8 +1425,9 @@ class TFBartDecoderForConditionalGeneration(TFPretrainedBartModel, TFEncoderDeco
             temperature=temperature,
             repetition_penalty=repetition_penalty,
             pad_token_id=pad_token_id,
-            bos_token_id=bos_id,
-            eos_token_id=eos_id,
-            use_cache=True
+            bos_token_id=self.bos_id,
+            eos_token_id=eos_token_id,
+            use_cache=False,
+            encoder_outputs=[encoder_hidden_states]
         )
         return pred

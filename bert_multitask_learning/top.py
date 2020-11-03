@@ -265,6 +265,8 @@ class Seq2Seq(tf.keras.Model):
         #     config=config, embed_tokens=self.share_embedding_layer)
         self.decoder = TFBartDecoderForConditionalGeneration(
             config=config, embedding_layer=self.share_embedding_layer)
+        self.decoder.set_bos_id(self.params.bos_id)
+        self.decoder.set_eos_id(self.params.eos_id)
 
         self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
             name='{}_acc'.format(self.problem_name))
@@ -290,22 +292,15 @@ class Seq2Seq(tf.keras.Model):
             decoder_padding_mask = features['{}_mask'.format(
                 self.problem_name)]
 
-        decoder_output = self.decoder(input_ids=input_ids,
-                                      encoder_hidden_states=hidden_features['seq'],
-                                      encoder_padding_mask=encoder_mask,
-                                      decoder_padding_mask=decoder_padding_mask,
-                                      bos_id=self.params.bos_id,
-                                      eos_id=self.params.eos_id,
-                                      decode_max_length=self.params.decode_max_seq_len,
-                                      num_beams=3,
-                                      temperature=1.0,
-                                      repetition_penalty=1.0,
-                                      pad_token_id=0,
-                                      mode=mode)
-
         if mode == tf.estimator.ModeKeys.PREDICT:
-            return decoder_output
+            return self.decoder.generate(eos_token_id=self.params.eos_id, encoder_hidden_states=hidden_features['seq'])
         else:
+            decoder_output = self.decoder(input_ids=input_ids,
+                                          encoder_hidden_states=hidden_features['seq'],
+                                          encoder_padding_mask=encoder_mask,
+                                          decoder_padding_mask=decoder_padding_mask,
+                                          decode_max_length=self.params.decode_max_seq_len,
+                                          mode=mode)
             loss = decoder_output.loss
             logits = decoder_output.logits
             self.add_loss(loss)
