@@ -357,9 +357,9 @@ class TFEncoderDecoderGenerationMixin:
             )
             cur_len = 1
 
-            assert (
-                batch_size == encoder_outputs[0].shape[0]
-            ), f"expected encoder_outputs[0] to have 1st dimension bs={batch_size}, got {encoder_outputs[0].shape[0]} "
+            # assert (
+            #     batch_size == encoder_outputs[0].shape[0]
+            # ), f"expected encoder_outputs[0] to have 1st dimension bs={batch_size}, got {encoder_outputs[0].shape[0]} "
 
             # expand batch_idx to assign correct encoder output for expanded input_ids (due to num_beams > 1 and num_return_sequences > 1)
             expanded_batch_idxs = tf.reshape(
