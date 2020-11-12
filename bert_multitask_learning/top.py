@@ -7,17 +7,22 @@ import tensorflow_addons as tfa
 import transformers
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
+from transformers import BartConfig
 from transformers.modeling_tf_outputs import (TFBaseModelOutput,
                                               TFBaseModelOutputWithPast,
                                               TFSeq2SeqLMOutput,
                                               TFSeq2SeqModelOutput)
-from transformers.modeling_tf_utils import TFSharedEmbeddings
+from transformers.modeling_tf_utils import (TFPreTrainedModel,
+                                            TFSharedEmbeddings)
 
 from bert_multitask_learning.params import BaseParams
 
 from . import modeling
 from .top_utils import gather_indexes
-from .transformers_tf_bart import TFBartForConditionalGeneration
+from .transformers_tf_bart import (TFBartDecoder,
+                                   TFBartDecoderForConditionalGeneration,
+                                   TFBartForConditionalGeneration,
+                                   causal_attention_mask, invert_mask)
 from .utils import load_transformer_model
 
 
@@ -51,7 +56,6 @@ def create_dummy_if_empty(inp_tensor: tf.Tensor) -> tf.Tensor:
         dummy_shape = tf.concat(
             [dummy_shape_first_dim, shape_tensor[1:]], axis=0)
         dummy_tensor = tf.zeros(dummy_shape, dtype=data_type)
-        tf.print(tf.shape(dummy_tensor))
         return dummy_tensor
     else:
         return inp_tensor
@@ -252,12 +256,20 @@ class Seq2Seq(tf.keras.Model):
         config = self.params.bert_decoder_config
         # some hacky approach to share embeddings from encoder to decoder
         word_embedding_weight = input_embeddings.word_embeddings
-        share_embedding_layer = TFSharedEmbeddings(
+        self.vocab_size = word_embedding_weight.shape[0]
+        self.share_embedding_layer = TFSharedEmbeddings(
             vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
-        share_embedding_layer.build([1])
-        share_embedding_layer.weight = word_embedding_weight
-        self.decoder = TFBartForConditionalGeneration(
-            config=config, embedding_layer=share_embedding_layer)
+        self.share_embedding_layer.build([1])
+        self.share_embedding_layer.weight = word_embedding_weight
+        # self.decoder = TFBartDecoder(
+        #     config=config, embed_tokens=self.share_embedding_layer)
+        self.decoder = TFBartDecoderForConditionalGeneration(
+            config=config, embedding_layer=self.share_embedding_layer)
+        self.decoder.set_bos_id(self.params.bos_id)
+        self.decoder.set_eos_id(self.params.eos_id)
+
+        self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
+            name='{}_acc'.format(self.problem_name))
 
     def _seq2seq_label_shift_right(self, labels: tf.Tensor, eos_id: int) -> tf.Tensor:
         batch_eos_ids = tf.fill([tf.shape(labels)[0], 1], eos_id)
@@ -270,112 +282,33 @@ class Seq2Seq(tf.keras.Model):
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
              mode: str):
         features, hidden_features = inputs
-        if mode != tf.estimator.ModeKeys.PREDICT:
-            labels = features['%s_label_ids' % self.problem_name]
-            label_mask = features['{}_mask'.format(self.problem_name)]
-            encoder_mask = features['model_input_mask']
+        encoder_mask = features['model_input_mask']
 
-            # create encoder outputs
-            encoder_output = TFBaseModelOutput(
-                last_hidden_state=hidden_features['seq'],
-                hidden_states=hidden_features['all'])
-            # remove first token as decoder label
-            eos_id = self.params.eos_id if self.params.eos_id is None else 1
-            decoder_lable = self._seq2seq_label_shift_right(
-                labels, 1)
-
-            return_dict: TFSeq2SeqLMOutput = self.decoder({'decoder_input_ids': labels,
-                                                           'decoder_attention_mask': label_mask,
-                                                           'encoder_outputs': encoder_output,
-                                                           'attention_mask': encoder_mask,
-                                                           'labels': decoder_lable}, return_dict=True)
-            batch_loss = return_dict.loss
-            logits = return_dict.logits
-
-            # loss = self.create_loss(
-            #     batch_loss, features['%s_loss_multiplier' % problem_name])
-            # # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
-            # # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-            # loss = tf.compat.v1.where(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-            #     tf.math.is_nan(loss), tf.zeros_like(loss), loss)
-            loss = tf.reduce_mean(batch_loss)
-            self.add_loss(loss)
-            return tf.nn.softmax(logits)
-
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            input_ids = None
+            decoder_padding_mask = None
         else:
-            bos_id = self.params.bos_id
-            init_tensor = tf.ones(
-                (tf.shape(encoder_output)[0], 1), dtype=tf.int32) * bos_id
-            eos_id = self.params.eos_id
-            pred = self.decoder.generate(
-                input_ids=init_tensor,
-                max_length=self.params.decode_max_seq_len,
-                min_length=2,
-                early_stopping=True,
-                num_beams=self.params.beam_size,
-                bos_token_id=bos_id,
-                eos_token_id=eos_id,
-                use_cache=True
-            )
-            return pred
+            input_ids = features['%s_label_ids' % self.problem_name]
+            decoder_padding_mask = features['{}_mask'.format(
+                self.problem_name)]
 
-
-# class Seq2Seq(TopLayer):
-#     # pylint: disable=attribute-defined-outside-init
-#     '''Top model for seq2seq problem.
-#     This is basically a decoder of encoder-decoder framework.
-#     Here uses transformer decoder architecture with beam search support.
-#     '''
-
-#     def __call__(self, features, hidden_feature, mode, problem_name):
-#         self.decoder = load_transformer_model(
-#             self.params.transformer_decoder_model_name,
-#             self.params.transformer_decoder_model_loading)
-#         scope_name = self.params.share_top[problem_name]
-#         encoder_output = hidden_feature['seq']
-#         if mode != tf.estimator.ModeKeys.PREDICT:
-#             labels = features['%s_label_ids' % problem_name]
-#             label_mask = features['{}_mask'.format(problem_name)]
-#             encoder_mask = features['model_input_mask']
-
-#             batch_loss, logits = self.decoder({'input_ids': labels,
-#                                                'attention_mask': label_mask,
-#                                                'encoder_hidden_states': encoder_output,
-#                                                'encoder_attention_mask': encoder_mask,
-#                                                'labels': labels})
-
-#             # loss = self.create_loss(
-#             #     batch_loss, features['%s_loss_multiplier' % problem_name])
-#             # # If a batch does not contain input instances from the current problem, the loss multiplier will be empty
-#             # # and loss will be NaN. Replacing NaN with 0 fixes the problem.
-#             # loss = tf.compat.v1.where(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-#             #     tf.math.is_nan(loss), tf.zeros_like(loss), loss)
-#             loss = tf.reduce_mean(batch_loss)
-#             self.loss = loss
-
-#             if mode == tf.estimator.ModeKeys.TRAIN:
-#                 return self.loss
-#             else:
-#                 return self.eval_metric_fn(
-#                     features, logits, loss, problem_name, features['%s_mask' % problem_name])
-
-#         else:
-#             bos_id = self.params.bos_id
-#             init_tensor = tf.ones(
-#                 (tf.shape(encoder_output)[0], 1), dtype=tf.int32) * bos_id
-#             eos_id = self.params.eos_id
-#             self.pred = tf.identity(self.decoder.generate(
-#                 input_ids=init_tensor,
-#                 max_length=self.params.decode_max_seq_len,
-#                 min_length=2,
-#                 early_stopping=True,
-#                 num_beams=self.params.beam_size,
-#                 bos_token_id=bos_id,
-#                 eos_token_id=eos_id,
-#                 use_cache=True
-#             ),
-#                 name='%s_predict' % scope_name)
-#             return self.pred
+        if mode == tf.estimator.ModeKeys.PREDICT:
+            return self.decoder.generate(eos_token_id=self.params.eos_id, encoder_hidden_states=hidden_features['seq'])
+        else:
+            decoder_output = self.decoder(input_ids=input_ids,
+                                          encoder_hidden_states=hidden_features['seq'],
+                                          encoder_padding_mask=encoder_mask,
+                                          decoder_padding_mask=decoder_padding_mask,
+                                          decode_max_length=self.params.decode_max_seq_len,
+                                          mode=mode)
+            loss = decoder_output.loss
+            logits = decoder_output.logits
+            self.add_loss(loss)
+            decoder_label = self._seq2seq_label_shift_right(
+                features['%s_label_ids' % self.problem_name], eos_id=self.params.eos_id)
+            acc = self.metric_fn(decoder_label, logits)
+            self.add_metric(acc)
+            return logits
 
 
 class MultiLabelClassification(tf.keras.Model):

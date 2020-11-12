@@ -8,7 +8,7 @@ from .modeling import MultiModalBertModel
 from .params import BaseParams
 from .top import (Classification, MultiLabelClassification, PreTrain,
                   Seq2Seq, SequenceLabel)
-from .utils import get_embedding_table_from_model
+from .utils import get_embedding_table_from_model, get_transformer_main_model
 
 
 def variable_summaries(var, name):
@@ -236,7 +236,9 @@ class BertMultiTask(tf.keras.Model):
         # mlm might need word embedding from bert
         # build sub-model
         _ = get_embedding_table_from_model(self.body.bert.bert_model)
-        input_embeddings = self.body.bert.bert_model.bert.embeddings
+        main_model = get_transformer_main_model(self.body.bert.bert_model)
+        # input_embeddings = self.body.bert.bert_model.bert.embeddings
+        input_embeddings = main_model.embeddings
         self.top = BertMultiTaskTop(
             params=self.params, input_embeddings=input_embeddings)
 
