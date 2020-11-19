@@ -7,23 +7,11 @@ import tensorflow_addons as tfa
 import transformers
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
-from transformers import BartConfig
-from transformers.modeling_tf_outputs import (TFBaseModelOutput,
-                                              TFBaseModelOutputWithPast,
-                                              TFSeq2SeqLMOutput,
-                                              TFSeq2SeqModelOutput)
-from transformers.modeling_tf_utils import (TFPreTrainedModel,
-                                            TFSharedEmbeddings)
+
 
 from bert_multitask_learning.params import BaseParams
 
-from . import modeling
 from .top_utils import gather_indexes
-from .transformers_tf_bart import (TFBartDecoder,
-                                   TFBartDecoderForConditionalGeneration,
-                                   TFBartForConditionalGeneration,
-                                   causal_attention_mask, invert_mask)
-from .utils import load_transformer_model
 
 
 @tf.function
@@ -240,36 +228,37 @@ class PreTrain(tf.keras.Model):
 class Seq2Seq(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer):
         super(Seq2Seq, self).__init__(name=problem_name)
-        self.params = params
-        self.problem_name = problem_name
-        # if self.params.init_weight_from_huggingface:
-        #     self.decoder = load_transformer_model(
-        #         self.params.transformer_decoder_model_name,
-        #         self.params.transformer_decoder_model_loading)
-        # else:
-        #     self.decoder = load_transformer_model(
-        #         self.params.bert_decoder_config, self.params.transformer_decoder_model_loading)
+        # self.params = params
+        # self.problem_name = problem_name
+        # # if self.params.init_weight_from_huggingface:
+        # #     self.decoder = load_transformer_model(
+        # #         self.params.transformer_decoder_model_name,
+        # #         self.params.transformer_decoder_model_loading)
+        # # else:
+        # #     self.decoder = load_transformer_model(
+        # #         self.params.bert_decoder_config, self.params.transformer_decoder_model_loading)
 
-        # TODO: better implementation
-        logging.warning(
-            'Seq2Seq model is not well supported yet. Bugs are expected.')
-        config = self.params.bert_decoder_config
-        # some hacky approach to share embeddings from encoder to decoder
-        word_embedding_weight = input_embeddings.word_embeddings
-        self.vocab_size = word_embedding_weight.shape[0]
-        self.share_embedding_layer = TFSharedEmbeddings(
-            vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
-        self.share_embedding_layer.build([1])
-        self.share_embedding_layer.weight = word_embedding_weight
-        # self.decoder = TFBartDecoder(
-        #     config=config, embed_tokens=self.share_embedding_layer)
-        self.decoder = TFBartDecoderForConditionalGeneration(
-            config=config, embedding_layer=self.share_embedding_layer)
-        self.decoder.set_bos_id(self.params.bos_id)
-        self.decoder.set_eos_id(self.params.eos_id)
+        # # TODO: better implementation
+        # logging.warning(
+        #     'Seq2Seq model is not well supported yet. Bugs are expected.')
+        # config = self.params.bert_decoder_config
+        # # some hacky approach to share embeddings from encoder to decoder
+        # word_embedding_weight = input_embeddings.word_embeddings
+        # self.vocab_size = word_embedding_weight.shape[0]
+        # self.share_embedding_layer = TFSharedEmbeddings(
+        #     vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
+        # self.share_embedding_layer.build([1])
+        # self.share_embedding_layer.weight = word_embedding_weight
+        # # self.decoder = TFBartDecoder(
+        # #     config=config, embed_tokens=self.share_embedding_layer)
+        # self.decoder = TFBartDecoderForConditionalGeneration(
+        #     config=config, embedding_layer=self.share_embedding_layer)
+        # self.decoder.set_bos_id(self.params.bos_id)
+        # self.decoder.set_eos_id(self.params.eos_id)
 
-        self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
-            name='{}_acc'.format(self.problem_name))
+        # self.metric_fn = tf.keras.metrics.SparseCategoricalAccuracy(
+        #     name='{}_acc'.format(self.problem_name))
+        raise NotImplementedError
 
     def _seq2seq_label_shift_right(self, labels: tf.Tensor, eos_id: int) -> tf.Tensor:
         batch_eos_ids = tf.fill([tf.shape(labels)[0], 1], eos_id)
