@@ -59,6 +59,11 @@ class BertMultiTaskBody(tf.keras.Model):
         super(BertMultiTaskBody, self).__init__(name=name)
         self.params = params
         self.bert = MultiModalBertModel(params=self.params)
+        if self.params.custom_pooled_hidden_size:
+            self.custom_pooled_layer = tf.keras.layers.Dense(
+                self.params.custom_pooled_hidden_size, activation=tf.keras.activations.selu)
+        else:
+            self.custom_pooled_layer = None
 
     @tf.function
     def get_features_for_problem(self, features, hidden_feature, problem, mode):
@@ -110,6 +115,9 @@ class BertMultiTaskBody(tf.keras.Model):
             elif logit_type == 'all':
                 # list, num_hidden_layers * [batch_size, seq_length, hidden_size]
                 hidden_feature[logit_type] = self.bert.get_all_encoder_layers()
+                if self.custom_pooled_layer:
+                    hidden_feature[logit_type] = self.custom_pooled_layer(
+                        hidden_feature[logit_type])
             elif logit_type == 'embed':
                 # for res connection
                 hidden_feature[logit_type] = self.bert.get_embedding_output()
