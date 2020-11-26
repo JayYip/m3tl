@@ -36,12 +36,12 @@ class BaseParams():
         self.transformer_decoder_tokenizer_loading = 'AutoTokenizer'
 
         # multimodal params
-        self.modal_token_type_id = {
+        self.modal_segment_id = {
             'text': 0,
-            'image': 2,
-            'others': 3
+            'image': 0,
+            'others': 0
         }
-        self.model_type_id = {
+        self.modal_type_id = {
             'text': 0,
             'image': 1,
             'others': 2

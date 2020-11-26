@@ -368,7 +368,7 @@ class MultiModalBertModel(tf.keras.Model):
             # add modal type
             if self.enable_modal_type:
                 this_modal_type_ids = tf.ones_like(
-                    modal_segment_ids) * self.params.model_type_id[modal_name]
+                    modal_segment_ids) * self.params.modal_type_id[modal_name]
 
             # concat to text correspondingly
             self.embedding_output = tf.concat(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter

@@ -292,6 +292,8 @@ def write_single_problem_gen_tfrecord(problem,
             if is_full:
                 data_list = Parallel(min(params.num_cpus, len(tmp_instances_list)))(delayed(part_fn)(example_list=d_list)
                                                                                     for d_list in tmp_instances_list)
+                # data_list = [part_fn(example_list=d_list)
+                #              for d_list in tmp_instances_list]
                 for d_list in data_list:
                     for d in d_list:
                         yield d

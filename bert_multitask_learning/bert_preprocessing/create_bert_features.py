@@ -381,7 +381,7 @@ def _create_multimodal_bert_features(problem,
                     modal_inputs = np.expand_dims(modal_inputs, axis=0)
                 target = modal_target
                 segment_ids = np.zeros(
-                    modal_inputs.shape[0], dtype=np.int32) + params.modal_token_type_id[modal_name]
+                    modal_inputs.shape[0], dtype=np.int32) + params.modal_segment_id[modal_name]
                 input_mask = [1]*len(modal_inputs)
                 modal_feature_dict = {
                     '{}_input'.format(modal_name): modal_inputs,
