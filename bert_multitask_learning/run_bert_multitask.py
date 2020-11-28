@@ -59,7 +59,8 @@ def train_bert_multitask(
         params: BaseParams = None,
         problem_type_dict: Dict[str, str] = None,
         processing_fn_dict: Dict[str, Callable] = None,
-        model: tf.keras.Model = None):
+        model: tf.keras.Model = None,
+        create_tf_record_only=False):
     """Train Multi-task Bert model
 
     About problem:
@@ -117,6 +118,8 @@ def train_bert_multitask(
 
     train_dataset = train_eval_input_fn(params)
     eval_dataset = train_eval_input_fn(params, mode=EVAL)
+    if create_tf_record_only:
+        return
 
     # get train_steps and update params
     train_steps = 0

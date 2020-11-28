@@ -288,6 +288,55 @@ def create_bert_pretraining(problem,
     return return_list
 
 
+def mask_inputs_for_mask_lm(inp_text: str, tokenizer: PreTrainedTokenizer, mask_prob=0.1, max_length=128, max_predictions_per_seq=20) -> str:
+    if not inp_text:
+        return None, None
+    inp_text = list(inp_text)
+    mask_idx = [i for i in range(min(len(inp_text), max_length))
+                if random.uniform(0, 1) <= mask_prob]
+    if not mask_idx:
+        return None, None
+    masked_text = [inp_text[i] for i in mask_idx]
+    inp_text = [t if i not in mask_idx else '[MASK]' for i,
+                t in enumerate(inp_text)]
+
+    tokenized_dict = tokenizer(
+        inp_text, None,
+        truncation=True,
+        max_length=max_length,
+        is_split_into_words=True,
+        padding=False,
+        return_special_tokens_mask=False,
+        add_special_tokens=True,
+        return_overflowing_tokens=True)
+
+    # create mask lm features
+    mask_lm_dict = tokenizer(masked_text,
+                             truncation=False,
+                             is_split_into_words=True,
+                             padding='max_length',
+                             max_length=max_predictions_per_seq,
+                             return_special_tokens_mask=False,
+                             add_special_tokens=False,)
+
+    mask_token_id = tokenizer(
+        '[MASK]', add_special_tokens=False, is_split_into_words=False)['input_ids'][0]
+    masked_lm_positions = [i for i, input_id in enumerate(
+        tokenized_dict['input_ids']) if input_id == mask_token_id]
+    # pad masked_lm_positions to max_predictions_per_seq
+    if len(masked_lm_positions) < max_predictions_per_seq:
+        masked_lm_positions = masked_lm_positions + \
+            [0 for _ in range(max_predictions_per_seq -
+                              len(masked_lm_positions))]
+    masked_lm_ids = np.array(mask_lm_dict['input_ids'], dtype='int32')
+    masked_lm_weights = np.array(mask_lm_dict['attention_mask'], dtype='int32')
+    mask_lm_dict = {'masked_lm_positions': masked_lm_positions,
+                    'masked_lm_ids': masked_lm_ids,
+                    'masked_lm_weights': masked_lm_weights}
+
+    return tokenized_dict, mask_lm_dict
+
+
 def _create_multimodal_bert_features(problem,
                                      example_list,
                                      label_encoder,
@@ -298,6 +347,8 @@ def _create_multimodal_bert_features(problem,
                                      is_seq):
     if problem_type == 'pretrain':
         raise NotImplementedError('Multimodal Pretraining is not implemented')
+
+    is_mask_lm = problem_type == 'masklm'
 
     for example_id, example in enumerate(example_list):
         if mode != tf.estimator.ModeKeys.PREDICT:
@@ -322,84 +373,99 @@ def _create_multimodal_bert_features(problem,
         modal_name_list = ['text', 'image', 'others']
 
         return_dict = {}
-        for modal_name in modal_name_list:
-            if modal_name not in raw_inputs:
-                continue
+        try:
+            for modal_name in modal_name_list:
+                if modal_name not in raw_inputs:
+                    continue
 
-            modal_inputs = raw_inputs[modal_name]
-
-            if target_by_modal:
-                modal_target = raw_target[modal_name]
-            else:
-                modal_target = raw_target
-
-            if modal_name == 'text':
-                # tokenize inputs, now the length is fixed, target == raw_target
-                if isinstance(modal_inputs, dict):
-                    tokens_a = modal_inputs['a']
-                    tokens_b = modal_inputs['b']
-                else:
-                    tokens_a = modal_inputs
-                    tokens_b = None
-                target = modal_target
-
-                if isinstance(tokens_a, list):
-                    is_split_into_words = True
-                else:
-                    is_split_into_words = False
-                tokenized_dict = tokenizer(
-                    tokens_a, tokens_b,
-                    truncation=True,
-                    max_length=params.max_seq_len,
-                    is_split_into_words=is_split_into_words,
-                    padding=False,
-                    return_special_tokens_mask=is_seq,
-                    add_special_tokens=True,
-                    return_overflowing_tokens=True)
-
-                if is_seq:
-                    target, tokenized_dict = seq_tag_label_handling(
-                        tokenized_dict, target, tokenizer.pad_token)
-
-                    if len(target) != len(tokenized_dict['input_ids']):
-                        raise ValueError(
-                            'Length is different for seq tag problem, inputs: {}'.format(tokenizer.decode(tokenized_dict['input_ids'])))
-
-                input_ids = tokenized_dict['input_ids']
-                segment_ids = tokenized_dict['token_type_ids']
-                input_mask = tokenized_dict['attention_mask']
-
-                modal_feature_dict = {
-                    'input_ids': input_ids,
-                    'input_mask': input_mask,
-                    'segment_ids': segment_ids
-                }
-
-            else:
-                modal_inputs = np.array(modal_inputs)
-                if len(modal_inputs.shape) == 1:
-                    modal_inputs = np.expand_dims(modal_inputs, axis=0)
-                target = modal_target
-                segment_ids = np.zeros(
-                    modal_inputs.shape[0], dtype=np.int32) + params.modal_segment_id[modal_name]
-                input_mask = [1]*len(modal_inputs)
-                modal_feature_dict = {
-                    '{}_input'.format(modal_name): modal_inputs,
-                    '{}_mask'.format(modal_name): input_mask,
-                    '{}_segment_ids'.format(modal_name): segment_ids}
-
-            # encode labels
-            if mode != PREDICT:
-                label_id, label_mask = convert_labels_to_ids(
-                    target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
+                modal_inputs = raw_inputs[modal_name]
 
                 if target_by_modal:
-                    modal_feature_dict['{}_{}_label_ids'.format(
-                        problem, modal_name)] = label_id
+                    modal_target = raw_target[modal_name]
                 else:
-                    modal_feature_dict['{}_label_ids'.format(
-                        problem)] = label_id
-            return_dict.update(modal_feature_dict)
+                    modal_target = raw_target
+
+                if modal_name == 'text':
+                    # tokenize inputs, now the length is fixed, target == raw_target
+                    if isinstance(modal_inputs, dict):
+                        tokens_a = modal_inputs['a']
+                        tokens_b = modal_inputs['b']
+                    else:
+                        tokens_a = modal_inputs
+                        tokens_b = None
+                    target = modal_target
+                    if is_mask_lm:
+                        tokenized_dict, mlm_feature_dict = mask_inputs_for_mask_lm(
+                            tokens_a, tokenizer, mask_prob=params.masked_lm_prob,
+                            max_length=params.max_seq_len, max_predictions_per_seq=params.max_predictions_per_seq)
+                        if tokenized_dict is None:
+                            # hacky approach to continue outer loop
+                            raise NotImplementedError
+                    else:
+                        mlm_feature_dict = {}
+
+                        if isinstance(tokens_a, list):
+                            is_split_into_words = True
+                        else:
+                            is_split_into_words = False
+                        tokenized_dict = tokenizer(
+                            tokens_a, tokens_b,
+                            truncation=True,
+                            max_length=params.max_seq_len,
+                            is_split_into_words=is_split_into_words,
+                            padding=False,
+                            return_special_tokens_mask=is_seq,
+                            add_special_tokens=True,
+                            return_overflowing_tokens=True)
+
+                    if is_seq:
+                        target, tokenized_dict = seq_tag_label_handling(
+                            tokenized_dict, target, tokenizer.pad_token)
+
+                        if len(target) != len(tokenized_dict['input_ids']):
+                            raise ValueError(
+                                'Length is different for seq tag problem, inputs: {}'.format(tokenizer.decode(tokenized_dict['input_ids'])))
+
+                    input_ids = tokenized_dict['input_ids']
+                    segment_ids = tokenized_dict['token_type_ids']
+                    input_mask = tokenized_dict['attention_mask']
+
+                    modal_feature_dict = {
+                        'input_ids': input_ids,
+                        'input_mask': input_mask,
+                        'segment_ids': segment_ids
+                    }
+                    modal_feature_dict.update(mlm_feature_dict)
+
+                else:
+                    modal_inputs = np.array(modal_inputs)
+                    if len(modal_inputs.shape) == 1:
+                        modal_inputs = np.expand_dims(modal_inputs, axis=0)
+                    target = modal_target
+                    segment_ids = np.zeros(
+                        modal_inputs.shape[0], dtype=np.int32) + params.modal_segment_id[modal_name]
+                    input_mask = [1]*len(modal_inputs)
+                    modal_feature_dict = {
+                        '{}_input'.format(modal_name): modal_inputs,
+                        '{}_mask'.format(modal_name): input_mask,
+                        '{}_segment_ids'.format(modal_name): segment_ids}
+
+                # encode labels
+                if mode != PREDICT:
+                    if not is_mask_lm:
+                        label_id, label_mask = convert_labels_to_ids(
+                            target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
+
+                        if target_by_modal:
+                            modal_feature_dict['{}_{}_label_ids'.format(
+                                problem, modal_name)] = label_id
+                        else:
+                            modal_feature_dict['{}_label_ids'.format(
+                                problem)] = label_id
+                return_dict.update(modal_feature_dict)
+
+        except NotImplementedError:
+            continue
 
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask

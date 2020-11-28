@@ -128,6 +128,7 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
     is_multi_cls = params.problem_type[problem] == 'multi_cls'
     is_seq = params.problem_type[problem] == 'seq_tag'
     is_pretrain = params.problem_type[problem] == 'pretrain'
+    is_masklm = params.problem_type[problem] == 'masklm'
 
     if is_pretrain:
         return None
@@ -136,6 +137,12 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
         if is_seq2seq_text:
             label_encoder = load_transformer_tokenizer(
                 params.transformer_decoder_tokenizer_name, params.transformer_decoder_tokenizer_loading)
+            pickle.dump(label_encoder, open(le_path, 'wb'))
+
+        elif is_masklm:
+            label_encoder = load_transformer_tokenizer(
+                params.transformer_tokenizer_name, params.transformer_tokenizer_loading
+            )
             pickle.dump(label_encoder, open(le_path, 'wb'))
 
         elif is_multi_cls:
@@ -157,13 +164,13 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
 
     else:
 
-        if is_seq2seq_text or is_multi_cls:
+        if is_seq2seq_text or is_multi_cls or is_masklm:
             label_encoder = pickle.load(open(le_path, 'rb'))
         else:
             label_encoder = LabelEncoder()
             label_encoder.load(le_path)
 
-    if not is_seq2seq_text:
+    if not is_seq2seq_text and not is_masklm:
         if is_multi_cls:
             params.num_classes[problem] = label_encoder.classes_.shape[0]
         else:

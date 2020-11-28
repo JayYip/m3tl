@@ -101,7 +101,7 @@ def serialize_fn(features: dict, return_feature_desc=False):
     return example_proto.SerializeToString()
 
 
-def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_file=10000, prefix='', **kwargs):
+def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_file=100000, prefix='', **kwargs):
 
     # create output tfrecord path
     os.makedirs(os.path.join(
