@@ -1,5 +1,6 @@
 
 from typing import Dict, Tuple
+from inspect import signature
 
 import tensorflow as tf
 import transformers
@@ -7,7 +8,7 @@ import transformers
 from .modeling import MultiModalBertModel
 from .params import BaseParams
 from .top import (Classification, MultiLabelClassification, PreTrain,
-                  Seq2Seq, SequenceLabel)
+                  Seq2Seq, SequenceLabel, MaskLM)
 from .utils import get_embedding_table_from_model, get_transformer_main_model
 
 
@@ -179,19 +180,27 @@ class BertMultiTaskTop(tf.keras.Model):
             'seq2seq_tag': Seq2Seq,
             'seq2seq_text': Seq2Seq,
             'multi_cls': MultiLabelClassification,
-            'pretrain': PreTrain
+            'pretrain': PreTrain,
+            'masklm': MaskLM
         }
         self.top_layer_dict = {}
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:
                 problem_type = self.params.problem_type[problem]
-                # if pretrain, return pretrain logit
-                if problem_type in ('pretrain', 'seq2seq_text'):
-                    self.top_layer_dict[problem] = problem_type_layer[problem_type](
-                        self.params, problem_name=problem, input_embeddings=input_embeddings)
-                else:
-                    self.top_layer_dict[problem] = problem_type_layer[problem_type](
-                        self.params, problem)
+                # some layers has different signatures, assign inputs accordingly
+                layer_signature_name = signature(
+                    problem_type_layer[problem_type].__init__).parameters.keys()
+                inputs_kwargs = {
+                    'params': self.params,
+                    'problem_name': problem
+                }
+                for signature_name in layer_signature_name:
+                    if signature_name == 'input_embeddings':
+                        inputs_kwargs.update(
+                            {signature_name: input_embeddings})
+
+                self.top_layer_dict[problem] = problem_type_layer[problem_type](
+                    **inputs_kwargs)
 
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],

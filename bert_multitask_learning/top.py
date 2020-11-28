@@ -5,6 +5,7 @@ from typing import Dict, Tuple
 import tensorflow as tf
 import tensorflow_addons as tfa
 import transformers
+from transformers.modeling_tf_utils import TFSharedEmbeddings
 from tensorflow_addons.layers.crf import CRF
 from tensorflow_addons.text.crf import crf_log_likelihood
 
@@ -347,19 +348,49 @@ class MultiLabelClassification(tf.keras.Model):
             logits, name='%s_predict' % self.problem_name)
 
 
-class MultimodalPretrain(tf.keras.Model):
-    """Multimodal pretrain top layer.
-
-    This includes following tasks:
-    - Multi-modal MLM
-    - Cross modal alignment
-
+class MaskLM(tf.keras.Model):
+    """Multimodal MLM top layer.
     """
 
-    def __init__(self, params: BaseParams, problem_name: str) -> None:
-        super(MultimodalPretrain, self).__init__(name=problem_name)
+    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer) -> None:
+        super(MaskLM, self).__init__(name=problem_name)
         self.params = params
         self.problem_name = problem_name
 
-    def call(self, input, mode):
-        pass
+        word_embedding_weight = input_embeddings.word_embeddings
+        self.vocab_size = word_embedding_weight.shape[0]
+        self.share_embedding_layer = TFSharedEmbeddings(
+            vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
+        self.share_embedding_layer.build([1])
+        self.share_embedding_layer.weight = word_embedding_weight
+
+    def call(self, inputs, mode):
+        features, hidden_features = inputs
+
+        # masking is done inside the model
+        seq_hidden_feature = hidden_features['seq']
+        positions = features['masked_lm_positions']
+
+        # gather_indexes will flatten the seq hidden_states, we need to reshape
+        # back to 3d tensor
+        input_tensor = gather_indexes(seq_hidden_feature, positions)
+        shape_tensor = tf.shape(positions)
+        shape_list = tf.concat([shape_tensor, [-1]], axis=0)
+        input_tensor = tf.reshape(input_tensor, shape=shape_list)
+        # set_shape to determin rank
+        input_tensor.set_shape(
+            [None, None, seq_hidden_feature.shape.as_list()[-1]])
+        mlm_logits = self.share_embedding_layer(input_tensor, mode='linear')
+        if mode != tf.estimator.ModeKeys.PREDICT:
+            mlm_labels = features['masked_lm_ids']
+            mlm_labels.set_shape([None, None])
+            # compute loss
+            mlm_loss = empty_tensor_handling_loss(
+                mlm_labels,
+                mlm_logits,
+                tf.keras.losses.sparse_categorical_crossentropy
+            )
+            loss = mlm_loss
+            self.add_loss(loss)
+
+        return tf.nn.softmax(mlm_logits)

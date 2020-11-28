@@ -166,10 +166,10 @@ class BaseParams():
         """
 
         if problem_type not in [
-                'cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain']:
+                'cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain', 'masklm']:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
                 ['cls', 'seq_tag', 'seq2seq_tag',
-                    'seq2seq_text', 'multi_cls', 'pretrain'],
+                    'seq2seq_text', 'multi_cls', 'pretrain', 'masklm'],
                 problem_type))
 
         self.problem_type[problem_name] = problem_type
