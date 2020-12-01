@@ -1,6 +1,7 @@
 import logging
 from types import GeneratorType
 from typing import Callable
+from inspect import signature
 
 from sklearn.preprocessing import MultiLabelBinarizer
 
@@ -40,7 +41,17 @@ def preprocessing_fn(func: Callable):
 
         tokenizer = load_transformer_tokenizer(
             params.transformer_tokenizer_name, params.transformer_tokenizer_loading)
-        example_list = func(params, mode)
+        proc_fn_signature_names = list(signature(
+            func).parameters.keys())
+
+        # proc func can return generator or tuple of lists
+        # and it can have an optional get_data_num argument to
+        # avoid iterate through the whole dataset to create
+        # label encoder and get number of rows of data
+        if len(proc_fn_signature_names) == 2:
+            example_list = func(params, mode)
+        else:
+            example_list = func(params, mode, get_data_num)
 
         if isinstance(example_list, GeneratorType):
             if get_data_num:
@@ -50,6 +61,9 @@ def preprocessing_fn(func: Callable):
                 logging.info(
                     "Preprocessing function returns generator, might take some time to create label encoder...")
                 for example in example_list:
+                    if isinstance(example[0], int):
+                        data_num, label_encoder = example
+                        return data_num, None
                     cnt += 1
                     try:
                         _, label = example
@@ -100,27 +114,34 @@ def preprocessing_fn(func: Callable):
                 }
 
         else:
-            try:
-                inputs_list, target_list = example_list
-            except ValueError:
-                inputs_list = example_list
-                target_list = None
+            # if proc func returns integer as the first element,
+            # that means it returns (num_of_data, label_encoder)
+            if isinstance(example_list[0], int):
+                data_num, label_encoder = example_list
+                inputs_list, target_list = None, None
+            else:
+                try:
+                    inputs_list, target_list = example_list
+                except ValueError:
+                    inputs_list = example_list
+                    target_list = None
 
-            label_encoder = get_or_make_label_encoder(
-                params, problem=problem, mode=mode, label_list=target_list)
+                label_encoder = get_or_make_label_encoder(
+                    params, problem=problem, mode=mode, label_list=target_list)
+                data_num = len(inputs_list)
 
             if get_data_num:
                 if label_encoder is None:
-                    return len(inputs_list), 0
+                    return data_num, 0
                 if isinstance(label_encoder, LabelEncoder):
-                    return len(inputs_list), len(label_encoder.encode_dict)
+                    return data_num, len(label_encoder.encode_dict)
                 if isinstance(label_encoder, MultiLabelBinarizer):
-                    return len(inputs_list), label_encoder.classes_.shape[0]
+                    return data_num, label_encoder.classes_.shape[0]
                 if hasattr(label_encoder, 'vocab'):
                     # label_encoder is tokenizer
-                    return len(inputs_list), len(label_encoder.vocab)
+                    return data_num, len(label_encoder.vocab)
                 elif hasattr(params, 'decoder_vocab_size'):
-                    return len(inputs_list), params.decoder_vocab_size
+                    return data_num, params.decoder_vocab_size
                 else:
                     raise ValueError('Cannot determine num of classes for problem {0}.'
                                      'This is usually caused by {1} dose not has attribute vocab. In this case, you should manually specify vocab size to params: params.decoder_vocab_size = 32000'.format(problem, type(label_encoder).__name__))

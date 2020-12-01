@@ -123,17 +123,27 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
 
     problem_path = params.ckpt_dir
     create_path(problem_path)
+    problem_type = params.problem_type[problem]
     le_path = os.path.join(problem_path, '%s_label_encoder.pkl' % problem)
-    is_seq2seq_text = params.problem_type[problem] == 'seq2seq_text'
-    is_multi_cls = params.problem_type[problem] == 'multi_cls'
-    is_seq = params.problem_type[problem] == 'seq_tag'
-    is_pretrain = params.problem_type[problem] == 'pretrain'
-    is_masklm = params.problem_type[problem] == 'masklm'
+    is_seq2seq_text = problem_type == 'seq2seq_text'
+    is_multi_cls = problem_type == 'multi_cls'
+    is_seq = problem_type == 'seq_tag'
+    is_pretrain = problem_type == 'pretrain'
+    is_masklm = problem_type == 'masklm'
+
+    if problem_type not in params.predefined_problem_type:
+        is_custom = True
+    else:
+        is_custom = False
 
     if is_pretrain:
         return None
 
     if mode == 'train' and not os.path.exists(le_path):
+        if is_custom:
+            get_or_make_custom_le_fn = params.get_or_make_label_encoder_fn_dict[
+                problem_type]
+            get_or_make_custom_le_fn(params, problem, mode, label_list)
         if is_seq2seq_text:
             label_encoder = load_transformer_tokenizer(
                 params.transformer_decoder_tokenizer_name, params.transformer_decoder_tokenizer_loading)
@@ -163,12 +173,24 @@ def get_or_make_label_encoder(params, problem: str, mode: str, label_list=None) 
             label_encoder.dump(le_path)
 
     else:
+        if is_custom:
+            get_or_make_custom_le_fn = params.get_or_make_label_encoder_fn_dict[
+                problem_type]
+            label_encoder = get_or_make_custom_le_fn(
+                params, problem, mode, label_list)
 
         if is_seq2seq_text or is_multi_cls or is_masklm:
             label_encoder = pickle.load(open(le_path, 'rb'))
         else:
             label_encoder = LabelEncoder()
             label_encoder.load(le_path)
+
+    if is_custom:
+        if problem not in params.num_classes:
+            raise ValueError(
+                'Seems custom get or make label encoder fn dose not set num_classes to'
+                'params. Please specify num_classes. Example: params.num_classes[problem] = 100')
+        return label_encoder
 
     if not is_seq2seq_text and not is_masklm:
         if is_multi_cls:

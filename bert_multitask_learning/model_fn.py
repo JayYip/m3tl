@@ -113,12 +113,12 @@ class BertMultiTaskBody(tf.keras.Model):
             elif logit_type == 'pooled':
                 # tensor, [batch_size, hidden_size]
                 hidden_feature[logit_type] = self.bert.get_pooled_output()
-            elif logit_type == 'all':
-                # list, num_hidden_layers * [batch_size, seq_length, hidden_size]
-                hidden_feature[logit_type] = self.bert.get_all_encoder_layers()
                 if self.custom_pooled_layer:
                     hidden_feature[logit_type] = self.custom_pooled_layer(
                         hidden_feature[logit_type])
+            elif logit_type == 'all':
+                # list, num_hidden_layers * [batch_size, seq_length, hidden_size]
+                hidden_feature[logit_type] = self.bert.get_all_encoder_layers()
             elif logit_type == 'embed':
                 # for res connection
                 hidden_feature[logit_type] = self.bert.get_embedding_output()
@@ -183,6 +183,7 @@ class BertMultiTaskTop(tf.keras.Model):
             'pretrain': PreTrain,
             'masklm': MaskLM
         }
+        problem_type_layer.update(self.params.top_layer)
         self.top_layer_dict = {}
         for problem_dict in self.params.run_problem_list:
             for problem in problem_dict:

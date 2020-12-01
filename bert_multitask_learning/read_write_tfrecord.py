@@ -45,7 +45,8 @@ def serialize_fn(features: dict, return_feature_desc=False):
                 features_tuple[feature_name] = _int64_list_feature(
                     feature.flatten())
                 feature_desc[feature_name] = 'int64'
-            elif issubclass(feature.dtype.type, np.float):
+            # elif issubclass(feature.dtype.type, np.float):
+            else:
                 features_tuple[feature_name] = _float_list_feature(
                     feature.flatten())
                 feature_desc[feature_name] = 'float32'
@@ -349,8 +350,11 @@ def write_tfrecord(params, replace=False):
             read_fn = read_data_fn_dict[problem]
             file_dir = os.path.join(
                 params.tmp_file_dir, problem, 'train_feature_desc.json')
+            eval_file_dir = os.path.join(
+                params.tmp_file_dir, problem, 'eval_feature_desc.json')
             if not os.path.exists(file_dir) or replace:
                 read_fn(params, TRAIN)
+            if not os.path.exists(eval_file_dir) or replace:
                 read_fn(params, EVAL)
         # if more than one problem in problem chunk, that means multiple
         # same feature space problems are chained by &. In this case, we

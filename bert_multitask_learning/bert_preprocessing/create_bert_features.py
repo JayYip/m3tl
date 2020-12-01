@@ -39,8 +39,10 @@ def pad_wrapper(inp, target_len=90):
         return inp + [0]*(target_len - len(inp))
 
 
-def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, decoding_length=None):
+def convert_labels_to_ids(target, problem_type, label_encoder, tokenizer=None, decoding_length=None, custom_label_handling_fn=None):
     label_mask = None
+    if custom_label_handling_fn is not None:
+        return custom_label_handling_fn(target, label_encoder, tokenizer, decoding_length)
     if isinstance(target, list):
         if problem_type == 'seq2seq_text':
 
@@ -134,8 +136,11 @@ def _create_bert_features(problem,
 
         if mode != PREDICT:
 
+            custom_label_handling_fn = params.label_handling_fn.get(
+                problem_type, None)
             label_id, label_mask = convert_labels_to_ids(
-                target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
+                target, problem_type, label_encoder,
+                tokenizer, params.decode_max_seq_len, custom_label_handling_fn=custom_label_handling_fn)
 
         input_ids = tokenized_dict['input_ids']
         segment_ids = tokenized_dict['token_type_ids']
@@ -453,8 +458,10 @@ def _create_multimodal_bert_features(problem,
                 # encode labels
                 if mode != PREDICT:
                     if not is_mask_lm:
+                        custom_label_handling_fn = params.label_handling_fn.get(
+                            problem_type, None)
                         label_id, label_mask = convert_labels_to_ids(
-                            target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len)
+                            target, problem_type, label_encoder, tokenizer, params.decode_max_seq_len, custom_label_handling_fn=custom_label_handling_fn)
 
                         if target_by_modal:
                             modal_feature_dict['{}_{}_label_ids'.format(
