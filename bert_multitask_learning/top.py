@@ -1,6 +1,6 @@
 import logging
 from functools import partial
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import tensorflow as tf
 import tensorflow_addons as tfa
@@ -48,6 +48,16 @@ def create_dummy_if_empty(inp_tensor: tf.Tensor) -> tf.Tensor:
         return dummy_tensor
     else:
         return inp_tensor
+
+
+class BaseTop(tf.keras.Model):
+    def __init__(self, params: BaseParams, problem_name: str) -> None:
+        super(BaseTop, self).__init__(name=problem_name)
+        self.params = params
+        self.problem_name = problem_name
+
+    def call(self, inputs: Tuple[Dict], mode: str):
+        raise NotImplementedError
 
 
 class SequenceLabel(tf.keras.Model):

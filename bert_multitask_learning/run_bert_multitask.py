@@ -60,7 +60,8 @@ def train_bert_multitask(
         problem_type_dict: Dict[str, str] = None,
         processing_fn_dict: Dict[str, Callable] = None,
         model: tf.keras.Model = None,
-        create_tf_record_only=False):
+        create_tf_record_only=False,
+        steps_per_epoch=None):
     """Train Multi-task Bert model
 
     About problem:
@@ -122,9 +123,12 @@ def train_bert_multitask(
         return
 
     # get train_steps and update params
-    train_steps = 0
-    for _ in train_dataset:
-        train_steps += 1
+    if steps_per_epoch is not None:
+        train_steps = steps_per_epoch
+    else:
+        train_steps = 0
+        for _ in train_dataset:
+            train_steps += 1
     params.update_train_steps(train_steps)
 
     train_dataset = train_dataset.repeat(params.train_epoch)

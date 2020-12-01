@@ -5,6 +5,7 @@ import shutil
 import logging
 from typing import Callable, List, Tuple, Dict, Union
 from collections import defaultdict
+import tensorflow as tf
 
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
 from .special_tokens import BOS_TOKEN, EOS_TOKEN
@@ -59,6 +60,13 @@ class BaseParams():
                 self.share_top[p] = p
 
         self.multitask_balance_type = 'data_balanced'
+        self.problem_type_list = ['cls', 'seq_tag', 'seq2seq_tag',
+                                  'seq2seq_text', 'multi_cls', 'pretrain', 'masklm']
+        self.predefined_problem_type = ['cls', 'seq_tag', 'seq2seq_tag',
+                                        'seq2seq_text', 'multi_cls', 'pretrain', 'masklm']
+        self.get_or_make_label_encoder_fn_dict: Dict[str, Callable] = {}
+        self.label_handling_fn: Dict[str, Callable] = {}
+        self.top_layer = {}
         # self.multitask_balance_type = 'problem_balanced'
 
         # logging control
@@ -165,11 +173,9 @@ class BaseParams():
             ValueError: unexpected problem_type
         """
 
-        if problem_type not in [
-                'cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain', 'masklm']:
+        if problem_type not in self.problem_type_list:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
-                ['cls', 'seq_tag', 'seq2seq_tag',
-                    'seq2seq_text', 'multi_cls', 'pretrain', 'masklm'],
+                self.problem_type_list,
                 problem_type))
 
         self.problem_type[problem_name] = problem_type
@@ -331,7 +337,7 @@ class BaseParams():
             for problem in problem_list:
                 if problem not in self.data_num_dict:
 
-                    self.data_num_dict[problem], self.num_classes[problem] = self.read_data_fn[problem](
+                    self.data_num_dict[problem], _ = self.read_data_fn[problem](
                         self, 'train', get_data_num=True)
                     self.data_num += self.data_num_dict[problem]
                 else:
@@ -613,6 +619,16 @@ class BaseParams():
         self.problem_sampling_weight_dict = {
             k: v / sum_across_problems for k, v in problem_chunk_data_num.items()}
         return self.problem_sampling_weight_dict
+
+    def register_problem_type(self,
+                              problem_type: str,
+                              top_layer: tf.keras.Model,
+                              label_handling_fn: Callable = None,
+                              get_or_make_label_encoder_fn: Callable = None):
+        self.problem_type_list.append(problem_type)
+        self.get_or_make_label_encoder_fn_dict[problem_type] = get_or_make_label_encoder_fn
+        self.top_layer[problem_type] = top_layer
+        self.label_handling_fn[problem_type] = label_handling_fn
 
 
 class CRFParams(BaseParams):
