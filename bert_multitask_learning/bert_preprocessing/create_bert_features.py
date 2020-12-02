@@ -317,7 +317,7 @@ def mask_inputs_for_mask_lm(inp_text: str, tokenizer: PreTrainedTokenizer, mask_
 
     # create mask lm features
     mask_lm_dict = tokenizer(masked_text,
-                             truncation=False,
+                             truncation=True,
                              is_split_into_words=True,
                              padding='max_length',
                              max_length=max_predictions_per_seq,
@@ -333,6 +333,7 @@ def mask_inputs_for_mask_lm(inp_text: str, tokenizer: PreTrainedTokenizer, mask_
         masked_lm_positions = masked_lm_positions + \
             [0 for _ in range(max_predictions_per_seq -
                               len(masked_lm_positions))]
+    masked_lm_positions = masked_lm_positions[:max_predictions_per_seq]
     masked_lm_ids = np.array(mask_lm_dict['input_ids'], dtype='int32')
     masked_lm_weights = np.array(mask_lm_dict['attention_mask'], dtype='int32')
     mask_lm_dict = {'masked_lm_positions': masked_lm_positions,
