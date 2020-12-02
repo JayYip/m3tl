@@ -135,6 +135,12 @@ def train_bert_multitask(
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
+    if num_gpus > 1:
+        train_dataset = mirrored_strategy.experimental_distribute_dataset(
+            train_dataset)
+        eval_dataset = mirrored_strategy.experimental_distribute_dataset(
+            eval_dataset)
+
     model = _create_keras_model(
         mirrored_strategy=mirrored_strategy, params=params)
 
