@@ -168,6 +168,7 @@ class Classification(tf.keras.layers.Layer):
             loss = empty_tensor_handling_loss(
                 one_hot_labels, logits,
                 loss_fn)
+            loss = nan_loss_handling(loss)
             self.add_loss(loss)
             acc = self.metric_fn(labels, logits)
             self.add_metric(acc)
@@ -348,6 +349,7 @@ class MultiLabelClassification(tf.keras.Model):
                 return tf.nn.weighted_cross_entropy_with_logits(x, y, pos_weight=label_weights, name='{}_loss'.format(self.problem_name))
             loss = empty_tensor_handling_loss(
                 labels, logits, _loss_fn_wrapper)
+            loss = nan_loss_handling(loss)
             self.add_loss(loss)
             labels = create_dummy_if_empty(labels)
             logits = create_dummy_if_empty(logits)
@@ -400,7 +402,7 @@ class MaskLM(tf.keras.Model):
                 mlm_logits,
                 tf.keras.losses.sparse_categorical_crossentropy
             )
-            loss = mlm_loss
+            loss = nan_loss_handling(mlm_loss)
             self.add_loss(loss)
 
         return tf.nn.softmax(mlm_logits)
