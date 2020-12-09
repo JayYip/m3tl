@@ -158,7 +158,8 @@ def trim_checkpoint_for_prediction(problem: str,
                                    input_dir: str,
                                    output_dir: str,
                                    problem_type_dict: Dict[str, str] = None,
-                                   overwrite=True):
+                                   overwrite=True,
+                                   fake_input_list=None):
     """Minimize checkpoint size for prediction.
 
     Since the original checkpoint contains optimizer's variable,
@@ -166,11 +167,15 @@ def trim_checkpoint_for_prediction(problem: str,
         be three times of the size of model weights. This function 
         will remove those unused variables in prediction to save space.
 
+    Note: if the model is a multimodal model, you have to provide fake_input_list that
+        mimic the structure of real input.
+
     Args:
         problem (str): problem
         input_dir (str): input dir
         output_dir (str): output dir
         problem_type_dict (Dict[str, str], optional): problem type dict. Defaults to None.
+        fake_input_list (List): fake input list to create dummy dataset
     """
     if overwrite and os.path.exists(output_dir):
         rmtree(output_dir)
@@ -184,7 +189,10 @@ def trim_checkpoint_for_prediction(problem: str,
                           dir_name=dir_name, predicting=True)
 
     model = BertMultiTask(params)
-    dummy_dataset = predict_input_fn(['fake']*5, params)
+    if fake_input_list is None:
+        dummy_dataset = predict_input_fn(['fake']*5, params)
+    else:
+        dummy_dataset = predict_input_fn(fake_input_list*5, params)
     _ = model(next(dummy_dataset.as_numpy_iterator()),
               mode=tf.estimator.ModeKeys.PREDICT)
     model.load_weights(os.path.join(input_dir, 'model'))
