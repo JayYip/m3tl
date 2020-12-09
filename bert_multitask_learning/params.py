@@ -88,6 +88,7 @@ class BaseParams():
         self.dynamic_padding = True
         self.bucket_batch_sizes = [32, 32, 32, 16]
         self.bucket_boundaries = [30, 64, 128]
+        self.shuffle_buffer = 200000
 
         # hparm
         self.dropout_keep_prob = 0.9
@@ -242,7 +243,6 @@ class BaseParams():
         self.set_data_sampling_strategy()
 
         if not predicting:
-            self.shuffle_buffer = min([200000, self.data_num])
             for problem in self.problem_list:
                 if self.problem_type[problem] == 'pretrain':
                     dup_fac = self.dupe_factor
