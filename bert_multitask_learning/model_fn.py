@@ -299,7 +299,8 @@ class BertMultiTask(tf.keras.Model):
         # Update weights
         self.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
-        self.mean_acc.update_state([v for v in metric_dict.values()])
+        self.mean_acc.update_state(
+            [v for n, v in metric_dict.items() if n != 'mean_acc'])
 
         return_dict = metric_dict
         return_dict.update(loss_dict)
