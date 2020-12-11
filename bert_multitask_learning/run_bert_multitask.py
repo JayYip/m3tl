@@ -61,7 +61,8 @@ def train_bert_multitask(
         processing_fn_dict: Dict[str, Callable] = None,
         model: tf.keras.Model = None,
         create_tf_record_only=False,
-        steps_per_epoch=None):
+        steps_per_epoch=None,
+        warmup_ratio=0.1):
     """Train Multi-task Bert model
 
     About problem:
@@ -129,7 +130,7 @@ def train_bert_multitask(
         train_steps = 0
         for _ in train_dataset:
             train_steps += 1
-    params.update_train_steps(train_steps)
+    params.update_train_steps(train_steps, warmup_ratio=warmup_ratio)
 
     train_dataset = train_dataset.repeat(params.train_epoch)
 
