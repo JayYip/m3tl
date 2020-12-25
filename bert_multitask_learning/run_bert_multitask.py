@@ -23,10 +23,26 @@ def create_keras_model(
         mode='train',
         inputs_to_build_model=None,
         model=None):
+    """init model in various mode
+
+    train: model will be loaded from huggingface
+    resume: model will be loaded from params.ckpt_dir, if params.ckpt_dir dose not contain valid checkpoint, then load from huggingface
+    transfer: model will be loaded from params.init_checkpoint, the correspongding path should contain checkpoints saved using bert-multitask-learning
+    predict: model will be loaded from params.ckpt_dir except optimizers' states
+    eval: model will be loaded from params.ckpt_dir except optimizers' states, model will be compiled
+
+    Args:
+        mirrored_strategy (tf.distribute.MirroredStrategy): mirrored strategy
+        params (BaseParams): params
+        mode (str, optional): Mode, see above explaination. Defaults to 'train'.
+        inputs_to_build_model (Dict, optional): A batch of data. Defaults to None.
+        model (Model, optional): Keras model. Defaults to None.
+
+    Returns:
+        model: loaded model
+    """
     with mirrored_strategy.scope():
         if model is None:
-            if mode == 'resume':
-                params.init_weight_from_huggingface = False
             model = BertMultiTask(params)
             # model.run_eagerly = True
         if mode == 'resume':
@@ -90,7 +106,7 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
             callbacks=[model_checkpoint_callback, tensorboard_callback],
-            steps_per_epoch=100
+            steps_per_epoch=params.train_steps_per_epoch
         )
     model.summary()
 
