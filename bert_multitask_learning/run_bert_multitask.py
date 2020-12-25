@@ -5,6 +5,7 @@ from typing import Dict, Callable
 from shutil import copytree, ignore_patterns, rmtree
 
 import tensorflow as tf
+from tensorflow.python.framework.errors_impl import NotFoundError as TFNotFoundError
 
 from .input_fn import predict_input_fn, train_eval_input_fn
 from .model_fn import BertMultiTask
@@ -16,11 +17,52 @@ LOGGER = tf.get_logger()
 LOGGER.propagate = False
 
 
-def _create_keras_model(
+def create_keras_model(
         mirrored_strategy: tf.distribute.MirroredStrategy,
-        params: BaseParams):
+        params: BaseParams,
+        mode='train',
+        inputs_to_build_model=None,
+        model=None):
     with mirrored_strategy.scope():
-        model = BertMultiTask(params)
+        if model is None:
+            if mode == 'resume':
+                params.init_weight_from_huggingface = False
+            model = BertMultiTask(params)
+            # model.run_eagerly = True
+        if mode == 'resume':
+            model.compile()
+            # build training graph
+            # model.train_step(inputs_to_build_model)
+            _ = model(inputs_to_build_model,
+                      mode=tf.estimator.ModeKeys.PREDICT)
+            # load ALL vars including optimizers' states
+            try:
+                model.load_weights(os.path.join(
+                    params.ckpt_dir, 'model'), skip_mismatch=False)
+            except TFNotFoundError:
+                LOGGER.warn('Not resuming since no mathcing ckpt found')
+        elif mode == 'transfer':
+            # build graph without optimizers' states
+            # calling compile again should reset optimizers' states but we're playing safe here
+            _ = model(inputs_to_build_model,
+                      mode=tf.estimator.ModeKeys.PREDICT)
+            # load weights without loading optimizers' vars
+            model.load_weights(os.path.join(params.init_checkpoint, 'model'))
+            # compile again
+            model.compile()
+        elif mode == 'predict':
+            _ = model(inputs_to_build_model,
+                      mode=tf.estimator.ModeKeys.PREDICT)
+            # load weights without loading optimizers' vars
+            model.load_weights(os.path.join(params.ckpt_dir, 'model'))
+        elif mode == 'eval':
+            _ = model(inputs_to_build_model,
+                      mode=tf.estimator.ModeKeys.PREDICT)
+            # load weights without loading optimizers' vars
+            model.load_weights(os.path.join(params.ckpt_dir, 'model'))
+            model.compile()
+        else:
+            model.compile()
     return model
 
 
@@ -29,6 +71,9 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
                                       model: tf.keras.Model,
                                       params: BaseParams,
                                       mirrored_strategy: tf.distribute.MirroredStrategy = None):
+    # can't save whole model with model subclassing api due to tf bug
+    # see: https://github.com/tensorflow/tensorflow/issues/42741
+    # https://github.com/tensorflow/tensorflow/issues/40366
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(params.ckpt_dir, 'model'),
         save_weights_only=True,
@@ -40,13 +85,12 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
         log_dir=params.ckpt_dir)
 
     with mirrored_strategy.scope():
-        model.compile()
         model.fit(
             x=train_dataset,
             validation_data=eval_dataset,
             epochs=params.train_epoch,
             callbacks=[model_checkpoint_callback, tensorboard_callback],
-            steps_per_epoch=params.train_steps_per_epoch
+            steps_per_epoch=100
         )
     model.summary()
 
@@ -62,7 +106,8 @@ def train_bert_multitask(
         model: tf.keras.Model = None,
         create_tf_record_only=False,
         steps_per_epoch=None,
-        warmup_ratio=0.1):
+        warmup_ratio=0.1,
+        continue_training=False):
     """Train Multi-task Bert model
 
     About problem:
@@ -99,24 +144,9 @@ def train_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
-    if params is None:
-        params = DynamicBatchSizeParams()
-
-    if not os.path.exists('models'):
-        os.mkdir('models')
-
-    if model_dir:
-        base_dir, dir_name = os.path.split(model_dir)
-    else:
-        base_dir, dir_name = None, None
     params.train_epoch = num_epochs
-    # add new problem to params if problem_type_dict and processing_fn_dict provided
-    if problem_type_dict:
-        params.add_multiple_problems(
-            problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
-    params.assign_problem(problem, gpu=int(num_gpus),
-                          base_dir=base_dir, dir_name=dir_name)
-    params.to_json()
+    params = get_params_ready(problem, num_gpus, model_dir,
+                              params, problem_type_dict, processing_fn_dict)
 
     train_dataset = train_eval_input_fn(params)
     eval_dataset = train_eval_input_fn(params, mode=EVAL)
@@ -134,6 +164,8 @@ def train_bert_multitask(
 
     train_dataset = train_dataset.repeat(params.train_epoch)
 
+    one_batch = next(train_dataset.as_numpy_iterator())
+
     mirrored_strategy = tf.distribute.MirroredStrategy()
 
     if num_gpus > 1:
@@ -142,8 +174,16 @@ def train_bert_multitask(
         eval_dataset = mirrored_strategy.experimental_distribute_dataset(
             eval_dataset)
 
-    model = _create_keras_model(
-        mirrored_strategy=mirrored_strategy, params=params)
+    # restore priority: self > transfer > huggingface
+    if continue_training and tf.train.latest_checkpoint(params.ckpt_dir):
+        mode = 'resume'
+    elif tf.train.latest_checkpoint(params.init_checkpoint):
+        mode = 'transfer'
+    else:
+        mode = 'train'
+
+    model = create_keras_model(
+        mirrored_strategy=mirrored_strategy, params=params, mode=mode, inputs_to_build_model=one_batch)
 
     _train_bert_multitask_keras_model(
         train_dataset=train_dataset,
@@ -153,6 +193,28 @@ def train_bert_multitask(
         mirrored_strategy=mirrored_strategy
     )
     return model
+
+
+def get_params_ready(problem, num_gpus, model_dir, params, problem_type_dict, processing_fn_dict, mode='train', json_path=''):
+    if params is None:
+        params = DynamicBatchSizeParams()
+    if not os.path.exists('models'):
+        os.mkdir('models')
+    if model_dir:
+        base_dir, dir_name = os.path.split(model_dir)
+    else:
+        base_dir, dir_name = None, None
+    # add new problem to params if problem_type_dict and processing_fn_dict provided
+    if problem_type_dict:
+        params.add_multiple_problems(
+            problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
+    params.assign_problem(problem, gpu=int(num_gpus),
+                          base_dir=base_dir, dir_name=dir_name)
+    if mode == 'train':
+        params.to_json()
+    else:
+        params.from_json(json_path)
+    return params
 
 
 def trim_checkpoint_for_prediction(problem: str,
@@ -205,7 +267,6 @@ def eval_bert_multitask(
         problem='weibo_ner',
         num_gpus=1,
         model_dir='',
-        eval_scheme='ner',
         params=None,
         problem_type_dict=None,
         processing_fn_dict=None,
@@ -224,34 +285,15 @@ def eval_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
-    raise NotImplementedError
-    # if params is None:
-    #     params = DynamicBatchSizeParams()
-    # if not params.problem_assigned:
-
-    #     if model_dir:
-    #         base_dir, dir_name = os.path.split(model_dir)
-    #     else:
-    #         base_dir, dir_name = None, None
-    #     # add new problem to params if problem_type_dict and processing_fn_dict provided
-    #     if processing_fn_dict:
-    #         for new_problem, new_problem_processing_fn in processing_fn_dict.items():
-    #             print('Adding new problem {0}, problem type: {1}'.format(
-    #                 new_problem, problem_type_dict[new_problem]))
-    #             params.add_problem(
-    #                 problem_name=new_problem, problem_type=problem_type_dict[new_problem], processing_fn=new_problem_processing_fn)
-    #     params.assign_problem(problem, gpu=int(num_gpus),
-    #                           base_dir=base_dir, dir_name=dir_name)
-    #     params.from_json()
-    # else:
-    #     print('Params problem assigned. Problem list: {0}'.format(
-    #         params.problem_list))
-
-    # estimator = _create_estimator(
-    #     num_gpus=num_gpus, params=params, model=model)
-
-    # evaluate_func = getattr(metrics, eval_scheme+'_evaluate')
-    # return evaluate_func(problem, estimator, params)
+    params = get_params_ready(problem, num_gpus, model_dir,
+                              params, problem_type_dict, processing_fn_dict, mode='predict', json_path=os.path.join(model_dir, 'params.json'))
+    eval_dataset = train_eval_input_fn(params, mode=EVAL)
+    one_batch_data = next(eval_dataset.as_numpy_iterator())
+    mirrored_strategy = tf.distribute.MirroredStrategy()
+    model = create_keras_model(
+        mirrored_strategy=mirrored_strategy, params=params, mode='eval', inputs_to_build_model=one_batch_data)
+    eval_dict = model.evaluate(eval_dataset, return_dict=True)
+    return eval_dict
 
 
 def predict_bert_multitask(
@@ -301,7 +343,7 @@ def predict_bert_multitask(
 
     mirrored_strategy = tf.distribute.MirroredStrategy()
     if model is None:
-        model = _create_keras_model(
+        model = create_keras_model(
             mirrored_strategy=mirrored_strategy, params=params)
         model.load_weights(os.path.join(params.ckpt_dir, 'model'))
 
