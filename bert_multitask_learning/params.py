@@ -5,6 +5,7 @@ import shutil
 import logging
 from typing import Callable, List, Tuple, Dict, Union
 from collections import defaultdict
+from distutils.dir_util import copy_tree
 import tensorflow as tf
 
 from .utils import create_path, load_transformer_tokenizer, load_transformer_config
@@ -438,25 +439,25 @@ class BaseParams():
             # bert config exists, init from existing config
             if os.path.exists(from_config_path):
                 # copy config
-                shutil.copy2(from_config_path, to_config_path)
+                copy_tree(from_config_path, to_config_path)
                 self.bert_config = load_transformer_config(
                     to_config_path, self.transformer_config_loading)
 
                 # copy tokenizer
-                shutil.copy2(from_tokenizer_path, to_tokenizer_path)
+                copy_tree(from_tokenizer_path, to_tokenizer_path)
 
                 # copy decoder config
                 if os.path.exists(from_decoder_config_path):
-                    shutil.copy2(from_decoder_config_path,
-                                 to_decoder_config_path)
+                    copy_tree(from_decoder_config_path,
+                              to_decoder_config_path)
                     self.bert_decoder_config = load_transformer_config(
                         from_decoder_config_path, self.transformer_decoder_config_loading
                     )
                     self.bert_decoder_config_dict = self.bert_decoder_config.to_dict()
                 # copy decoder tokenizer
                 if os.path.exists(from_decoder_tokenizer_path):
-                    shutil.copy2(from_decoder_tokenizer_path,
-                                 to_decoder_tokenizer_path)
+                    copy_tree(from_decoder_tokenizer_path,
+                              to_decoder_tokenizer_path)
 
                 self.init_weight_from_huggingface = False
             else:
