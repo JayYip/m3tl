@@ -7,3 +7,4 @@ setuptools
 nltk
 scikit_learn
 transformers
+tensorflow-addons
