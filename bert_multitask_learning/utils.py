@@ -342,7 +342,11 @@ def load_transformer_model(model_name_or_config, load_module_name=None):
         load_module = transformers.TFAutoModel
 
     if isinstance(model_name_or_config, str):
-        model = load_module.from_pretrained(model_name_or_config)
+        try:
+            model = load_module.from_pretrained(model_name_or_config)
+        except OSError:
+            model = load_module.from_pretrained(
+                model_name_or_config, from_pt=True)
     else:
         model = load_module.from_config(model_name_or_config)
     return model
