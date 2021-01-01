@@ -68,6 +68,7 @@ class BaseParams():
         self.get_or_make_label_encoder_fn_dict: Dict[str, Callable] = {}
         self.label_handling_fn: Dict[str, Callable] = {}
         self.top_layer = {}
+        self.num_classes = {}
         # self.multitask_balance_type = 'problem_balanced'
 
         # logging control

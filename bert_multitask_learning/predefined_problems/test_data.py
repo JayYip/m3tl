@@ -114,3 +114,18 @@ def get_weibo_fake_multi_cls_fn(file_path):
 
         return inputs_list, target_list
     return weibo_fake_multi_cls
+
+
+def get_weibo_masklm(file_path):
+    @preprocessing_fn
+    def weibo_masklm(params, mode):
+        data = read_ner_data(file_pattern=file_path,
+                             proc_fn=gold_horse_ent_type_process_fn)
+        if mode == 'train':
+            data = data['train']
+        else:
+            data = data['eval']
+        inputs_list = data['inputs']
+
+        return inputs_list, ['a' for _ in inputs_list]
+    return weibo_masklm
