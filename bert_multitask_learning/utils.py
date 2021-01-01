@@ -327,9 +327,11 @@ def load_transformer_config(config_name_or_dict, load_module_name=None):
     else:
         load_module = transformers.AutoConfig
     if isinstance(config_name_or_dict, str):
-        config = load_module.from_pretrained(config_name_or_dict)
+        config = load_module.from_pretrained(
+            config_name_or_dict, output_attentions=True, output_hidden_states=True)
     elif isinstance(config_name_or_dict, dict):
-        config = load_module.from_dict(config_name_or_dict)
+        config = load_module.from_dict(
+            config_name_or_dict, output_attentions=True, output_hidden_states=True)
     else:
         raise ValueError('config_name_or_dict should be str or dict')
     return config
@@ -343,12 +345,14 @@ def load_transformer_model(model_name_or_config, load_module_name=None):
 
     if isinstance(model_name_or_config, str):
         try:
-            model = load_module.from_pretrained(model_name_or_config)
+            model = load_module.from_pretrained(
+                model_name_or_config, output_attentions=True, output_hidden_states=True)
         except OSError:
             model = load_module.from_pretrained(
-                model_name_or_config, from_pt=True)
+                model_name_or_config, from_pt=True, output_attentions=True, output_hidden_states=True)
     else:
-        model = load_module.from_config(model_name_or_config)
+        model = load_module.from_config(
+            model_name_or_config)
     return model
 
 
