@@ -305,6 +305,7 @@ def eval_bert_multitask(
                               params, problem_type_dict, processing_fn_dict, mode='predict', json_path=os.path.join(model_dir, 'params.json'))
     eval_dataset = train_eval_input_fn(params, mode=EVAL)
     one_batch_data = next(eval_dataset.as_numpy_iterator())
+    eval_dataset = train_eval_input_fn(params, mode=EVAL)
     mirrored_strategy = tf.distribute.MirroredStrategy()
     model = create_keras_model(
         mirrored_strategy=mirrored_strategy, params=params, mode='eval', inputs_to_build_model=one_batch_data)
@@ -357,13 +358,14 @@ def predict_bert_multitask(
     LOGGER.info('Checkpoint dir: %s', params.ckpt_dir)
     time.sleep(3)
 
+    pred_dataset = predict_input_fn(inputs, params)
+    one_batch_data = next(pred_dataset.as_numpy_iterator())
+    pred_dataset = predict_input_fn(inputs, params)
+
     mirrored_strategy = tf.distribute.MirroredStrategy()
     if model is None:
         model = create_keras_model(
-            mirrored_strategy=mirrored_strategy, params=params)
-        model.load_weights(os.path.join(params.ckpt_dir, 'model'))
-
-    pred_dataset = predict_input_fn(inputs, params)
+            mirrored_strategy=mirrored_strategy, params=params, mode='predict', inputs_to_build_model=one_batch_data)
 
     with mirrored_strategy.scope():
         pred = model.predict(pred_dataset)
