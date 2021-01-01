@@ -12,7 +12,7 @@ from tensorflow_addons.text.crf import crf_log_likelihood
 
 from bert_multitask_learning.params import BaseParams
 
-from .top_utils import gather_indexes
+from .utils import gather_indexes
 
 
 @tf.function
