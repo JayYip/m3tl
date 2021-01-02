@@ -59,7 +59,7 @@ class ReadWriteTFRecordTest(TestBase):
 
     def test_write_tfrecord(self):
         self.params.assign_problem(
-            'weibo_ner&weibo_fake_cls|weibo_fake_multi_cls')
+            'weibo_ner&weibo_fake_cls|weibo_fake_multi_cls|weibo_masklm')
         bert_multitask_learning.write_tfrecord(
             params=self.params)
         self.assertTrue(os.path.exists(os.path.join(
@@ -75,17 +75,26 @@ class ReadWriteTFRecordTest(TestBase):
 
     def test_read_tfrecord(self):
         self.params.assign_problem(
-            'weibo_ner&weibo_fake_cls|weibo_fake_multi_cls')
+            'weibo_ner&weibo_fake_cls|weibo_fake_multi_cls|weibo_masklm')
         bert_multitask_learning.write_tfrecord(
             params=self.params, replace=False)
         dataset_dict = bert_multitask_learning.read_tfrecord(
             params=self.params, mode=bert_multitask_learning.TRAIN)
         dataset: tf.data.Dataset = dataset_dict['weibo_fake_cls_weibo_ner']
         self.assertEqual(sorted(list(dataset.element_spec.keys())),
-                         ['input_ids', 'input_mask', 'segment_ids',
-                          'weibo_fake_cls_label_ids', 'weibo_fake_cls_loss_multiplier',
-                          'weibo_fake_multi_cls_label_ids', 'weibo_fake_multi_cls_loss_multiplier',
-                          'weibo_ner_label_ids', 'weibo_ner_loss_multiplier'])
+                         ['input_ids',
+                          'input_mask',
+                          'masked_lm_ids',
+                          'masked_lm_positions',
+                          'masked_lm_weights',
+                          'segment_ids',
+                          'weibo_fake_cls_label_ids',
+                          'weibo_fake_cls_loss_multiplier',
+                          'weibo_fake_multi_cls_label_ids',
+                          'weibo_fake_multi_cls_loss_multiplier',
+                          'weibo_masklm_loss_multiplier',
+                          'weibo_ner_label_ids',
+                          'weibo_ner_loss_multiplier'])
         # make sure loss multiplier is correct
         ele = next(dataset.as_numpy_iterator())
         self.assertEqual(ele['weibo_fake_cls_loss_multiplier'], 1)

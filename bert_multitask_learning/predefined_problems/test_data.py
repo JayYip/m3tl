@@ -34,65 +34,32 @@ def get_weibo_fake_cls_fn(file_path):
     return weibo_fake_cls
 
 
-def get_weibo_fake_seq2seq_tag_fn(file_path):
-    @preprocessing_fn
-    def weibo_fake_seq2seq_tag(params, mode: str):
+# def get_weibo_pretrain_fn(file_path):
+#     @preprocessing_fn
+#     def weibo_pretrain(params, mode):
 
-        data = read_ner_data(file_pattern=file_path,
-                             proc_fn=gold_horse_ent_type_process_fn)
-        if mode == 'train':
-            data = data['train']
-        else:
-            data = data['eval']
-        inputs_list = data['inputs']
-        target_list = data['target']
-        new_target_list = [['1', '2'] for _ in range(len(inputs_list))]
-        return inputs_list, new_target_list
-    return weibo_fake_seq2seq_tag
+#         sentence_split = r'[.!?。？！]'
 
+#         data = read_ner_data(file_pattern=file_path,
+#                              proc_fn=gold_horse_segment_process_fn)
+#         if mode == 'train':
+#             data = data['train']
+#         else:
+#             data = data['eval']
+#         inputs_list = data['inputs']
 
-def get_weibo_pretrain_fn(file_path):
-    @preprocessing_fn
-    def weibo_pretrain(params, mode):
+#         segmented_list = []
+#         for document in inputs_list:
+#             segmented_list.append([])
+#             doc_string = ''.join(document)
+#             splited_doc = re.split(sentence_split, doc_string)
+#             for sentence in splited_doc:
+#                 if sentence:
+#                     segmented_list[-1].append(list(sentence))
+#         segmented_list = [doc for doc in segmented_list if doc]
 
-        sentence_split = r'[.!?。？！]'
-
-        data = read_ner_data(file_pattern=file_path,
-                             proc_fn=gold_horse_segment_process_fn)
-        if mode == 'train':
-            data = data['train']
-        else:
-            data = data['eval']
-        inputs_list = data['inputs']
-
-        segmented_list = []
-        for document in inputs_list:
-            segmented_list.append([])
-            doc_string = ''.join(document)
-            splited_doc = re.split(sentence_split, doc_string)
-            for sentence in splited_doc:
-                if sentence:
-                    segmented_list[-1].append(list(sentence))
-        segmented_list = [doc for doc in segmented_list if doc]
-
-        return segmented_list
-    return weibo_pretrain
-
-
-def get_weibo_fake_seq_tag_fn(file_path):
-    @preprocessing_fn
-    def weibo_fake_seq_tag(params, mode):
-        data = read_ner_data(file_pattern=file_path,
-                             proc_fn=gold_horse_ent_type_process_fn)
-        if mode == 'train':
-            data = data['train']
-        else:
-            data = data['eval']
-        inputs_list = data['inputs']
-        target_list = data['target']
-
-        return inputs_list, target_list
-    return weibo_fake_seq_tag
+#         return segmented_list
+#     return weibo_pretrain
 
 
 def get_weibo_fake_multi_cls_fn(file_path):
@@ -127,5 +94,6 @@ def get_weibo_masklm(file_path):
             data = data['eval']
         inputs_list = data['inputs']
 
-        return inputs_list, ['a' for _ in inputs_list]
+        for i in inputs_list:
+            yield i, 'a'
     return weibo_masklm
