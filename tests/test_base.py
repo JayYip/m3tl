@@ -22,7 +22,7 @@ class TestBase(unittest.TestCase):
 
     def prepare_params(self):
 
-        problem_type_dict = {
+        self.problem_type_dict = {
             'weibo_ner': 'seq_tag',
             'weibo_cws': 'seq_tag',
             'weibo_fake_multi_cls': 'multi_cls',
@@ -30,7 +30,7 @@ class TestBase(unittest.TestCase):
             'weibo_masklm': 'masklm'
         }
 
-        processing_fn_dict = {
+        self.processing_fn_dict = {
             'weibo_ner': get_weibo_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_cws': get_weibo_cws_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_fake_cls': get_weibo_fake_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
@@ -45,6 +45,7 @@ class TestBase(unittest.TestCase):
         self.params.transformer_config_name = 'voidful/albert_chinese_tiny'
         self.params.transformer_tokenizer_name = 'voidful/albert_chinese_tiny'
         self.params.transformer_tokenizer_loading = 'BertTokenizer'
+        self.params.transformer_config_loading = 'AlbertConfig'
 
         self.params.add_multiple_problems(
-            problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
+            problem_type_dict=self.problem_type_dict, processing_fn_dict=self.processing_fn_dict)

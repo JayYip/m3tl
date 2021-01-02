@@ -259,16 +259,18 @@ class MultiModalBertModel(tf.keras.Model):
         self.use_one_hot_embeddings = use_one_hot_embeddings
 
         # multimodal input dense
+        embedding_dim = get_embedding_table_from_model(
+            self.bert_model).shape[-1]
         self.modal_name_list = ['image', 'others']
         self.multimodal_dense = {modal_name: tf.keras.layers.Dense(
-            self.bert_model.config.hidden_size) for modal_name in self.modal_name_list}
+            embedding_dim) for modal_name in self.modal_name_list}
 
         # multimodal modal type embedding
         # this might raise no gradients warning if it's unimodal
         # variable: [3, 768]
         if self.params.enable_modal_type:
             self.modal_type_embedding = tf.keras.layers.Embedding(input_dim=len(
-                self.modal_name_list)+1, output_dim=self.bert_model.config.hidden_size)
+                self.modal_name_list)+1, output_dim=embedding_dim)
 
         self.enable_modal_type = self.params.enable_modal_type
 

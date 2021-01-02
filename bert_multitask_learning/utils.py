@@ -3,6 +3,7 @@ import os
 import pickle
 import re
 from typing import Union
+from inspect import getmembers
 
 import numpy as np
 import tensorflow as tf
@@ -367,9 +368,9 @@ def get_transformer_main_model(model, key='embeddings'):
         model
     """
 
-    model_attr_name_list = model.__dict__.keys()
-    for attr_name in model_attr_name_list:
-        attr = getattr(model, attr_name)
+    for attr_name, attr in getmembers(model):
+        if attr_name == key:
+            return model
         if hasattr(attr, key):
             return attr
 

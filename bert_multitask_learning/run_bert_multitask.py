@@ -224,12 +224,15 @@ def get_params_ready(problem, num_gpus, model_dir, params, problem_type_dict, pr
     if problem_type_dict:
         params.add_multiple_problems(
             problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
-    params.assign_problem(problem, gpu=int(num_gpus),
-                          base_dir=base_dir, dir_name=dir_name)
     if mode == 'train':
+        params.assign_problem(problem, gpu=int(num_gpus),
+                              base_dir=base_dir, dir_name=dir_name)
         params.to_json()
     else:
         params.from_json(json_path)
+        params.assign_problem(problem, gpu=int(num_gpus),
+                              base_dir=base_dir, dir_name=dir_name)
+
     return params
 
 
@@ -301,8 +304,11 @@ def eval_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
+    if not model_dir and params is not None:
+        model_dir = params.ckpt_dir
     params = get_params_ready(problem, num_gpus, model_dir,
-                              params, problem_type_dict, processing_fn_dict, mode='predict', json_path=os.path.join(model_dir, 'params.json'))
+                              params, problem_type_dict, processing_fn_dict,
+                              mode='predict', json_path=os.path.join(model_dir, 'params.json'))
     eval_dataset = train_eval_input_fn(params, mode=EVAL)
     one_batch_data = next(eval_dataset.as_numpy_iterator())
     eval_dataset = train_eval_input_fn(params, mode=EVAL)
@@ -339,21 +345,11 @@ def predict_bert_multitask(
 
     if params is None:
         params = DynamicBatchSizeParams()
-    if not params.problem_assigned:
-        if model_dir:
-            base_dir, dir_name = os.path.split(model_dir)
-        else:
-            base_dir, dir_name = None, None
-        # add new problem to params if problem_type_dict and processing_fn_dict provided
-        if problem_type_dict:
-            params.add_multiple_problems(
-                problem_type_dict=problem_type_dict, processing_fn_dict=processing_fn_dict)
-        params.from_json(os.path.join(model_dir, 'params.json'))
-        params.assign_problem(problem, gpu=1,
-                              base_dir=base_dir, dir_name=dir_name, predicting=True)
-    else:
-        print('Params problem assigned. Problem list: {0}'.format(
-            params.run_problem_list))
+    if not model_dir and params is not None:
+        model_dir = params.ckpt_dir
+    params = get_params_ready(problem, 1, model_dir,
+                              params, problem_type_dict, processing_fn_dict,
+                              mode='predict', json_path=os.path.join(model_dir, 'params.json'))
 
     LOGGER.info('Checkpoint dir: %s', params.ckpt_dir)
     time.sleep(3)
@@ -373,32 +369,3 @@ def predict_bert_multitask(
     if return_model:
         return pred, model
     return pred
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--problem', type=str,
-                        default='weibo_ner&weibo_cws', help='Problems to run')
-    parser.add_argument('--schedule', type=str,
-                        default='train', help='train or eval')
-    parser.add_argument('--model_dir', type=str,
-                        default='', help='path for saving trained models')
-    parser.add_argument('--num_epochs', type=int, default=15)
-    parser.add_argument('--num_gpus', type=int, default=1)
-
-    args = parser.parse_args()
-
-    if args.schedule == 'train':
-        train_bert_multitask(
-            problem=args.problem,
-            model_dir=args.model_dir,
-            num_gpus=args.num_gpus,
-            num_epochs=args.num_epochs
-        )
-    else:
-        eval_bert_multitask(
-            problem=args.problem,
-            model_dir=args.model_dir,
-            num_gpus=args.num_gpus,
-            eval_scheme=args.eval_scheme,
-        )
