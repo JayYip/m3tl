@@ -82,7 +82,10 @@ class ReadWriteTFRecordTest(TestBase):
             params=self.params, mode=bert_multitask_learning.TRAIN)
         dataset: tf.data.Dataset = dataset_dict['weibo_fake_cls_weibo_ner']
         self.assertEqual(sorted(list(dataset.element_spec.keys())),
-                         ['input_ids',
+                         ['image_input',
+                          'image_mask',
+                          'image_segment_ids',
+                          'input_ids',
                           'input_mask',
                           'masked_lm_ids',
                           'masked_lm_positions',
@@ -100,3 +103,7 @@ class ReadWriteTFRecordTest(TestBase):
         self.assertEqual(ele['weibo_fake_cls_loss_multiplier'], 1)
         self.assertEqual(ele['weibo_ner_loss_multiplier'], 1)
         self.assertEqual(ele['weibo_fake_multi_cls_loss_multiplier'], 0)
+
+        # multimodal dataset
+        dataset: tf.data.Dataset = dataset_dict['weibo_fake_multi_cls']
+        _ = next(dataset.as_numpy_iterator())

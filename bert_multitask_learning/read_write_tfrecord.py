@@ -136,7 +136,7 @@ def make_tfrecord(data_list, output_dir, serialize_fn, mode='train', shards_per_
     shard_count = 0
     for idx, example in enumerate(data_list):
         x.append(example)
-        if idx % shards_per_file == 0 and idx:
+        if idx % shards_per_file == 0 and idx:  # pragma: no cover
             path = os.path.join(
                 output_dir, prefix, '{}_{:05d}.tfrecord'.format(mode, shard_count))
             shard_count += 1
@@ -410,7 +410,7 @@ def make_feature_desc(feature_desc_dict: dict):
     return feature_desc
 
 
-def reshape_tensors_in_dataset(example):
+def reshape_tensors_in_dataset(example):  # pragma: no cover
     """Reshape serialized tensor back to its original shape
 
     Arguments:
@@ -437,13 +437,13 @@ def reshape_tensors_in_dataset(example):
     return example
 
 
-def add_loss_multiplier(example, problem):
+def add_loss_multiplier(example, problem):  # pragma: no cover
     example['{}_loss_multiplier'.format(problem)] = tf.constant(
         value=1, shape=(), dtype=tf.int32)
     return example
 
 
-def set_shape_for_dataset(example, feature_desc_dict):
+def set_shape_for_dataset(example, feature_desc_dict):  # pragma: no cover
     for feature_key in example:
         example[feature_key].set_shape(
             feature_desc_dict['{}_shape_value'.format(feature_key)])
@@ -492,7 +492,7 @@ def get_dummy_features(dataset_dict, feature_desc_dict):
     return dummy_features
 
 
-def add_dummy_features_to_dataset(example, dummy_features):
+def add_dummy_features_to_dataset(example, dummy_features):  # pragma: no cover
     """Add dummy features to dataset
 
     feature dict without dummy:

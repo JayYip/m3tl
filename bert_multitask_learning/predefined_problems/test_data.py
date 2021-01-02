@@ -3,6 +3,7 @@
 import re
 import string
 import random
+import numpy as np
 
 
 from .ner_data import gold_horse_ent_type_process_fn, read_ner_data, gold_horse_segment_process_fn
@@ -72,6 +73,10 @@ def get_weibo_fake_multi_cls_fn(file_path):
         else:
             data = data['eval']
         inputs_list = data['inputs']
+
+        # fake multimodal
+        inputs_list = [{'text': t, 'image': np.random.uniform(
+            size=(5, 10))} for t in inputs_list]
 
         # create fake target
         target_list = []
