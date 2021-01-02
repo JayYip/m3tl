@@ -14,7 +14,7 @@ from .special_tokens import PREDICT, TRAIN
 from .utils import infer_shape_and_type_from_dict, load_transformer_tokenizer
 
 
-def element_length_func(yield_dict: Dict[str, tf.Tensor]):
+def element_length_func(yield_dict: Dict[str, tf.Tensor]):  # pragma: no cover
     max_length = tf.shape(yield_dict['input_ids'])[0]
     return max_length
 

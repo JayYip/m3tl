@@ -265,9 +265,9 @@ def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=
         if type(feature) is list:
             feature = np.array(feature)
         if type(feature) is np.ndarray:
-            if issubclass(feature.dtype.type, np.integer):
+            if np.issubdtype(feature.dtype, np.integer):
                 type_dict[feature_name] = tf.int32
-            elif issubclass(feature.dtype.type, np.float):
+            elif np.issubdtype(feature.dtype, np.floating):
                 type_dict[feature_name] = tf.float32
 
             # this seems not a good idea
@@ -278,7 +278,7 @@ def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=
                 shape_dict[feature_name] = [
                     None for _ in feature.shape]
 
-        elif np.issubdtype(type(feature), np.float):
+        elif np.issubdtype(type(feature), np.floating):
 
             type_dict[feature_name] = tf.float32
             shape_dict[feature_name] = []
