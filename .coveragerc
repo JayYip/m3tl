@@ -1,0 +1,5 @@
+[run]
+source = 
+    bert_multittask_learning
+omit =
+    bert_multittask_learning/predefined_problems/*

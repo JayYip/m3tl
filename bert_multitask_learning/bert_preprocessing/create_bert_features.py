@@ -5,8 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..special_tokens import PREDICT
-from .bert_utils import (create_instances_from_document,
-                         create_masked_lm_predictions)
+from .bert_utils import (create_instances_from_document)
 
 from transformers import PreTrainedTokenizer
 
