@@ -5,7 +5,7 @@ import unittest
 import bert_multitask_learning
 from bert_multitask_learning.predefined_problems import (
     get_weibo_cws_fn, get_weibo_fake_cls_fn, get_weibo_fake_multi_cls_fn,
-    get_weibo_ner_fn, get_weibo_masklm)
+    get_weibo_fake_ner_fn, get_weibo_masklm)
 
 
 class TestBase(unittest.TestCase):
@@ -23,7 +23,7 @@ class TestBase(unittest.TestCase):
     def prepare_params(self):
 
         self.problem_type_dict = {
-            'weibo_ner': 'seq_tag',
+            'weibo_fake_ner': 'seq_tag',
             'weibo_cws': 'seq_tag',
             'weibo_fake_multi_cls': 'multi_cls',
             'weibo_fake_cls': 'cls',
@@ -31,7 +31,7 @@ class TestBase(unittest.TestCase):
         }
 
         self.processing_fn_dict = {
-            'weibo_ner': get_weibo_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
+            'weibo_fake_ner': get_weibo_fake_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_cws': get_weibo_cws_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_fake_cls': get_weibo_fake_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_fake_multi_cls': get_weibo_fake_multi_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),

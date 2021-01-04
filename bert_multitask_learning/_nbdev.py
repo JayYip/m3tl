@@ -43,7 +43,7 @@ index = {"BaseParams": "00_params.ipynb",
          "create_multimodal_bert_features": "04_create_bert_features.ipynb",
          "create_bert_features_generator": "04_create_bert_features.ipynb",
          "create_multimodal_bert_features_generator": "04_create_bert_features.ipynb",
-         "LOGGER": "04_create_bert_features.ipynb",
+         "LOGGER": "11_modeling.ipynb",
          "preprocessing_fn": "05_preproc_decorator.ipynb",
          "serialize_fn": "06_read_write_tfrecord.ipynb",
          "make_tfrecord": "06_read_write_tfrecord.ipynb",
@@ -84,6 +84,7 @@ index = {"BaseParams": "00_params.ipynb",
          "get_weibo_fake_ner_fn": "10_predefined_problems_test.ipynb",
          "get_weibo_fake_multi_cls_fn": "10_predefined_problems_test.ipynb",
          "get_weibo_masklm": "10_predefined_problems_test.ipynb",
+         "MultiModalBertModel": "11_modeling.ipynb",
          "TestBase": "99_test_base.ipynb"}
 
 modules = ["params.py",
@@ -97,6 +98,7 @@ modules = ["params.py",
            "predefined_problems/cws_data.py",
            "predefined_problems/ner_data.py",
            "predefined_problems/test_data.py",
+           "modeling.py",
            "test_base.py"]
 
 doc_url = "https://JayYip.github.io/bert_multitask_learning/"

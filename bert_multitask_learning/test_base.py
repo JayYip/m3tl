@@ -9,9 +9,8 @@ import tempfile
 
 from .predefined_problems import (
     get_weibo_cws_fn, get_weibo_fake_cls_fn, get_weibo_fake_multi_cls_fn,
-    get_weibo_ner_fn, get_weibo_masklm)
+    get_weibo_fake_ner_fn, get_weibo_masklm)
 from .params import BaseParams
-
 
 class TestBase():
     def __init__(self):
@@ -29,7 +28,7 @@ class TestBase():
     def prepare_params(self):
 
         self.problem_type_dict = {
-            'weibo_ner': 'seq_tag',
+            'weibo_fake_ner': 'seq_tag',
             'weibo_cws': 'seq_tag',
             'weibo_fake_multi_cls': 'multi_cls',
             'weibo_fake_cls': 'cls',
@@ -37,13 +36,12 @@ class TestBase():
         }
 
         self.processing_fn_dict = {
-            'weibo_ner': get_weibo_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
+            'weibo_fake_ner': get_weibo_fake_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_cws': get_weibo_cws_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_fake_cls': get_weibo_fake_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_fake_multi_cls': get_weibo_fake_multi_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
             'weibo_masklm': get_weibo_masklm(file_path='/data/bert-multitask-learning/data/ner/weiboNER*')
         }
-
         self.params = BaseParams()
         self.params.tmp_file_dir = self.tmpfiledir
         self.params.ckpt_dir = self.tmpckptdir
