@@ -3,6 +3,7 @@ import os
 import pickle
 import re
 from typing import Union
+from inspect import getmembers
 
 import numpy as np
 import tensorflow as tf
@@ -265,9 +266,9 @@ def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=
         if type(feature) is list:
             feature = np.array(feature)
         if type(feature) is np.ndarray:
-            if issubclass(feature.dtype.type, np.integer):
+            if np.issubdtype(feature.dtype, np.integer):
                 type_dict[feature_name] = tf.int32
-            elif issubclass(feature.dtype.type, np.float):
+            elif np.issubdtype(feature.dtype, np.floating):
                 type_dict[feature_name] = tf.float32
 
             # this seems not a good idea
@@ -278,7 +279,7 @@ def infer_shape_and_type_from_dict(inp_dict: dict, fix_dim_for_high_rank_tensor=
                 shape_dict[feature_name] = [
                     None for _ in feature.shape]
 
-        elif np.issubdtype(type(feature), np.float):
+        elif np.issubdtype(type(feature), np.floating):
 
             type_dict[feature_name] = tf.float32
             shape_dict[feature_name] = []
@@ -367,9 +368,9 @@ def get_transformer_main_model(model, key='embeddings'):
         model
     """
 
-    model_attr_name_list = model.__dict__.keys()
-    for attr_name in model_attr_name_list:
-        attr = getattr(model, attr_name)
+    for attr_name, attr in getmembers(model):
+        if attr_name == key:
+            return model
         if hasattr(attr, key):
             return attr
 
@@ -379,9 +380,40 @@ def get_embedding_table_from_model(model):
     return base_model.embeddings.word_embeddings
 
 
+def get_shape_list(tensor, expected_rank=None, name=None):
+    """Returns a list of the shape of tensor, preferring static dimensions.
+
+    Args:
+      tensor: A tf.Tensor object to find the shape of.
+      expected_rank: (optional) int. The expected rank of `tensor`. If this is
+        specified and the `tensor` has a different rank, and exception will be
+        thrown.
+      name: Optional name of the tensor for the error message.
+
+    Returns:
+      A list of dimensions of the shape of tensor. All static dimensions will
+      be returned as python integers, and dynamic dimensions will be returned
+      as tf.Tensor scalars.
+    """
+    shape = tensor.shape.as_list()
+
+    non_static_indexes = []
+    for (index, dim) in enumerate(shape):
+        if dim is None:
+            non_static_indexes.append(index)
+
+    if not non_static_indexes:
+        return shape
+
+    dyn_shape = tf.shape(input=tensor)
+    for index in non_static_indexes:
+        shape[index] = dyn_shape[index]
+    return shape
+
+
 def gather_indexes(sequence_tensor, positions):
     """Gathers the vectors at the specific positions over a minibatch."""
-    sequence_shape = modeling.get_shape_list(sequence_tensor, expected_rank=3)
+    sequence_shape = get_shape_list(sequence_tensor, expected_rank=3)
     batch_size = sequence_shape[0]
     seq_length = sequence_shape[1]
     width = sequence_shape[2]

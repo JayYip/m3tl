@@ -5,8 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from ..special_tokens import PREDICT
-from .bert_utils import (create_instances_from_document,
-                         create_masked_lm_predictions)
+from .bert_utils import (create_instances_from_document)
 
 from transformers import PreTrainedTokenizer
 
@@ -92,6 +91,7 @@ def _create_bert_features(problem,
                           mode,
                           problem_type,
                           is_seq):
+    is_mask_lm = problem_type == 'masklm'
 
     for example_id, example in enumerate(example_list):
         if mode != tf.estimator.ModeKeys.PREDICT:
@@ -115,15 +115,23 @@ def _create_bert_features(problem,
         else:
             is_split_into_words = False
 
-        tokenized_dict = tokenizer(
-            tokens_a, tokens_b,
-            truncation=True,
-            max_length=params.max_seq_len,
-            is_split_into_words=is_split_into_words,
-            padding=False,
-            return_special_tokens_mask=is_seq,
-            add_special_tokens=True,
-            return_overflowing_tokens=True)
+        if is_mask_lm:
+            tokenized_dict, mlm_feature_dict = mask_inputs_for_mask_lm(
+                tokens_a, tokenizer, mask_prob=params.masked_lm_prob,
+                max_length=params.max_seq_len, max_predictions_per_seq=params.max_predictions_per_seq)
+            if tokenized_dict is None:
+                # hacky approach to continue outer loop
+                continue
+        else:
+            tokenized_dict = tokenizer(
+                tokens_a, tokens_b,
+                truncation=True,
+                max_length=params.max_seq_len,
+                is_split_into_words=is_split_into_words,
+                padding=False,
+                return_special_tokens_mask=is_seq,
+                add_special_tokens=True,
+                return_overflowing_tokens=True)
 
         # check whether tokenization changed the length
         if is_seq:
@@ -134,7 +142,7 @@ def _create_bert_features(problem,
                 raise ValueError(
                     'Length is different for seq tag problem, inputs: {}'.format(tokenizer.decode(tokenized_dict['input_ids'])))
 
-        if mode != PREDICT:
+        if mode != PREDICT and not is_mask_lm:
 
             custom_label_handling_fn = params.label_handling_fn.get(
                 problem_type, None)
@@ -145,21 +153,18 @@ def _create_bert_features(problem,
         input_ids = tokenized_dict['input_ids']
         segment_ids = tokenized_dict['token_type_ids']
         input_mask = tokenized_dict['attention_mask']
-
+        return_dict = {
+            'input_ids': input_ids,
+            'input_mask': input_mask,
+            'segment_ids': segment_ids
+        }
         # create return dict
         if mode != PREDICT:
-            return_dict = {
-                'input_ids': input_ids,
-                'input_mask': input_mask,
-                'segment_ids': segment_ids,
-                '%s_label_ids' % problem: label_id
-            }
-        else:
-            return_dict = {
-                'input_ids': input_ids,
-                'input_mask': input_mask,
-                'segment_ids': segment_ids
-            }
+            if is_mask_lm:
+                return_dict.update(mlm_feature_dict)
+            else:
+                return_dict['%s_label_ids' % problem] = label_id
+
         if problem_type in ['seq2seq_tag', 'seq2seq_text']:
             return_dict['%s_mask' % problem] = label_mask
 

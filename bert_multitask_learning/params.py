@@ -68,6 +68,7 @@ class BaseParams():
         self.get_or_make_label_encoder_fn_dict: Dict[str, Callable] = {}
         self.label_handling_fn: Dict[str, Callable] = {}
         self.top_layer = {}
+        self.num_classes = {}
         # self.multitask_balance_type = 'problem_balanced'
 
         # logging control
@@ -103,6 +104,7 @@ class BaseParams():
         self.multi_cls_threshold = 0.5
         self.multi_cls_positive_weight = 1.0
         self.custom_pooled_hidden_size = 0
+        self.share_embedding = True
 
         # seq2seq
         self.decoder_num_hidden_layers = 3

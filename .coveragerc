@@ -1,0 +1,7 @@
+[run]
+omit =
+    */predefined_problems/*
+
+[report]
+omit =
+    */predefined_problems/*
