@@ -359,8 +359,8 @@ class MultiLabelClassification(tf.keras.Model):
             self.add_loss(loss)
             labels = create_dummy_if_empty(labels)
             logits = create_dummy_if_empty(logits)
-            f1 = self.metric_fn(labels, logits)
-            self.add_metric(f1)
+            # f1 = self.metric_fn(labels, logits)
+            # self.add_metric(f1)
 
         return tf.nn.sigmoid(
             logits, name='%s_predict' % self.problem_name)
