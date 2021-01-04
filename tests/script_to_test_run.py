@@ -24,7 +24,7 @@ params.dynamic_padding = False
 params.shuffle_buffer = 1000
 
 # problem = 'city_cws|weibo_ner&weibo_cws'
-problem = 'weibo_ner&weibo_fake_cls|weibo_fake_multi_cls|weibo_masklm'
+problem = 'weibo_fake_ner&weibo_fake_cls|weibo_fake_multi_cls|weibo_masklm'
 # problem = 'weibo_ner|weibo_fake_cls'
 num_gpus = 1
 num_epochs = 1
@@ -47,7 +47,7 @@ params.tmp_file_dir = tmptmpdir
 params.ckpt_dir = tmpckptdir
 
 problem_type_dict = {
-    'weibo_ner': 'seq_tag',
+    'weibo_fake_ner': 'seq_tag',
     'weibo_cws': 'seq_tag',
     'weibo_fake_multi_cls': 'multi_cls',
     'weibo_fake_cls': 'cls',
@@ -55,7 +55,7 @@ problem_type_dict = {
 }
 
 processing_fn_dict = {
-    'weibo_ner': get_weibo_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
+    'weibo_fake_ner': get_weibo_fake_ner_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
     'weibo_cws': get_weibo_cws_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
     'weibo_fake_cls': get_weibo_fake_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
     'weibo_fake_multi_cls': get_weibo_fake_multi_cls_fn(file_path='/data/bert-multitask-learning/data/ner/weiboNER*'),
@@ -98,7 +98,7 @@ params.transformer_model_name = 'voidful/albert_chinese_tiny'
 params.transformer_config_name = 'voidful/albert_chinese_tiny'
 params.transformer_tokenizer_name = 'voidful/albert_chinese_tiny'
 pred, model = predict_bert_multitask(
-    problem='weibo_ner',
+    problem='weibo_fake_ner',
     inputs=test_predict, model_dir=model_dir,
     problem_type_dict=problem_type_dict,
     processing_fn_dict=processing_fn_dict, return_model=True,
