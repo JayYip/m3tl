@@ -95,6 +95,11 @@ index = {"BaseParams": "00_params.ipynb",
          "Seq2Seq": "12_top.ipynb",
          "MultiLabelClassification": "12_top.ipynb",
          "MaskLM": "12_top.ipynb",
+         "variable_summaries": "13_model_fn.ipynb",
+         "filter_loss": "13_model_fn.ipynb",
+         "BertMultiTaskBody": "13_model_fn.ipynb",
+         "BertMultiTaskTop": "13_model_fn.ipynb",
+         "BertMultiTask": "13_model_fn.ipynb",
          "TestBase": "99_test_base.ipynb"}
 
 modules = ["params.py",
@@ -110,6 +115,7 @@ modules = ["params.py",
            "predefined_problems/test_data.py",
            "modeling.py",
            "top.py",
+           "model_fn.py",
            "test_base.py"]
 
 doc_url = "https://JayYip.github.io/bert_multitask_learning/"
