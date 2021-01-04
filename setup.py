@@ -1,6 +1,15 @@
 
 import codecs
 from setuptools import setup, find_packages
+from pkg_resources import parse_version
+from configparser import ConfigParser
+import setuptools
+assert parse_version(setuptools.__version__) >= parse_version('36.2')
+
+# note: all settings are in settings.ini; edit there, not here
+config = ConfigParser(delimiters=['='])
+config.read('settings.ini')
+cfg = config['DEFAULT']
 
 with codecs.open('README.md', 'r', 'utf8') as reader:
     long_description = reader.read()
@@ -12,7 +21,7 @@ with codecs.open('requirements.txt', 'r', 'utf8') as reader:
 
 setup(
     name='bert_multitask_learning',
-    version='0.6.4',
+    version=cfg['version'],
     packages=find_packages(),
     url='https://github.com/JayYip/bert-multitask-learning',
     license='MIT',
