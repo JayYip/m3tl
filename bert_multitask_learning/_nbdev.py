@@ -85,6 +85,16 @@ index = {"BaseParams": "00_params.ipynb",
          "get_weibo_fake_multi_cls_fn": "10_predefined_problems_test.ipynb",
          "get_weibo_masklm": "10_predefined_problems_test.ipynb",
          "MultiModalBertModel": "11_modeling.ipynb",
+         "empty_tensor_handling_loss": "12_top.ipynb",
+         "nan_loss_handling": "12_top.ipynb",
+         "create_dummy_if_empty": "12_top.ipynb",
+         "BaseTop": "12_top.ipynb",
+         "SequenceLabel": "12_top.ipynb",
+         "Classification": "12_top.ipynb",
+         "PreTrain": "12_top.ipynb",
+         "Seq2Seq": "12_top.ipynb",
+         "MultiLabelClassification": "12_top.ipynb",
+         "MaskLM": "12_top.ipynb",
          "TestBase": "99_test_base.ipynb"}
 
 modules = ["params.py",
@@ -99,6 +109,7 @@ modules = ["params.py",
            "predefined_problems/ner_data.py",
            "predefined_problems/test_data.py",
            "modeling.py",
+           "top.py",
            "test_base.py"]
 
 doc_url = "https://JayYip.github.io/bert_multitask_learning/"
