@@ -32,7 +32,7 @@ class BaseParams():
         self.transformer_config_name = 'bert-base-chinese'
         self.transformer_model_loading = 'TFAutoModel'
         self.transformer_config_loading = 'AutoConfig'
-        self.transformer_tokenizer_loading = 'AutoTokenizer'
+        self.transformer_tokenizer_loading = 'BertTokenizer'
         self.transformer_decoder_model_name = None
         self.transformer_decoder_config_name = None
         self.transformer_decoder_tokenizer_name = None
@@ -634,6 +634,14 @@ class BaseParams():
                               top_layer: tf.keras.Model,
                               label_handling_fn: Callable = None,
                               get_or_make_label_encoder_fn: Callable = None):
+        """
+        API to register a new problem type
+        Args:
+            problem_type: string, problem type name
+            top_layer: a keras model with some specific reqirements
+            label_handling_fn: function to convert labels to label ids
+            get_or_make_label_encoder_fn: function to create label encoder, num_classes has to be specified here
+        """
         self.problem_type_list.append(problem_type)
         self.get_or_make_label_encoder_fn_dict[problem_type] = get_or_make_label_encoder_fn
         self.top_layer[problem_type] = top_layer

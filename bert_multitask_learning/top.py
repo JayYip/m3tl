@@ -328,11 +328,11 @@ class MultiLabelClassification(tf.keras.Model):
         self.dropout = tf.keras.layers.Dropout(
             1-self.params.dropout_keep_prob
         )
-        self.metric_fn = tfa.metrics.F1Score(
-            num_classes=self.params.num_classes[problem_name],
-            threshold=self.params.multi_cls_threshold,
-            average='macro',
-            name='{}_f1'.format(problem_name))
+        # self.metric_fn = tfa.metrics.F1Score(
+        #     num_classes=self.params.num_classes[problem_name],
+        #     threshold=self.params.multi_cls_threshold,
+        #     average='macro',
+        #     name='{}_f1'.format(problem_name))
 
     def call(self, inputs, mode):
         training = (mode == tf.estimator.ModeKeys.TRAIN)
