@@ -47,7 +47,8 @@ def create_keras_model(
     Returns:
         model: loaded model
     """
-    with mirrored_strategy.scope():
+
+    def _get_model_wrapper(params, mode, inputs_to_build_model, model):
         if model is None:
             model = BertMultiTask(params)
             # model.run_eagerly = True
@@ -85,6 +86,13 @@ def create_keras_model(
             model.compile()
         else:
             model.compile()
+
+        return model
+    if mirrored_strategy is not None:
+         with mirrored_strategy.scope():
+             model = _get_model_wrapper(params, mode, inputs_to_build_model, model)
+    else:
+        model = _get_model_wrapper(params, mode, inputs_to_build_model, model)
     return model
 
 
@@ -107,8 +115,16 @@ def _train_bert_multitask_keras_model(train_dataset: tf.data.Dataset,
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=params.ckpt_dir)
-
-    with mirrored_strategy.scope():
+    if mirrored_strategy is not None:
+        with mirrored_strategy.scope():
+            model.fit(
+                x=train_dataset,
+                validation_data=eval_dataset,
+                epochs=params.train_epoch,
+                callbacks=[model_checkpoint_callback, tensorboard_callback],
+                steps_per_epoch=params.train_steps_per_epoch
+            )
+    else:
         model.fit(
             x=train_dataset,
             validation_data=eval_dataset,
@@ -158,7 +174,8 @@ def train_bert_multitask(
         create_tf_record_only=False,
         steps_per_epoch=None,
         warmup_ratio=0.1,
-        continue_training=False):
+        continue_training=False,
+        mirrored_strategy=None):
     """Train Multi-task Bert model
 
     About problem:
@@ -217,9 +234,12 @@ def train_bert_multitask(
 
     one_batch = next(train_dataset.as_numpy_iterator())
 
-    mirrored_strategy = tf.distribute.MirroredStrategy()
+    if mirrored_strategy is None:
+        mirrored_strategy = tf.distribute.MirroredStrategy()
+    elif mirrored_strategy is False:
+        mirrored_strategy = None
 
-    if num_gpus > 1:
+    if num_gpus > 1 and mirrored_strategy is not None:
         train_dataset = mirrored_strategy.experimental_distribute_dataset(
             train_dataset)
         eval_dataset = mirrored_strategy.experimental_distribute_dataset(

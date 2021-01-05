@@ -186,12 +186,24 @@ class PreTrain(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.Tensor):
         super(PreTrain, self).__init__(name=problem_name)
         self.params = params
-        self.nsp = transformers.modeling_tf_bert.TFBertNSPHead(
+        self.nsp = transformers.models.bert.modeling_tf_bert.TFBertNSPHead(
             self.params.bert_config)
 
-        # TODO: add mlm back to pretrain
-        self.mlm = transformers.modeling_tf_bert.TFBertMLMHead(
-            self.params.bert_config, input_embeddings=input_embeddings)
+        word_embedding_weight = input_embeddings.word_embeddings
+        self.vocab_size = word_embedding_weight.shape[0]
+        share_valid = (self.params.bert_config.hidden_size ==
+                       self.params.bert_config.embedding_size)
+        if not share_valid and self.params.share_embedding:
+            logging.warning(
+                'Share embedding is enabled but hidden_size != embedding_size')
+        self.share_embedding = self.params.share_embedding & share_valid
+        if self.share_embedding:
+            self.share_embedding_layer = TFSharedEmbeddings(
+                vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
+            self.share_embedding_layer.build([1])
+            self.share_embedding_layer.weight = word_embedding_weight
+        else:
+            self.share_embedding_layer = tf.keras.layers.Dense(self.vocab_size)
 
     def call(self,
              inputs: Tuple[Dict[str, Dict[str, tf.Tensor]], Dict[str, Dict[str, tf.Tensor]]],
@@ -203,18 +215,26 @@ class PreTrain(tf.keras.Model):
 
         # masking is done inside the model
         seq_hidden_feature = hidden_features['seq']
-        positions = features['masked_lm_positions']
+        if mode != tf.estimator.ModeKeys.PREDICT:
+            positions = features['masked_lm_positions']
 
-        # gather_indexes will flatten the seq hidden_states, we need to reshape
-        # back to 3d tensor
-        input_tensor = gather_indexes(seq_hidden_feature, positions)
-        shape_tensor = tf.shape(positions)
-        shape_list = tf.concat([shape_tensor, [-1]], axis=0)
-        input_tensor = tf.reshape(input_tensor, shape=shape_list)
-        # set_shape to determin rank
-        input_tensor.set_shape(
-            [None, None, seq_hidden_feature.shape.as_list()[-1]])
-        mlm_logits = self.mlm(input_tensor)
+            # gather_indexes will flatten the seq hidden_states, we need to reshape
+            # back to 3d tensor
+            input_tensor = gather_indexes(seq_hidden_feature, positions)
+            shape_tensor = tf.shape(positions)
+            shape_list = tf.concat(
+                [shape_tensor, [seq_hidden_feature.shape.as_list()[-1]]], axis=0)
+            input_tensor = tf.reshape(input_tensor, shape=shape_list)
+            # set_shape to determin rank
+            input_tensor.set_shape(
+                [None, None, seq_hidden_feature.shape.as_list()[-1]])
+        else:
+            input_tensor = seq_hidden_feature
+        if self.share_embedding:
+            mlm_logits = self.share_embedding_layer(
+                input_tensor, mode='linear')
+        else:
+            mlm_logits = self.share_embedding_layer(input_tensor)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
             nsp_labels = tf.squeeze(
@@ -357,8 +377,8 @@ class MultiLabelClassification(tf.keras.Model):
                 labels, logits, _loss_fn_wrapper)
             loss = nan_loss_handling(loss)
             self.add_loss(loss)
-            labels = create_dummy_if_empty(labels)
-            logits = create_dummy_if_empty(logits)
+            # labels = create_dummy_if_empty(labels)
+            # logits = create_dummy_if_empty(logits)
             # f1 = self.metric_fn(labels, logits)
             # self.add_metric(f1)
 
@@ -403,7 +423,7 @@ class MaskLM(tf.keras.Model):
             # back to 3d tensor
             input_tensor = gather_indexes(seq_hidden_feature, positions)
             shape_tensor = tf.shape(positions)
-            shape_list = tf.concat([shape_tensor, [-1]], axis=0)
+            shape_list = tf.concat([shape_tensor, [seq_hidden_feature.shape.as_list()[-1]]], axis=0)
             input_tensor = tf.reshape(input_tensor, shape=shape_list)
             # set_shape to determin rank
             input_tensor.set_shape(
