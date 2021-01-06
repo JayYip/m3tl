@@ -230,7 +230,7 @@ def train_bert_multitask(
             train_steps += 1
     params.update_train_steps(train_steps, warmup_ratio=warmup_ratio)
 
-    train_dataset = train_dataset.repeat(params.train_epoch)
+    train_dataset = train_dataset.repeat(10)
 
     one_batch = next(train_dataset.as_numpy_iterator())
 
@@ -239,7 +239,7 @@ def train_bert_multitask(
     elif mirrored_strategy is False:
         mirrored_strategy = None
 
-    if num_gpus > 1 and mirrored_strategy is not None:
+    if num_gpus > 1 and mirrored_strategy is not False:
         train_dataset = mirrored_strategy.experimental_distribute_dataset(
             train_dataset)
         eval_dataset = mirrored_strategy.experimental_distribute_dataset(
