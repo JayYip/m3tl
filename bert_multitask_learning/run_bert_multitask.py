@@ -273,7 +273,8 @@ def trim_checkpoint_for_prediction(problem: str,
                                    output_dir: str,
                                    problem_type_dict: Dict[str, str] = None,
                                    overwrite=True,
-                                   fake_input_list=None):
+                                   fake_input_list=None,
+                                   params=None):
     """Minimize checkpoint size for prediction.
 
     Since the original checkpoint contains optimizer's variable,
@@ -296,7 +297,8 @@ def trim_checkpoint_for_prediction(problem: str,
     copytree(input_dir, output_dir, ignore=ignore_patterns(
         'checkpoint', '*.index', '*.data-000*'))
     base_dir, dir_name = os.path.split(output_dir)
-    params = DynamicBatchSizeParams()
+    if params is None:
+        params = DynamicBatchSizeParams()
     params.add_multiple_problems(problem_type_dict=problem_type_dict)
     params.from_json(os.path.join(input_dir, 'params.json'))
     params.assign_problem(problem, base_dir=base_dir,
