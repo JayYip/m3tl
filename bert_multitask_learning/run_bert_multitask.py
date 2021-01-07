@@ -230,6 +230,7 @@ def train_bert_multitask(
             train_steps += 1
     params.update_train_steps(train_steps, warmup_ratio=warmup_ratio)
 
+    train_dataset = train_eval_input_fn(params)
     train_dataset = train_dataset.repeat(10)
 
     one_batch = next(train_dataset.as_numpy_iterator())

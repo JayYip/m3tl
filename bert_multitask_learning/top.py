@@ -386,6 +386,9 @@ class MultiLabelClassification(tf.keras.Model):
             logits, name='%s_predict' % self.problem_name)
 
 
+
+
+# Cell
 class MaskLM(tf.keras.Model):
     """Multimodal MLM top layer.
     """
@@ -397,8 +400,9 @@ class MaskLM(tf.keras.Model):
 
         word_embedding_weight = input_embeddings.word_embeddings
         self.vocab_size = word_embedding_weight.shape[0]
+        embedding_size = word_embedding_weight.shape[-1]
         share_valid = (self.params.bert_config.hidden_size ==
-                       self.params.bert_config.embedding_size)
+                       embedding_size)
         if not share_valid and self.params.share_embedding:
             logging.warning(
                 'Share embedding is enabled but hidden_size != embedding_size')
