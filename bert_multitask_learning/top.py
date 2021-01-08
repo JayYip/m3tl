@@ -66,6 +66,7 @@ class BaseTop(tf.keras.Model):
         raise NotImplementedError
 
 
+# Cell
 class SequenceLabel(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str):
         super(SequenceLabel, self).__init__(name=problem_name)
@@ -140,6 +141,8 @@ class SequenceLabel(tf.keras.Model):
             logits, name='%s_predict' % self.problem_name)
 
 
+# Cell
+
 class Classification(tf.keras.layers.Layer):
     def __init__(self, params: BaseParams, problem_name: str) -> None:
         super(Classification, self).__init__(name=problem_name)
@@ -164,7 +167,7 @@ class Classification(tf.keras.layers.Layer):
         logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
-            labels = tf.squeeze(labels)
+            # labels = tf.squeeze(labels)
             # convert labels to one-hot to use label_smoothing
             one_hot_labels = tf.one_hot(
                 labels, depth=self.params.num_classes[self.problem_name])
@@ -182,21 +185,29 @@ class Classification(tf.keras.layers.Layer):
             logits, name='%s_predict' % self.problem_name)
 
 
+# Cell
+
 class PreTrain(tf.keras.Model):
-    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.Tensor):
+    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.Tensor=None, share_embedding=True):
         super(PreTrain, self).__init__(name=problem_name)
         self.params = params
         self.nsp = transformers.models.bert.modeling_tf_bert.TFBertNSPHead(
             self.params.bert_config)
 
-        word_embedding_weight = input_embeddings.word_embeddings
-        self.vocab_size = word_embedding_weight.shape[0]
-        share_valid = (self.params.bert_config.hidden_size ==
-                       self.params.bert_config.embedding_size)
-        if not share_valid and self.params.share_embedding:
-            logging.warning(
-                'Share embedding is enabled but hidden_size != embedding_size')
-        self.share_embedding = self.params.share_embedding & share_valid
+        if share_embedding is False:
+            self.vocab_size = self.params.bert_config.vocab_size
+            self.share_embedding = False
+        else:
+            word_embedding_weight = input_embeddings.word_embeddings
+            self.vocab_size = word_embedding_weight.shape[0]
+            embedding_size = word_embedding_weight.shape[-1]
+            share_valid = (self.params.bert_config.hidden_size ==
+                        embedding_size)
+            if not share_valid and self.params.share_embedding:
+                logging.warning(
+                    'Share embedding is enabled but hidden_size != embedding_size')
+            self.share_embedding = self.params.share_embedding & share_valid
+
         if self.share_embedding:
             self.share_embedding_layer = TFSharedEmbeddings(
                 vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
@@ -237,8 +248,7 @@ class PreTrain(tf.keras.Model):
             mlm_logits = self.share_embedding_layer(input_tensor)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
-            nsp_labels = tf.squeeze(
-                features['next_sentence_label_ids'])
+            nsp_labels = features['next_sentence_label_ids']
             mlm_labels = features['masked_lm_ids']
             mlm_labels.set_shape([None, None])
             # compute loss
@@ -262,6 +272,8 @@ class PreTrain(tf.keras.Model):
 
         return (tf.sigmoid(nsp_logits), tf.nn.softmax(mlm_logits))
 
+
+# Cell
 
 class Seq2Seq(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer):
@@ -338,6 +350,8 @@ class Seq2Seq(tf.keras.Model):
             return logits
 
 
+# Cell
+
 class MultiLabelClassification(tf.keras.Model):
     def __init__(self, params: BaseParams, problem_name: str) -> None:
         super(MultiLabelClassification, self).__init__(name=problem_name)
@@ -366,7 +380,6 @@ class MultiLabelClassification(tf.keras.Model):
         logits = self.dense(hidden_feature)
 
         if mode != tf.estimator.ModeKeys.PREDICT:
-            labels = tf.squeeze(labels)
             labels = tf.cast(labels, tf.float32)
             # use weighted loss
             label_weights = self.params.multi_cls_positive_weight
@@ -393,23 +406,28 @@ class MaskLM(tf.keras.Model):
     """Multimodal MLM top layer.
     """
 
-    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer) -> None:
+    def __init__(self, params: BaseParams, problem_name: str, input_embeddings: tf.keras.layers.Layer=None, share_embedding=True) -> None:
         super(MaskLM, self).__init__(name=problem_name)
         self.params = params
         self.problem_name = problem_name
 
-        word_embedding_weight = input_embeddings.word_embeddings
-        self.vocab_size = word_embedding_weight.shape[0]
-        embedding_size = word_embedding_weight.shape[-1]
-        share_valid = (self.params.bert_config.hidden_size ==
-                       embedding_size)
-        if not share_valid and self.params.share_embedding:
-            logging.warning(
-                'Share embedding is enabled but hidden_size != embedding_size')
-        self.share_embedding = self.params.share_embedding & share_valid
+        if share_embedding is False:
+            self.vocab_size = self.params.bert_config.vocab_size
+            self.share_embedding = False
+        else:
+            word_embedding_weight = input_embeddings.word_embeddings
+            self.vocab_size = word_embedding_weight.shape[0]
+            embedding_size = word_embedding_weight.shape[-1]
+            share_valid = (self.params.bert_config.hidden_size ==
+                        embedding_size)
+            if not share_valid and self.params.share_embedding:
+                logging.warning(
+                    'Share embedding is enabled but hidden_size != embedding_size')
+            self.share_embedding = self.params.share_embedding & share_valid
+
         if self.share_embedding:
             self.share_embedding_layer = TFSharedEmbeddings(
-                vocab_size=word_embedding_weight.shape[0], hidden_size=word_embedding_weight.shape[1])
+                vocab_size=self.vocab_size, hidden_size=word_embedding_weight.shape[1])
             self.share_embedding_layer.build([1])
             self.share_embedding_layer.weight = word_embedding_weight
         else:
