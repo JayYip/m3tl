@@ -170,18 +170,6 @@ class BaseParams():
         self.problem_assigned = False
 
     def add_problem(self, problem_name: str, problem_type='cls', processing_fn: Callable = None):
-        """Add problems.
-
-        Args:
-            problem_name (str): problem name.
-            problem_type (str, optional): One of the following problem types:
-                ['cls', 'seq_tag', 'seq2seq_tag', 'seq2seq_text', 'multi_cls', 'pretrain'].
-                Defaults to 'cls'.
-            processing_fn (Callable, optional): preprocessing function. Defaults to None.
-
-        Raises:
-            ValueError: unexpected problem_type
-        """
 
         if problem_type not in self.problem_type_list:
             raise ValueError('Provided problem type not valid, expect {0}, got {1}'.format(
@@ -192,13 +180,6 @@ class BaseParams():
         self.read_data_fn[problem_name] = processing_fn
 
     def add_multiple_problems(self, problem_type_dict: Dict[str, str], processing_fn_dict: Dict[str, Callable] = None):
-        """add multiple problems.
-        processing_fn_dict is optional, if it's not provided, processing fn will be set as None.
-
-        Args:
-            problem_type_dict (Dict[str, str]): problem type dict
-            processing_fn_dict (Dict[str, Callable], optional): problem type fn. Defaults to None.
-        """
         # add new problem to params if problem_type_dict and processing_fn_dict provided
         for new_problem, problem_type in problem_type_dict.items():
             print('Adding new problem {0}, problem type: {1}'.format(
@@ -216,26 +197,6 @@ class BaseParams():
                        base_dir: str = None,
                        dir_name: str = None,
                        predicting=False):
-        """Assign the actual run problem to param. This function will
-        do the following things:
-
-        1. parse the flag string to form the run_problem_list
-        2. create checkpoint saving path
-        3. calculate total number of training data and training steps
-        4. scale learning rate with the number of gpu linearly
-
-        Arguments:
-            flag_string {str} -- run problem string
-            example: cws|POS|weibo_ner&weibo_cws
-
-        Keyword Arguments:
-            gpu {int} -- number of gpu use for training, this
-                will affect the training steps and learning rate (default: {2})
-            base_dir {str} -- base dir for ckpt, if None,
-                then "models" is assigned (default: {None})
-            dir_name {str} -- dir name for ckpt, if None,
-                will be created automatically (default: {None})
-        """
         self.assigned_details = (
             flag_string, gpu, base_dir, dir_name, predicting)
         self.problem_assigned = True
@@ -634,14 +595,6 @@ class BaseParams():
                               top_layer: tf.keras.Model,
                               label_handling_fn: Callable = None,
                               get_or_make_label_encoder_fn: Callable = None):
-        """
-        API to register a new problem type
-        Args:
-            problem_type: string, problem type name
-            top_layer: a keras model with some specific reqirements
-            label_handling_fn: function to convert labels to label ids
-            get_or_make_label_encoder_fn: function to create label encoder, num_classes has to be specified here
-        """
         self.problem_type_list.append(problem_type)
         self.get_or_make_label_encoder_fn_dict[problem_type] = get_or_make_label_encoder_fn
         self.top_layer[problem_type] = top_layer

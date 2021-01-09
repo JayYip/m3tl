@@ -1,7 +1,8 @@
-![python](https://img.shields.io/badge/python%20-3.6.0-brightgreen.svg) [![tensorflow](https://img.shields.io/badge/tensorflow-1.13.1-green.svg)](https://www.tensorflow.org/) [![PyPI version fury.io](https://badge.fury.io/py/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/) [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/)
-
-
 # Bert for Multi-task Learning
+
+
+
+[python](https://img.shields.io/badge/python%20-3.6.0-brightgreen.svg) [![tensorflow](https://img.shields.io/badge/tensorflow-1.13.1-green.svg)](https://www.tensorflow.org/) [![PyPI version fury.io](https://badge.fury.io/py/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/) [![PyPI license](https://img.shields.io/pypi/l/ansicolortags.svg)](https://pypi.python.org/pypi/bert-multitask-learning/)
 
 [中文文档](#Bert多任务学习)
 
@@ -15,7 +16,7 @@ pip install bert-multitask-learning
 
 ## What is it
 
-This a project that uses [BERT](https://github.com/google-research/bert) to do **multi-task learning** with multiple GPU support.
+This a project that uses transformers(based on huggingface transformers) to do **multi-modal multi-task learning**.
 
 ## Why do I need this
 
@@ -23,7 +24,7 @@ In the original BERT code, neither multi-task learning or multiple GPU training 
 
 To sum up, compared to the original bert repo, this repo has the following features:
 
-1. Multi-task learning(major reason of re-writing the majority of code).
+1. Multimodal multi-task learning(major reason of re-writing the majority of code).
 2. Multiple GPU training
 3. Support sequence labeling (for example, NER) and Encoder-Decoder Seq2Seq(with transformer decoder).
 
@@ -32,9 +33,8 @@ To sum up, compared to the original bert repo, this repo has the following featu
 - Masked LM and next sentence prediction Pre-train(pretrain)
 - Classification(cls)
 - Sequence Labeling(seq_tag)
-- Seq2seq Labeling(seq2seq_tag)
-- Seq2seq Text Generation(seq2seq_text)
 - Multi-Label Classification(multi_cls)
+- Multi-modal Mask LM(mask_lm)
 
 ## How to run pre-defined problems
 
@@ -60,7 +60,7 @@ pip install bert-multitask-learning
 
 ## 这是什么
 
-这是利用[BERT](https://github.com/google-research/bert)进行**多任务学习**并且支持多GPU训练的项目.
+这是利用transformer(基于huggingface transformers)进行**多模态多任务学习**的项目.
 
 ## 我为什么需要这个项目
 
@@ -77,18 +77,10 @@ pip install bert-multitask-learning
 - Masked LM和next sentence prediction预训练(pretrain)
 - 单标签分类(cls)
 - 序列标注(seq_tag)
-- 序列到序列标签标注(seq2seq_tag)
-- 序列到序列文本生成(seq2seq_text)
 - 多标签分类(multi_cls)
+- 多模态Mask LM(mask_lm)
 
 ## 如何运行预定义任务
-
-### 目前支持的任务
-
-- 中文命名实体识别
-- 中文分词
-- 中文词性标注
-
 
 可以用两种方法来将多个任务连接起来.
 

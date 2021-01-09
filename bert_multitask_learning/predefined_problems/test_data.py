@@ -100,7 +100,7 @@ def get_weibo_fake_multi_cls_fn(file_path):
         target_list = []
         for _ in inputs_list:
             target_list.append(
-                list(string.ascii_lowercase[:random.randint(0, 3)]))
+                list(string.ascii_lowercase[:3]))
 
         return inputs_list[:20], target_list[:20]
     return weibo_fake_multi_cls
