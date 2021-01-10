@@ -10,6 +10,9 @@ entries:
       title: Overview
       url: /
     - output: web,pdf
+      title: Tutorial
+      url: tutorial.html
+    - output: web,pdf
       title: Params
       url: params.html
     - output: web,pdf
@@ -51,10 +54,7 @@ entries:
     - output: web,pdf
       title: Test Base
       url: test_base.html
-    - output: web,pdf
-      title: Tutorial
-      url: tutorial.html
     output: web
-    title: bert_multitask_learning
+    title: bert-multitask-learning
   output: web
   title: Sidebar
