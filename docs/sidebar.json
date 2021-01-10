@@ -1,5 +1,5 @@
 {
-  "bert_multitask_learning": {
+  "bert-multitask-learning": {
     "Overview": "/",
     "Params": "params.html",
     "Utils": "utils.html",
