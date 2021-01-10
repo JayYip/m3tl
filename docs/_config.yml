@@ -1,7 +1,7 @@
-repository: JayYip/bert_multitask_learning
+repository: JayYip/bert-multitask-learning
 output: web
-topnav_title: bert_multitask_learning
-site_title: bert_multitask_learning
+topnav_title: bert-multitask-learning
+site_title: bert-multitask-learning
 company_name: jayyip
 description: BERT for Multi-task Learning
 # Set to false to disable KaTeX math
@@ -60,4 +60,4 @@ sidebars:
 - home_sidebar
 
 theme: jekyll-theme-cayman
-baseurl: /bert_multitask_learning/
+baseurl: /bert-multitask-learning/

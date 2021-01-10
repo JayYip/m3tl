@@ -107,7 +107,7 @@ nb_path: "source_nbs/07_input_fn.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="train_eval_input_fn" class="doc_header"><code>train_eval_input_fn</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/input_fn.py#L26" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>train_eval_input_fn</code>(<strong><code>params</code></strong>:<a href="/bert_multitask_learning/params.html#BaseParams"><code>BaseParams</code></a>, <strong><code>mode</code></strong>=<em><code>'train'</code></em>)</p>
+<h4 id="train_eval_input_fn" class="doc_header"><code>train_eval_input_fn</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/input_fn.py#L26" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>train_eval_input_fn</code>(<strong><code>params</code></strong>:<code>BaseParams</code>, <strong><code>mode</code></strong>=<em><code>'train'</code></em>)</p>
 </blockquote>
 <p>This function will write and read tf record for training
 and evaluation.</p>
@@ -374,7 +374,7 @@ INFO:tensorflow:weibo_masklm: 0.25
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="predict_input_fn" class="doc_header"><code>predict_input_fn</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/input_fn.py#L86" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>predict_input_fn</code>(<strong><code>input_file_or_list</code></strong>:<code>Union</code>[<code>str</code>, <code>List</code>[<code>str</code>]], <strong><code>params</code></strong>:<a href="/bert_multitask_learning/params.html#BaseParams"><code>BaseParams</code></a>, <strong><code>mode</code></strong>=<em><code>'infer'</code></em>, <strong><code>labels_in_input</code></strong>=<em><code>False</code></em>)</p>
+<h4 id="predict_input_fn" class="doc_header"><code>predict_input_fn</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/input_fn.py#L86" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>predict_input_fn</code>(<strong><code>input_file_or_list</code></strong>:<code>Union</code>[<code>str</code>, <code>List</code>[<code>str</code>]], <strong><code>params</code></strong>:<code>BaseParams</code>, <strong><code>mode</code></strong>=<em><code>'infer'</code></em>, <strong><code>labels_in_input</code></strong>=<em><code>False</code></em>)</p>
 </blockquote>
 <p>Input function that takes a file path or list of string and
 convert it to tf.dataset</p>
