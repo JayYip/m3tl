@@ -128,8 +128,8 @@ modules = ["params.py",
            "run_bert_multitask.py",
            "test_base.py"]
 
-doc_url = "https://JayYip.github.io/bert_multitask_learning/"
+doc_url = "https://JayYip.github.io/bert-multitask-learning/"
 
-git_url = "https://github.com/JayYip/bert_multitask_learning/tree/master/"
+git_url = "https://github.com/JayYip/bert-multitask-learning/tree/master/"
 
 def custom_doc_links(name): return None

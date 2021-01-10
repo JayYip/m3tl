@@ -58,7 +58,7 @@ nb_path: "source_nbs/03_bert_utils.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="truncate_seq_pair" class="doc_header"><code>truncate_seq_pair</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L45" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>truncate_seq_pair</code>(<strong><code>tokens_a</code></strong>, <strong><code>tokens_b</code></strong>, <strong><code>target</code></strong>, <strong><code>max_length</code></strong>, <strong><code>rng</code></strong>=<em><code>None</code></em>, <strong><code>is_seq</code></strong>=<em><code>False</code></em>)</p>
+<h4 id="truncate_seq_pair" class="doc_header"><code>truncate_seq_pair</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L45" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>truncate_seq_pair</code>(<strong><code>tokens_a</code></strong>, <strong><code>tokens_b</code></strong>, <strong><code>target</code></strong>, <strong><code>max_length</code></strong>, <strong><code>rng</code></strong>=<em><code>None</code></em>, <strong><code>is_seq</code></strong>=<em><code>False</code></em>)</p>
 </blockquote>
 
 </div>
@@ -82,7 +82,7 @@ nb_path: "source_nbs/03_bert_utils.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="punc_augument" class="doc_header"><code>punc_augument</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L58" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>punc_augument</code>(<strong><code>raw_inputs</code></strong>, <strong><code>params</code></strong>)</p>
+<h4 id="punc_augument" class="doc_header"><code>punc_augument</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L58" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>punc_augument</code>(<strong><code>raw_inputs</code></strong>, <strong><code>params</code></strong>)</p>
 </blockquote>
 <p>This code is dedicated in memory of a special time.</p>
 
@@ -107,9 +107,9 @@ nb_path: "source_nbs/03_bert_utils.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_instances_from_document" class="doc_header"><code>create_instances_from_document</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L71" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_instances_from_document</code>(<strong><code>all_documents</code></strong>, <strong><code>document_index</code></strong>, <strong><code>max_seq_length</code></strong>, <strong><code>short_seq_prob</code></strong>, <strong><code>masked_lm_prob</code></strong>, <strong><code>max_predictions_per_seq</code></strong>, <strong><code>vocab_words</code></strong>, <strong><code>rng</code></strong>)</p>
+<h4 id="create_instances_from_document" class="doc_header"><code>create_instances_from_document</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L71" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_instances_from_document</code>(<strong><code>all_documents</code></strong>, <strong><code>document_index</code></strong>, <strong><code>max_seq_length</code></strong>, <strong><code>short_seq_prob</code></strong>, <strong><code>masked_lm_prob</code></strong>, <strong><code>max_predictions_per_seq</code></strong>, <strong><code>vocab_words</code></strong>, <strong><code>rng</code></strong>)</p>
 </blockquote>
-<p>Creates <code>TrainingInstance</code>s for a single document.</p>
+<p>Creates <a href="/bert-multitask-learning/bert_utils.html#TrainingInstance"><code>TrainingInstance</code></a>s for a single document.</p>
 
 </div>
 
@@ -132,7 +132,7 @@ nb_path: "source_nbs/03_bert_utils.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_masked_lm_predictions" class="doc_header"><code>create_masked_lm_predictions</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L200" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_masked_lm_predictions</code>(<strong><code>tokens</code></strong>, <strong><code>masked_lm_prob</code></strong>, <strong><code>max_predictions_per_seq</code></strong>, <strong><code>vocab_words</code></strong>, <strong><code>rng</code></strong>)</p>
+<h4 id="create_masked_lm_predictions" class="doc_header"><code>create_masked_lm_predictions</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/bert_utils.py#L200" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_masked_lm_predictions</code>(<strong><code>tokens</code></strong>, <strong><code>masked_lm_prob</code></strong>, <strong><code>max_predictions_per_seq</code></strong>, <strong><code>vocab_words</code></strong>, <strong><code>rng</code></strong>)</p>
 </blockquote>
 <p>Creates the predictions for the masked LM objective.</p>
 

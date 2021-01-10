@@ -93,7 +93,7 @@ nb_path: "source_nbs/13_model_fn.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="variable_summaries" class="doc_header"><code>variable_summaries</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/model_fn.py#L18" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>variable_summaries</code>(<strong><code>var</code></strong>, <strong><code>name</code></strong>)</p>
+<h4 id="variable_summaries" class="doc_header"><code>variable_summaries</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L18" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>variable_summaries</code>(<strong><code>var</code></strong>, <strong><code>name</code></strong>)</p>
 </blockquote>
 <p>Attach a lot of summaries to a Tensor (for TensorBoard visualization).</p>
 
@@ -118,7 +118,7 @@ nb_path: "source_nbs/13_model_fn.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="filter_loss" class="doc_header"><code>filter_loss</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/model_fn.py#L32" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>filter_loss</code>(<strong><code>loss</code></strong>, <strong><code>features</code></strong>, <strong><code>problem</code></strong>)</p>
+<h4 id="filter_loss" class="doc_header"><code>filter_loss</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L32" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>filter_loss</code>(<strong><code>loss</code></strong>, <strong><code>features</code></strong>, <strong><code>problem</code></strong>)</p>
 </blockquote>
 
 </div>
@@ -142,7 +142,7 @@ nb_path: "source_nbs/13_model_fn.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="BertMultiTaskBody" class="doc_header"><code>class</code> <code>BertMultiTaskBody</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/model_fn.py#L43" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskBody</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="BertMultiTaskBody" class="doc_header"><code>class</code> <code>BertMultiTaskBody</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L43" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskBody</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p>Model to extract bert features and dispatch corresponding rows to each problem_chunk.</p>
 <p>for each problem chunk, we extract corresponding features
@@ -248,7 +248,7 @@ WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="BertMultiTaskTop" class="doc_header"><code>class</code> <code>BertMultiTaskTop</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/model_fn.py#L174" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskTop</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="BertMultiTaskTop" class="doc_header"><code>class</code> <code>BertMultiTaskTop</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L174" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskTop</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p>Model to create top layer, aka classification layer, for each problem.</p>
 
@@ -334,7 +334,7 @@ WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="BertMultiTask" class="doc_header"><code>class</code> <code>BertMultiTask</code><a href="https://github.com/JayYip/bert_multitask_learning/tree/master/bert_multitask_learning/model_fn.py#L256" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTask</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="BertMultiTask" class="doc_header"><code>class</code> <code>BertMultiTask</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L256" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTask</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p><code>Model</code> groups layers into an object with training and inference features.</p>
 <p>Arguments:
