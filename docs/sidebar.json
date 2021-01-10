@@ -1,10 +1,20 @@
 {
-  "Notebook": {
-    "Export to modules": "/export",
-    "Convert to html": "/export2html",
-    "Show doc": "/showdoc",
-    "Test functions": "/test",
-    "Core functions": "/core",
-    "Command line functions": "/cli"
+  "bert_multitask_learning": {
+    "Overview": "/",
+    "Params": "params.html",
+    "Utils": "utils.html",
+    "Special Tokens": "special_tokens.html",
+    "Bert Utils": "bert_utils.html",
+    "Create Bert Features": "create_bert_features.html",
+    "Preprocessing Decorator": "preproc_decorator.html",
+    "Read and Write TFRecord": "read_write_tfrecord.html",
+    "Function to Create Datasets": "input_fn.html",
+    "Pre-defined Problems": "predefined_problems_test.html",
+    "Body Modeling": "modeling.html",
+    "Top Models": "top.html",
+    "Multitask Learning Model": "model_fn.html",
+    "Run Bert Multitask Learning": "run_bert_multitask.html",
+    "Test Base": "test_base.html",
+    "Tutorial": "tutorial.html"
   }
 }

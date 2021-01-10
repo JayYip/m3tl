@@ -7,24 +7,54 @@ entries:
 - folders:
   - folderitems:
     - output: web,pdf
-      title: Export to modules
-      url: /export.html
+      title: Overview
+      url: /
     - output: web,pdf
-      title: Convert to html
-      url: /export2html.html
+      title: Params
+      url: params.html
     - output: web,pdf
-      title: Show doc
-      url: /showdoc.html
+      title: Utils
+      url: utils.html
     - output: web,pdf
-      title: Test functions
-      url: /test.html
+      title: Special Tokens
+      url: special_tokens.html
     - output: web,pdf
-      title: Core functions
-      url: /core.html
+      title: Bert Utils
+      url: bert_utils.html
     - output: web,pdf
-      title: Command line functions
-      url: /cli.html
+      title: Create Bert Features
+      url: create_bert_features.html
+    - output: web,pdf
+      title: Preprocessing Decorator
+      url: preproc_decorator.html
+    - output: web,pdf
+      title: Read and Write TFRecord
+      url: read_write_tfrecord.html
+    - output: web,pdf
+      title: Function to Create Datasets
+      url: input_fn.html
+    - output: web,pdf
+      title: Pre-defined Problems
+      url: predefined_problems_test.html
+    - output: web,pdf
+      title: Body Modeling
+      url: modeling.html
+    - output: web,pdf
+      title: Top Models
+      url: top.html
+    - output: web,pdf
+      title: Multitask Learning Model
+      url: model_fn.html
+    - output: web,pdf
+      title: Run Bert Multitask Learning
+      url: run_bert_multitask.html
+    - output: web,pdf
+      title: Test Base
+      url: test_base.html
+    - output: web,pdf
+      title: Tutorial
+      url: tutorial.html
     output: web
-    title: Notebook
+    title: bert_multitask_learning
   output: web
   title: Sidebar
