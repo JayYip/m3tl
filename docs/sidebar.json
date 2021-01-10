@@ -1,6 +1,7 @@
 {
   "bert-multitask-learning": {
     "Overview": "/",
+    "Tutorial": "tutorial.html",
     "Params": "params.html",
     "Utils": "utils.html",
     "Special Tokens": "special_tokens.html",
@@ -14,7 +15,6 @@
     "Top Models": "top.html",
     "Multitask Learning Model": "model_fn.html",
     "Run Bert Multitask Learning": "run_bert_multitask.html",
-    "Test Base": "test_base.html",
-    "Tutorial": "tutorial.html"
+    "Test Base": "test_base.html"
   }
 }
