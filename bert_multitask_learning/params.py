@@ -30,8 +30,8 @@ class BaseParams():
         self.transformer_model_name = 'bert-base-chinese'
         self.transformer_tokenizer_name = 'bert-base-chinese'
         self.transformer_config_name = 'bert-base-chinese'
-        self.transformer_model_loading = 'TFAutoModel'
-        self.transformer_config_loading = 'AutoConfig'
+        self.transformer_model_loading = 'TFBertModel'
+        self.transformer_config_loading = 'BertConfig'
         self.transformer_tokenizer_loading = 'BertTokenizer'
         self.transformer_decoder_model_name = None
         self.transformer_decoder_config_name = None

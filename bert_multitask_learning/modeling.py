@@ -152,7 +152,11 @@ class MultiModalBertModel(tf.keras.Model):
             return_dict=True
         )
         self.sequence_output = outputs.last_hidden_state
-        self.pooled_output = outputs.pooler_output
+        if 'pooler_output' in outputs:
+            self.pooled_output = outputs.pooler_output
+        else:
+            # no pooled output, use mean of token embedding
+            self.pooled_output = tf.reduce_mean(outputs.last_hidden_state, axis=1)
         self.all_encoder_layers = tf.stack(outputs.hidden_states, axis=1)
         return outputs
 

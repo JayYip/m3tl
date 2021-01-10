@@ -212,9 +212,10 @@ def train_bert_multitask(
         problem_type_dict {dict} -- Key: problem name, value: problem type (default: {{}})
         processing_fn_dict {dict} -- Key: problem name, value: problem data preprocessing fn (default: {{}})
     """
-    params.train_epoch = num_epochs
+
     params = get_params_ready(problem, num_gpus, model_dir,
                               params, problem_type_dict, processing_fn_dict)
+    params.train_epoch = num_epochs
 
     train_dataset = train_eval_input_fn(params)
     eval_dataset = train_eval_input_fn(params, mode=EVAL)

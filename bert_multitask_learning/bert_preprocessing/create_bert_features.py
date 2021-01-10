@@ -17,7 +17,6 @@ from transformers import PreTrainedTokenizer
 
 LOGGER = tf.get_logger()
 
-
 def seq_tag_label_handling(tokenized_dict, target, pad_token):
     special_token_mask = tokenized_dict['special_tokens_mask']
     del tokenized_dict['special_tokens_mask']
@@ -116,11 +115,6 @@ def _create_bert_features(problem,
 
         target = raw_target
 
-        if isinstance(tokens_a, list):
-            is_split_into_words = True
-        else:
-            is_split_into_words = False
-
         if is_mask_lm:
             tokenized_dict, mlm_feature_dict = mask_inputs_for_mask_lm(
                 tokens_a, tokenizer, mask_prob=params.masked_lm_prob,
@@ -129,11 +123,11 @@ def _create_bert_features(problem,
                 # hacky approach to continue outer loop
                 continue
         else:
-            tokenized_dict = tokenizer(
+            tokenized_dict = tokenizer.encode_plus(
                 tokens_a, tokens_b,
                 truncation=True,
                 max_length=params.max_seq_len,
-                is_split_into_words=is_split_into_words,
+                is_split_into_words=False,
                 padding=False,
                 return_special_tokens_mask=is_seq,
                 add_special_tokens=True,
@@ -425,11 +419,11 @@ def _create_multimodal_bert_features(problem,
                             is_split_into_words = True
                         else:
                             is_split_into_words = False
-                        tokenized_dict = tokenizer(
+                        tokenized_dict = tokenizer.encode_plus(
                             tokens_a, tokens_b,
                             truncation=True,
                             max_length=params.max_seq_len,
-                            is_split_into_words=is_split_into_words,
+                            is_split_into_words=False,
                             padding=False,
                             return_special_tokens_mask=is_seq,
                             add_special_tokens=True,
