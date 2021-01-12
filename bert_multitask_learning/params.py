@@ -277,12 +277,6 @@ class BaseParams():
             self.assign_problem(*assign_details)
 
     def get_data_info(self, problem_list: List[str], base: str):
-        '''Get number of data, number of classes of data and eos_id of data.
-
-        Arguments:
-            problem_list {list} -- problem list
-            base {str} -- path to store data_info.json
-        '''
 
         json_path = os.path.join(base, 'data_info.json')
         if os.path.exists(json_path):
@@ -322,20 +316,6 @@ class BaseParams():
         return json_path
 
     def parse_problem_string(self, flag_string: str) -> Tuple[List[str], List[List[str]]]:
-        '''Parse problem string
-        Example:
-            cws|POS|weibo_ner&weibo_cws
-
-            self.run_problem_list = [{cws:seq_tag}, {POS:seq_tag}, {weibo_ner:seq_tag, weibo_cws:seq_tag}]
-            problem_list = [cws, POS, weibo_ner, weibo_cws]
-            problem_chunk = [[cws], [POS], [weibo_ner, weibo_cws]]
-
-        Arguments:
-            flag_string {str} -- problem string
-
-        Returns:
-            list -- problem list
-        '''
 
         self.problem_str = flag_string
         # Parse problem string
@@ -545,23 +525,6 @@ class BaseParams():
     def set_data_sampling_strategy(self,
                                    sampling_strategy='data_balanced',
                                    sampling_strategy_fn: Callable = None) -> Dict[str, float]:
-        """Set data sampling strategy for multi-task learning.
-
-        'data_balanced' and 'problem_balanced' is implemented by default.
-        data_balanced: sampling weight equals to number of rows of that problem chunk.
-        problem_balanced: sampling weight equals to 1 for every problem chunk.
-
-        Args:
-            sampling_strategy (str, optional): sampling strategy. Defaults to 'data_balanced'.
-            sampling_strategy_fn (Callable, optional): function to create weight dict. Defaults to None.
-
-        Raises:
-            NotImplementedError: sampling_strategy_fn is not implemented yet
-            ValueError: invalid sampling_strategy provided
-
-        Returns:
-            Dict[str, float]: sampling weight for each problem_chunk
-        """
         if sampling_strategy_fn:
             logging.info(
                 'sampling_strategy_fn is provided, sampling_strategy arg will be ignored.')

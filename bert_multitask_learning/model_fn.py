@@ -69,7 +69,7 @@ class BertMultiTaskBody(tf.keras.Model):
         else:
             self.custom_pooled_layer = None
 
-    @tf.function
+    # @tf.function
     def get_features_for_problem(self, features, hidden_feature, problem, mode):
         # get features with ind == 1
         if mode == tf.estimator.ModeKeys.PREDICT:
@@ -78,8 +78,10 @@ class BertMultiTaskBody(tf.keras.Model):
         else:
             multiplier_name = '%s_loss_multiplier' % problem
 
-            record_ind = tf.where(tf.cast(
-                tf.squeeze(features[multiplier_name]), tf.bool))
+            # record_ind = tf.where(tf.cast(
+            #     tf.squeeze(features[multiplier_name]), tf.bool))
+
+            record_ind = tf.where(tf.cast(features[multiplier_name], tf.bool))
 
             hidden_feature_this_round = {}
             for hidden_feature_name in hidden_feature:
@@ -88,7 +90,7 @@ class BertMultiTaskBody(tf.keras.Model):
                         hidden_feature[hidden_feature_name], record_ind, axis=0
                     ), axis=1)
                     hidden_feature_this_round[hidden_feature_name].set_shape(
-                        hidden_feature[hidden_feature_name].shape.as_list())
+                        [None, *hidden_feature[hidden_feature_name].shape.as_list()[1:]])
                 else:
                     hidden_feature_this_round[hidden_feature_name] = hidden_feature[hidden_feature_name]
 
