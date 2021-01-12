@@ -198,11 +198,24 @@ Output:
 
 <div class="output_subarea output_stream output_stderr output_text">
 <pre>404 Client Error: Not Found for url: https://huggingface.co/voidful/albert_chinese_tiny/resolve/main/tf_model.h5
-Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFAlbertModel: [&#39;predictions.LayerNorm.weight&#39;, &#39;predictions.bias&#39;, &#39;predictions.decoder.bias&#39;, &#39;predictions.decoder.weight&#39;, &#39;predictions.dense.bias&#39;, &#39;predictions.LayerNorm.bias&#39;, &#39;predictions.dense.weight&#39;]
+Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFAlbertModel: [&#39;predictions.bias&#39;, &#39;predictions.dense.bias&#39;, &#39;predictions.LayerNorm.weight&#39;, &#39;predictions.decoder.weight&#39;, &#39;predictions.decoder.bias&#39;, &#39;predictions.dense.weight&#39;, &#39;predictions.LayerNorm.bias&#39;]
 - This IS expected if you are initializing TFAlbertModel from a PyTorch model trained on another task or with another architecture (e.g. initializing a TFBertForSequenceClassification model from a BertForPreTraining model).
 - This IS NOT expected if you are initializing TFAlbertModel from a PyTorch model that you expect to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model).
 All the weights of TFAlbertModel were initialized from the PyTorch model.
 If your task is similar to the task the model of the checkpoint was trained on, you can already use TFAlbertModel for predictions without further training.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:From /data/anaconda3/lib/python3.8/inspect.py:350: Model.state_updates (from tensorflow.python.keras.engine.training) is deprecated and will be removed in a future version.
+Instructions for updating:
+This property should not be used in TensorFlow 2.0, as updates are applied automatically.
+WARNING:tensorflow:From /data/anaconda3/lib/python3.8/inspect.py:350: Layer.updates (from tensorflow.python.keras.engine.base_layer) is deprecated and will be removed in a future version.
+Instructions for updating:
+This property should not be used in TensorFlow 2.0, as updates are applied automatically.
 WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal_type is not set to be True.
 </pre>
 </div>
@@ -248,7 +261,7 @@ WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="BertMultiTaskTop" class="doc_header"><code>class</code> <code>BertMultiTaskTop</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L174" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskTop</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="BertMultiTaskTop" class="doc_header"><code>class</code> <code>BertMultiTaskTop</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L176" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTaskTop</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p>Model to create top layer, aka classification layer, for each problem.</p>
 
@@ -334,7 +347,7 @@ WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="BertMultiTask" class="doc_header"><code>class</code> <code>BertMultiTask</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L256" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTask</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="BertMultiTask" class="doc_header"><code>class</code> <code>BertMultiTask</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/model_fn.py#L258" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>BertMultiTask</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p><code>Model</code> groups layers into an object with training and inference features.</p>
 <p>Arguments:
@@ -438,19 +451,22 @@ to do prediction with <code>model.predict()</code>.</p>
 
 <div class="output_subarea output_stream output_stderr output_text">
 <pre>404 Client Error: Not Found for url: https://huggingface.co/voidful/albert_chinese_tiny/resolve/main/tf_model.h5
-Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFAlbertModel: [&#39;predictions.LayerNorm.weight&#39;, &#39;predictions.bias&#39;, &#39;predictions.decoder.bias&#39;, &#39;predictions.decoder.weight&#39;, &#39;predictions.dense.bias&#39;, &#39;predictions.LayerNorm.bias&#39;, &#39;predictions.dense.weight&#39;]
+Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFAlbertModel: [&#39;predictions.bias&#39;, &#39;predictions.dense.bias&#39;, &#39;predictions.LayerNorm.weight&#39;, &#39;predictions.decoder.weight&#39;, &#39;predictions.decoder.bias&#39;, &#39;predictions.dense.weight&#39;, &#39;predictions.LayerNorm.bias&#39;]
 - This IS expected if you are initializing TFAlbertModel from a PyTorch model trained on another task or with another architecture (e.g. initializing a TFBertForSequenceClassification model from a BertForPreTraining model).
 - This IS NOT expected if you are initializing TFAlbertModel from a PyTorch model that you expect to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model).
 All the weights of TFAlbertModel were initialized from the PyTorch model.
 If your task is similar to the task the model of the checkpoint was trained on, you can already use TFAlbertModel for predictions without further training.
 WARNING:root:Share embedding is enabled but hidden_size != embedding_size
-WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal_type is not set to be True.
-WARNING:tensorflow:9 out of the last 9 calls to &lt;function BertMultiTaskBody.get_features_for_problem at 0x7fea9cd45dc0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:10 out of the last 10 calls to &lt;function BertMultiTaskBody.get_features_for_problem at 0x7fea9cd45dc0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:11 out of the last 11 calls to &lt;function BertMultiTaskBody.get_features_for_problem at 0x7fea9cd45dc0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:11 out of the last 11 calls to &lt;function BertMultiTaskBody.get_features_for_problem at 0x7fea9cd45dc0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:7 out of the last 10 calls to &lt;function empty_tensor_handling_loss at 0x7feaf0e65af0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
-WARNING:tensorflow:8 out of the last 11 calls to &lt;function empty_tensor_handling_loss at 0x7feaf0e65af0&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:Seems there&#39;s a multimodal inputs but params.enable_modal_type is not set to be True.
+WARNING:tensorflow:5 out of the last 6 calls to &lt;function empty_tensor_handling_loss at 0x7f2f95857940&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 7 calls to &lt;function empty_tensor_handling_loss at 0x7f2f95857940&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has experimental_relax_shapes=True option that relaxes argument shapes that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/tutorials/customization/performance#python_or_tensor_args and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
 </pre>
 </div>
 </div>
