@@ -1,4 +1,4 @@
-__version__ = "0.6.10"
+__version__ = "0.7.0"
 from .read_write_tfrecord import *
 from .input_fn import *
 from .model_fn import *
