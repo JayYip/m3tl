@@ -32,19 +32,60 @@ nb_path: "source_nbs/tutorial.ipynb"
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h2 id="Minimal-Example">Minimal Example<a class="anchor-link" href="#Minimal-Example"> </a></h2><p>In this example, we'll create train, eval and predict toy problems. But first, we need to what dose problem mean here. Essentially, a problem should have <strong>a name(string), a problem type(string), and a preprocessing function(callable)</strong>. The following problem type is pre-defined:</p>
-<ul>
-<li><code>cls</code>: classification</li>
-<li><code>seq_tag</code>: sequence labeling</li>
-<li><code>multi_cls</code>: multi-label classification</li>
-<li><code>mask_lm</code>: masked language model</li>
-<li><code>pretrain</code>: masked lm + next sentence prediction</li>
-</ul>
+
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">problem_type</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">list_available_problem_types</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;`</span><span class="si">{problem_type}</span><span class="s1">`: </span><span class="si">{desc}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">desc</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">problem_type_desc</span><span class="p">[</span><span class="n">problem_type</span><span class="p">],</span> <span class="n">problem_type</span><span class="o">=</span><span class="n">problem_type</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>`cls`: Classification
+`multi_cls`: Multi-Label Classification
+`seq_tag`: Sequence Labeling
+`masklm`: Masked Language Model
+`pretrain`: NSP+MLM(Deprecated)
+`regression`: Regression
+`vector_fit`: Vector Fitting
+`premask_mlm`: Pre-masked Masked Language Model
+`contrastive_learning`: Contrastive Learning
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <p>Normally, you would want to use this library to do multi-task learning. There are two types of chaining operations can be used to chain problems.</p>
 <ul>
 <li><code>&amp;</code>. If two problems have the same inputs, they can be chained using <code>&amp;</code>. Problems chained by <code>&amp;</code> will be trained at the same time.</li>
-<li><code>|</code>. If two problems don't have the same inputs, they need to be chained using <code>|</code>. Problems chained by <code>|</code> will be sampled to train at every instance.</li>
+<li><code>|</code>. If two problems don't have the same inputs, they need to be chained using <code>|</code>. Problems chained by <code>|</code> will be sampled to train at every instance.
+{% include note.html content='chaining problems with <code>&amp;</code> works better with pyspark pre-processing and providing <code>inputs_record_id</code> key. For more information, please refer to <a href="#Write-More-Flexible-Preprocessing-Function">Write More Flexible Preprocessing Function</a>.' %}
+If your problem dose not fall in the pre-defined problem types, you can implement your own and register to params. We will cover this topic later. Let's start with a simple example of adding a classification problem and a sequence labeling problem.</li>
 </ul>
-<p>If your problem dose not fall in the pre-defined problem types, you can implement your own and register to params. We will cover this topic later. Let's start with a simple example of adding a classification problem and a sequence labeling problem.</p>
 
 </div>
 </div>
@@ -73,7 +114,7 @@ nb_path: "source_nbs/tutorial.ipynb"
 <li>same name as problem name</li>
 <li>fixed input signature </li>
 <li>returns(or yield) inputs and targets</li>
-<li>decorated by <code>bert_multitask_learning.preproc_decorator.preprocessing_fn</code></li>
+<li>decorated by <code>m3tl.preproc_decorator.preprocessing_fn</code></li>
 </ul>
 
 </div>
@@ -86,13 +127,14 @@ nb_path: "source_nbs/tutorial.ipynb"
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">bert_multitask_learning</span>
-<span class="kn">from</span> <span class="nn">bert_multitask_learning.preproc_decorator</span> <span class="kn">import</span> <span class="n">preprocessing_fn</span>
-<span class="kn">from</span> <span class="nn">bert_multitask_learning.params</span> <span class="kn">import</span> <span class="n">BaseParams</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">m3tl</span>
+<span class="kn">from</span> <span class="nn">m3tl.preproc_decorator</span> <span class="kn">import</span> <span class="n">preprocessing_fn</span>
+<span class="kn">from</span> <span class="nn">m3tl.params</span> <span class="kn">import</span> <span class="n">Params</span>
+<span class="kn">from</span> <span class="nn">m3tl.special_tokens</span> <span class="kn">import</span> <span class="n">TRAIN</span>
 <span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="s2">&quot;Simple example to demonstrate singe modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">TRAIN</span><span class="p">:</span>
         <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
         <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
     <span class="k">else</span><span class="p">:</span>
@@ -101,9 +143,9 @@ nb_path: "source_nbs/tutorial.ipynb"
     <span class="k">return</span> <span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span>
 
 <span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_seq_tag</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">toy_seq_tag</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
     <span class="s2">&quot;Simple example to demonstrate singe modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">TRAIN</span><span class="p">:</span>
         <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
         <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;d&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
     <span class="k">else</span><span class="p">:</span>
@@ -135,7 +177,7 @@ nb_path: "source_nbs/tutorial.ipynb"
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">bert_multitask_learning</span> <span class="kn">import</span> <span class="n">train_bert_multitask</span><span class="p">,</span> <span class="n">eval_bert_multitask</span><span class="p">,</span> <span class="n">predict_bert_multitask</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.run_bert_multitask</span> <span class="kn">import</span> <span class="n">train_bert_multitask</span><span class="p">,</span> <span class="n">eval_bert_multitask</span><span class="p">,</span> <span class="n">predict_bert_multitask</span>
 <span class="n">problem</span> <span class="o">=</span> <span class="s1">&#39;toy_cls&amp;toy_seq_tag&#39;</span>
 <span class="c1"># train</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">train_bert_multitask</span><span class="p">(</span>
@@ -143,7 +185,7 @@ nb_path: "source_nbs/tutorial.ipynb"
     <span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">problem_type_dict</span><span class="o">=</span><span class="n">problem_type_dict</span><span class="p">,</span>
     <span class="n">processing_fn_dict</span><span class="o">=</span><span class="n">processing_fn_dict</span><span class="p">,</span>
-    <span class="n">continue_training</span><span class="o">=</span><span class="kc">True</span>
+    <span class="n">continue_training</span><span class="o">=</span><span class="kc">False</span>
 <span class="p">)</span>
 </pre></div>
 
@@ -160,67 +202,123 @@ nb_path: "source_nbs/tutorial.ipynb"
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stderr output_text">
-<pre>WARNING:root:bert_config not exists. will load model from huggingface checkpoint.
-Adding new problem toy_cls, problem type: cls
-Adding new problem toy_seq_tag, problem type: seq_tag
-INFO:tensorflow:sampling weights: 
-INFO:tensorflow:toy_cls_toy_seq_tag: 1.0
-INFO:tensorflow:sampling weights: 
-INFO:tensorflow:toy_cls_toy_seq_tag: 1.0
-INFO:tensorflow:sampling weights: 
-INFO:tensorflow:toy_cls_toy_seq_tag: 1.0
-WARNING:tensorflow:There are non-GPU devices in `tf.distribute.Strategy`, not using nccl allreduce.
+<pre>2021-06-24 16:07:25.768 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_cls, problem type: cls
+2021-06-24 16:07:25.769 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_seq_tag, problem type: seq_tag
+2021-06-24 16:07:25.770 | WARNING  | m3tl.base_params:prepare_dir:363 - bert_config not exists. will load model from huggingface checkpoint.
+2021-06-24 16:07:27.851 | WARNING  | m3tl.read_write_tfrecord:chain_processed_data:258 - Chaining problems with &amp; may consume a lot of memory if data is not pyspark RDD.
+2021-06-24 16:07:27.853 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: this is a test
+2021-06-24 16:07:27.854 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:07:27.854 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:07:27.855 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:07:27.855 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:07:27.856 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - toy_cls_label_ids: 0
+2021-06-24 16:07:27.862 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:07:27.862 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:07:27.863 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:07:27.863 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:07:27.863 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:07:27.864 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - toy_seq_tag_label_ids: [0, 1, 2, 3, 4, 0]
+2021-06-24 16:07:27.867 | DEBUG    | m3tl.read_write_tfrecord:_write_fn:135 - Writing tmp/toy_cls_toy_seq_tag/train_00000.tfrecord
+2021-06-24 16:07:27.898 | WARNING  | m3tl.read_write_tfrecord:chain_processed_data:258 - Chaining problems with &amp; may consume a lot of memory if data is not pyspark RDD.
+2021-06-24 16:07:27.899 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: this is a test
+2021-06-24 16:07:27.900 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:07:27.900 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:07:27.901 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:07:27.901 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:07:27.901 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - toy_cls_label_ids: 0
+2021-06-24 16:07:27.905 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:07:27.906 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:07:27.906 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:07:27.907 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:07:27.907 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:07:27.907 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - toy_seq_tag_label_ids: [0, 1, 2, 3, 4, 0]
+2021-06-24 16:07:27.910 | DEBUG    | m3tl.read_write_tfrecord:_write_fn:135 - Writing tmp/toy_cls_toy_seq_tag/eval_00000.tfrecord
+2021-06-24 16:07:28.601 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:07:28.602 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+2021-06-24 16:07:28.750 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:07:28.751 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+2021-06-24 16:07:28.943 | CRITICAL | m3tl.base_params:update_train_steps:456 - Updating train_steps to 1
+2021-06-24 16:07:29.062 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:07:29.063 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:There are non-GPU devices in `tf.distribute.Strategy`, not using nccl allreduce.
 INFO:tensorflow:Using MirroredStrategy with devices (&#39;/job:localhost/replica:0/task:0/device:CPU:0&#39;,)
-Some layers from the model checkpoint at bert-base-chinese were not used when initializing TFBertModel: [&#39;mlm___cls&#39;, &#39;nsp___cls&#39;]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Some layers from the model checkpoint at bert-base-chinese were not used when initializing TFBertModel: [&#39;mlm___cls&#39;, &#39;nsp___cls&#39;]
 - This IS expected if you are initializing TFBertModel from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
 - This IS NOT expected if you are initializing TFBertModel from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
 All the layers of TFBertModel were initialized from the model checkpoint at bert-base-chinese.
 If your task is similar to the task the model of the checkpoint was trained on, you can already use TFBertModel for predictions without further training.
-WARNING:tensorflow:From /data/anaconda3/lib/python3.8/inspect.py:350: Model.state_updates (from tensorflow.python.keras.engine.training) is deprecated and will be removed in a future version.
-Instructions for updating:
-This property should not be used in TensorFlow 2.0, as updates are applied automatically.
-WARNING:tensorflow:From /data/anaconda3/lib/python3.8/inspect.py:350: Layer.updates (from tensorflow.python.keras.engine.base_layer) is deprecated and will be removed in a future version.
-Instructions for updating:
-This property should not be used in TensorFlow 2.0, as updates are applied automatically.
-INFO:tensorflow:Initial lr: 2e-05
-INFO:tensorflow:Train steps: 1
-INFO:tensorflow:Warmup steps: 0
-WARNING:tensorflow:From /data/anaconda3/lib/python3.8/site-packages/tensorflow/python/data/ops/multi_device_iterator_ops.py:601: get_next_as_optional (from tensorflow.python.data.ops.iterator_ops) is deprecated and will be removed in a future version.
-Instructions for updating:
-Use `tf.data.Iterator.get_next_as_optional()` instead.
-WARNING:tensorflow:AutoGraph could not transform &lt;bound method Socket.send of &lt;zmq.sugar.socket.Socket object at 0x7f071c6a6940&gt;&gt; and will run it as-is.
-Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
-Cause: module, class, method, function, traceback, frame, or code object was expected, got cython_function_or_method
-To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
-WARNING: AutoGraph could not transform &lt;bound method Socket.send of &lt;zmq.sugar.socket.Socket object at 0x7f071c6a6940&gt;&gt; and will run it as-is.
-Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
-Cause: module, class, method, function, traceback, frame, or code object was expected, got cython_function_or_method
-To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+2021-06-24 16:07:33.091 | CRITICAL | m3tl.embedding_layer.base:__init__:58 - Modal Type id mapping: 
+ {
+    &#34;text&#34;: 0
+}
+2021-06-24 16:07:33.278 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+2021-06-24 16:07:33.289 | CRITICAL | m3tl.model_fn:compile:271 - Initial lr: 0.0
+2021-06-24 16:07:33.290 | CRITICAL | m3tl.model_fn:compile:272 - Train steps: 1
+2021-06-24 16:07:33.290 | CRITICAL | m3tl.model_fn:compile:273 - Warmup steps: 0
+2021-06-24 16:07:33.496 | INFO     | m3tl.utils:set_phase:478 - Setting phase to train
 The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
 The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+2021-06-24 16:07:50.903 | INFO     | m3tl.utils:set_phase:478 - Setting phase to train
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>1/1 [==============================] - ETA: 0s - mean_acc: 0.9431 - toy_cls_acc: 0.6000 - toy_seq_tag_acc: 0.0857 - BertMultiTaskTop/toy_cls/losses/0: 0.7577 - BertMultiTaskTop/toy_seq_tag/losses/0: 2.3291</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:04.196 | INFO     | m3tl.utils:set_phase:478 - Setting phase to eval
 The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
 The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
-The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
-The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
-The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
-The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
-1/1 [==============================] - ETA: 0s - mean_acc: 0.3000 - toy_cls_acc: 0.3000 - toy_seq_tag_acc: 0.3000 - toy_cls_loss: 0.8341 - toy_seq_tag_loss: 2.0840The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
-The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
-The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
-The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
-1/1 [==============================] - 7s 7s/step - mean_acc: 0.3000 - toy_cls_acc: 0.3000 - toy_seq_tag_acc: 0.3000 - toy_cls_loss: 0.8341 - toy_seq_tag_loss: 2.0840 - val_loss: 2.7318 - val_mean_acc: 0.3833 - val_toy_cls_acc: 0.6000 - val_toy_seq_tag_acc: 0.1667
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:Your input ran out of data; interrupting training. Make sure that your dataset or generator can generate at least `steps_per_epoch * epochs` batches (in this case, 1000 batches). You may need to use the repeat() function when building your dataset.
+1/1 [==============================] - 39s 39s/step - mean_acc: 0.9431 - toy_cls_acc: 0.6000 - toy_seq_tag_acc: 0.0857 - BertMultiTaskTop/toy_cls/losses/0: 0.7577 - BertMultiTaskTop/toy_seq_tag/losses/0: 2.3291 - val_loss: 3.1377 - val_mean_acc: 0.3000 - val_toy_cls_acc: 0.6000 - val_toy_seq_tag_acc: 0.0000e+00 - val_BertMultiTaskTop/toy_cls/losses/0: 0.6794 - val_BertMultiTaskTop/toy_seq_tag/losses/0: 2.4584
 Model: &#34;BertMultiTask&#34;
 _________________________________________________________________
 Layer (type)                 Output Shape              Param #   
 =================================================================
-BertMultiTaskBody (BertMulti multiple                  102267648 
+BertMultiTaskBody (BertMulti multiple                  102268416 
+_________________________________________________________________
+basic_mtl (BasicMTL)         multiple                  0         
 _________________________________________________________________
 BertMultiTaskTop (BertMultiT multiple                  5387      
 _________________________________________________________________
-mean_acc (Mean)              multiple                  2         
+sum_loss_combination (SumLos multiple                  0         
 =================================================================
-Total params: 102,273,037
-Trainable params: 102,273,031
+Total params: 102,273,805
+Trainable params: 102,273,799
 Non-trainable params: 6
 _________________________________________________________________
 </pre>
@@ -236,14 +334,14 @@ _________________________________________________________________
 
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>For eval, we can need to provide <code>model_dir</code> or <code>model</code> to the function.</p>
+<p>For eval, we need to provide <code>model_dir</code> or <code>model</code> to the function. Please note that the unresolved object warning raised by tensorflow is expected since optimizer's states will not be initialized in evaluation and prediction.</p>
 
 </div>
 </div>
 </div>
     {% raw %}
     
-<div class="cell border-box-sizing code_cell rendered celltag_outputPrepend">
+<div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 
 <div class="inner_cell">
@@ -257,7 +355,90 @@ _________________________________________________________________
     </div>
 </div>
 </div>
+<details class="description">
+      <summary data-open="Hide Output" data-close="Show Output"></summary>
+        <summary></summary>
+        
+<div class="output_wrapper">
+<div class="output">
 
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:13.640 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_cls, problem type: cls
+2021-06-24 16:08:13.641 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_seq_tag, problem type: seq_tag
+2021-06-24 16:08:13.782 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:08:13.782 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+2021-06-24 16:08:14.095 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:08:14.096 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:There are non-GPU devices in `tf.distribute.Strategy`, not using nccl allreduce.
+INFO:tensorflow:Using MirroredStrategy with devices (&#39;/job:localhost/replica:0/task:0/device:CPU:0&#39;,)
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:15.113 | CRITICAL | m3tl.embedding_layer.base:__init__:58 - Modal Type id mapping: 
+ {
+    &#34;text&#34;: 0
+}
+2021-06-24 16:08:15.189 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+2021-06-24 16:08:17.691 | CRITICAL | m3tl.model_fn:compile:271 - Initial lr: 0.0
+2021-06-24 16:08:17.692 | CRITICAL | m3tl.model_fn:compile:272 - Train steps: 1
+2021-06-24 16:08:17.693 | CRITICAL | m3tl.model_fn:compile:273 - Warmup steps: 0
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:Unresolved object in checkpoint: (root).optimizer.iter
+WARNING:tensorflow:Unresolved object in checkpoint: (root).optimizer.beta_1
+WARNING:tensorflow:Unresolved object in checkpoint: (root).optimizer.beta_2
+WARNING:tensorflow:Unresolved object in checkpoint: (root).optimizer.decay
+WARNING:tensorflow:A checkpoint was restored (e.g. tf.train.Checkpoint.restore or tf.keras.Model.load_weights) but not all checkpointed values were used. See above for specific issues. Use expect_partial() on the load status object, e.g. tf.train.Checkpoint.restore(...).expect_partial(), to silence these warnings, or use assert_consumed() to make the check explicit. See https://www.tensorflow.org/guide/checkpoint#loading_mechanics for details.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:18.193 | INFO     | m3tl.utils:set_phase:478 - Setting phase to eval
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>2/2 [==============================] - 8s 8ms/step - loss: 3.1377 - mean_acc: 0.3000 - toy_cls_acc: 0.6000 - toy_seq_tag_acc: 0.0000e+00 - BertMultiTaskTop/toy_cls/losses/0: 0.6794 - BertMultiTaskTop/toy_seq_tag/losses/0: 2.4584
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+    </details>
 </div>
     {% endraw %}
 
@@ -281,7 +462,7 @@ _________________________________________________________________
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>{&#39;loss&#39;: 2.7317519187927246, &#39;mean_acc&#39;: 0.38333335518836975, &#39;toy_cls_acc&#39;: 0.6000000238418579, &#39;toy_seq_tag_acc&#39;: 0.1666666716337204}
+<pre>{&#39;loss&#39;: 3.1377058029174805, &#39;mean_acc&#39;: 0.30000001192092896, &#39;toy_cls_acc&#39;: 0.6000000238418579, &#39;toy_seq_tag_acc&#39;: 0.0, &#39;BertMultiTaskTop/toy_cls/losses/0&#39;: 0.6793524026870728, &#39;BertMultiTaskTop/toy_seq_tag/losses/0&#39;: 2.458353281021118}
 </pre>
 </div>
 </div>
@@ -311,7 +492,58 @@ _________________________________________________________________
     </div>
 </div>
 </div>
+<details class="description">
+      <summary data-open="Hide Output" data-close="Show Output"></summary>
+        <summary></summary>
+        
+<div class="output_wrapper">
+<div class="output">
 
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:26.800 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+2021-06-24 16:08:26.801 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_cls, problem type: cls
+2021-06-24 16:08:26.802 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_seq_tag, problem type: seq_tag
+2021-06-24 16:08:26.822 | INFO     | m3tl.run_bert_multitask:predict_bert_multitask:464 - Checkpoint dir: models/toy_cls_toy_seq_tag_ckpt
+2021-06-24 16:08:29.839 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:08:29.840 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:08:29.841 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:08:29.841 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:08:29.841 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:08:29.891 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:08:29.892 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:08:29.892 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:08:29.893 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:08:29.894 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:08:29.914 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:08:29.915 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:08:29.915 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:08:29.916 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:08:29.916 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:08:30.835 | CRITICAL | m3tl.embedding_layer.base:__init__:58 - Modal Type id mapping: 
+ {
+    &#34;text&#34;: 0
+}
+2021-06-24 16:08:30.907 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+2021-06-24 16:08:33.300 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+2021-06-24 16:08:39.912 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: [&#39;this&#39;, &#39;is&#39;, &#39;a&#39;, &#39;test&#39;]
+2021-06-24 16:08:39.913 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:08:39.913 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 8554, 8310, 143, 10060, 102]
+2021-06-24 16:08:39.914 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:08:39.914 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+    </details>
 </div>
     {% endraw %}
 
@@ -344,7 +576,7 @@ _________________________________________________________________
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>toy_cls - (10, 2)
-toy_seq_tag - (10, 6, 5)
+toy_seq_tag - (10, 7, 5)
 </pre>
 </div>
 </div>
@@ -364,14 +596,14 @@ toy_seq_tag - (10, 6, 5)
 </div>
     {% raw %}
     
-<div class="cell border-box-sizing code_cell rendered celltag_outputPrepend">
+<div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># change model to distilbert-base-uncased</span>
-<span class="kn">from</span> <span class="nn">bert_multitask_learning.params</span> <span class="kn">import</span> <span class="n">BaseParams</span>
-<span class="n">params</span> <span class="o">=</span> <span class="n">BaseParams</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">m3tl.params</span> <span class="kn">import</span> <span class="n">Params</span>
+<span class="n">params</span> <span class="o">=</span> <span class="n">Params</span><span class="p">()</span>
 <span class="c1"># specify model and its loading module</span>
 <span class="n">params</span><span class="o">.</span><span class="n">transformer_model_name</span> <span class="o">=</span> <span class="s1">&#39;distilbert-base-uncased&#39;</span>
 <span class="n">params</span><span class="o">.</span><span class="n">transformer_model_loading</span> <span class="o">=</span> <span class="s1">&#39;TFDistilBertModel&#39;</span>
@@ -381,14 +613,79 @@ toy_seq_tag - (10, 6, 5)
 <span class="c1"># specify config and its loading module</span>
 <span class="n">params</span><span class="o">.</span><span class="n">transformer_config_name</span> <span class="o">=</span> <span class="s1">&#39;distilbert-base-uncased&#39;</span>
 <span class="n">params</span><span class="o">.</span><span class="n">transformer_config_loading</span> <span class="o">=</span> <span class="s1">&#39;DistilBertConfig&#39;</span>
+</pre></div>
 
-<span class="c1"># train model</span>
+    </div>
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Besides the "body" model, we can also set mtl model. By default, it will be hard parameter sharing, but we have implemented various mtl models. To see what's available, use</p>
+
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">list_available_mtl_setup</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{
+    &#34;available_mtl_model&#34;: [
+        &#34;basic&#34;,
+        &#34;mmoe&#34;
+    ],
+    &#34;available_problem_sampling_strategy&#34;: [],
+    &#34;available_loss_combination_strategy&#34;: [
+        &#34;sum&#34;
+    ],
+    &#34;available_gradient_surgery&#34;: []
+}
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># train model with mmoe</span>
+<span class="n">params</span><span class="o">.</span><span class="n">assign_mtl_model</span><span class="p">(</span><span class="s1">&#39;mmoe&#39;</span><span class="p">)</span>
 <span class="n">model</span> <span class="o">=</span> <span class="n">train_bert_multitask</span><span class="p">(</span>
     <span class="n">problem</span><span class="o">=</span><span class="n">problem</span><span class="p">,</span>
     <span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">problem_type_dict</span><span class="o">=</span><span class="n">problem_type_dict</span><span class="p">,</span>
     <span class="n">processing_fn_dict</span><span class="o">=</span><span class="n">processing_fn_dict</span><span class="p">,</span>
-    <span class="n">continue_training</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">continue_training</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="n">params</span><span class="o">=</span><span class="n">params</span> <span class="c1"># pass params</span>
 <span class="p">)</span>
 </pre></div>
@@ -396,27 +693,127 @@ toy_seq_tag - (10, 6, 5)
     </div>
 </div>
 </div>
+<details class="description">
+      <summary data-open="Hide Output" data-close="Show Output"></summary>
+        <summary></summary>
+        
+<div class="output_wrapper">
+<div class="output">
 
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:08:41.917 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_cls, problem type: cls
+2021-06-24 16:08:41.918 | INFO     | m3tl.base_params:register_multiple_problems:543 - Adding new problem toy_seq_tag, problem type: seq_tag
+2021-06-24 16:08:41.919 | WARNING  | m3tl.base_params:prepare_dir:363 - bert_config not exists. will load model from huggingface checkpoint.
+2021-06-24 16:08:44.124 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:08:44.125 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+2021-06-24 16:08:44.279 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:08:44.280 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+2021-06-24 16:08:44.467 | CRITICAL | m3tl.base_params:update_train_steps:456 - Updating train_steps to 1
+2021-06-24 16:08:44.589 | INFO     | m3tl.input_fn:train_eval_input_fn:59 - sampling weights: 
+2021-06-24 16:08:44.589 | INFO     | m3tl.input_fn:train_eval_input_fn:60 - {
+    &#34;toy_cls_toy_seq_tag&#34;: 1.0
+}
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:There are non-GPU devices in `tf.distribute.Strategy`, not using nccl allreduce.
+INFO:tensorflow:Using MirroredStrategy with devices (&#39;/job:localhost/replica:0/task:0/device:CPU:0&#39;,)
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>Some layers from the model checkpoint at distilbert-base-uncased were not used when initializing TFDistilBertModel: [&#39;vocab_transform&#39;, &#39;vocab_projector&#39;, &#39;vocab_layer_norm&#39;, &#39;activation_13&#39;]
+- This IS expected if you are initializing TFDistilBertModel from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing TFDistilBertModel from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+All the layers of TFDistilBertModel were initialized from the model checkpoint at distilbert-base-uncased.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use TFDistilBertModel for predictions without further training.
+2021-06-24 16:08:47.617 | CRITICAL | m3tl.embedding_layer.base:__init__:58 - Modal Type id mapping: 
+ {
+    &#34;text&#34;: 0
+}
+2021-06-24 16:08:47.695 | INFO     | m3tl.utils:set_phase:478 - Setting phase to infer
+2021-06-24 16:08:47.702 | CRITICAL | m3tl.model_fn:compile:271 - Initial lr: 0.0
+2021-06-24 16:08:47.703 | CRITICAL | m3tl.model_fn:compile:272 - Train steps: 1
+2021-06-24 16:08:47.703 | CRITICAL | m3tl.model_fn:compile:273 - Warmup steps: 0
+2021-06-24 16:08:47.874 | INFO     | m3tl.utils:set_phase:478 - Setting phase to train
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+2021-06-24 16:08:55.282 | INFO     | m3tl.utils:set_phase:478 - Setting phase to train
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>1/1 [==============================] - ETA: 0s - mean_acc: 0.7434 - toy_cls_acc: 0.4000 - toy_seq_tag_acc: 0.2714 - BertMultiTaskTop/toy_cls/losses/0: 0.6950 - BertMultiTaskTop/toy_seq_tag/losses/0: 1.6072</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:09:05.034 | INFO     | m3tl.utils:set_phase:478 - Setting phase to eval
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>WARNING:tensorflow:Your input ran out of data; interrupting training. Make sure that your dataset or generator can generate at least `steps_per_epoch * epochs` batches (in this case, 1000 batches). You may need to use the repeat() function when building your dataset.
+1/1 [==============================] - 22s 22s/step - mean_acc: 0.7434 - toy_cls_acc: 0.4000 - toy_seq_tag_acc: 0.2714 - BertMultiTaskTop/toy_cls/losses/0: 0.6950 - BertMultiTaskTop/toy_seq_tag/losses/0: 1.6072 - val_loss: 2.3018 - val_mean_acc: 0.3429 - val_toy_cls_acc: 0.4000 - val_toy_seq_tag_acc: 0.2857 - val_BertMultiTaskTop/toy_cls/losses/0: 0.6948 - val_BertMultiTaskTop/toy_seq_tag/losses/0: 1.6070
+Model: &#34;BertMultiTask&#34;
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+BertMultiTaskBody (BertMulti multiple                  66363648  
+_________________________________________________________________
+m_mo_e (MMoE)                multiple                  799760    
+_________________________________________________________________
+BertMultiTaskTop (BertMultiT multiple                  907       
+_________________________________________________________________
+sum_loss_combination_3 (SumL multiple                  0         
+=================================================================
+Total params: 67,164,317
+Trainable params: 67,164,311
+Non-trainable params: 6
+_________________________________________________________________
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+    </details>
 </div>
     {% endraw %}
 
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Write-More-Flexible-Preprocessing-Function">Write More Flexible Preprocessing Function<a class="anchor-link" href="#Write-More-Flexible-Preprocessing-Function"> </a></h2><p>The preprocessing function should return two elements: inputs and targets, except for <code>pretrain</code> problem type. You don't need to manually tokenize your inputs and encode the targets, it will be done automatically.</p>
-<p>For features and targets, it can be one of the following format:</p>
+<h2 id="Write-More-Flexible-Preprocessing-Function">Write More Flexible Preprocessing Function<a class="anchor-link" href="#Write-More-Flexible-Preprocessing-Function"> </a></h2><p>The most simple preprocessing function returns tuple of list, inputs and labels, as we shown above. However, inputs can get pretty complicated when doing multi-modal multi-task learning. In this case, we can use dictionary to store our data with some magic keys:</p>
 <ul>
-<li>tuple of list. This is the way to go if your data can fit into memory.</li>
-<li>generator of tuple. You should use generator if your data cannot fit into memory.</li>
+<li><code>"inputs_"</code> and <code>"labels_"</code> prefix. We still divide the preprocessing output into inputs and labels. By adding <code>"inputs_"</code> and <code>"labels_"</code> prefix to the dictionary keys, the module will correctly handle them in train, eval and predict.</li>
+<li><code>"_modal_type"</code> and <code>"_modal_info"</code> suffix. Adding these suffix will indicate the modal type of some inputs. If they're not provided, the module will try to infer the correct information from data.</li>
+<li><code>i</code>. If specified, this key will be used to join problems chained with <code>&amp;</code>. It is required if any problems are chained with <code>&amp;</code>.</li>
 </ul>
-<p>The features can be single modal and multi-modal. We will elaborate each form of the input in this section.</p>
-<p>Please note that if preprocessing function returns generator of tuple, then corresponding problem cannot be chained using <code>&amp;</code>.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Single-Modal-Input">Single Modal Input<a class="anchor-link" href="#Single-Modal-Input"> </a></h3><h4 id="Tuple-of-list">Tuple of list<a class="anchor-link" href="#Tuple-of-list"> </a></h4><p>Normal text, label pair</p>
+<p>Example:</p>
 
 </div>
 </div>
@@ -428,19 +825,33 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="s2">&quot;Simple example to demonstrate singe modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.predefined_problems.test_data</span> <span class="kn">import</span> <span class="n">generate_fake_data</span>
+<span class="n">gen</span> <span class="o">=</span> <span class="n">generate_fake_data</span><span class="p">(</span><span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;gen_dict&#39;</span><span class="p">)</span>
+<span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">gen</span><span class="p">))</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{&#39;inputs_array&#39;: array([0.89512351, 0.89110354, 0.70502249, 0.23868364, 0.40018975,
+       0.52657185, 0.87574078, 0.08114504, 0.93732932, 0.24289513]),
+ &#39;inputs_cate&#39;: 0,
+ &#39;inputs_cate_modal_info&#39;: 1,
+ &#39;inputs_cate_modal_type&#39;: &#39;category&#39;,
+ &#39;inputs_record_id&#39;: 0,
+ &#39;inputs_text&#39;: &#39;this is a test&#39;,
+ &#39;labels&#39;: &#39;a&#39;}
+</pre>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -449,7 +860,8 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>A, B tokens</p>
+<h3 id="Local-Preprocessing">Local Preprocessing<a class="anchor-link" href="#Local-Preprocessing"> </a></h3><p>You can return a list of dictionary or a generator of dictionary from your preprocessing function. 
+{% include important.html content='If you return a generator of dictionary, you have to call <code>m3tl.utils.get_or_make_label_encoder</code> within your preprocessing function!!!' %}</p>
 
 </div>
 </div>
@@ -461,16 +873,9 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="s2">&quot;Simple example to demonstrate singe modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">return</span> <span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.utils</span> <span class="kn">import</span> <span class="n">get_or_make_label_encoder</span>
+<span class="kn">from</span> <span class="nn">m3tl.special_tokens</span> <span class="kn">import</span> <span class="n">TRAIN</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
 </pre></div>
 
     </div>
@@ -480,9 +885,102 @@ toy_seq_tag - (10, 6, 5)
 </div>
     {% endraw %}
 
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">params</span><span class="o">.</span><span class="n">num_cpus</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="nd">@preprocessing_fn</span>
+<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="c1"># IMPORTANT!</span>
+    <span class="n">get_or_make_label_encoder</span><span class="p">(</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+        <span class="n">problem</span><span class="o">=</span><span class="n">inspect</span><span class="o">.</span><span class="n">currentframe</span><span class="p">()</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_name</span><span class="p">,</span> <span class="c1"># current function name</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="n">label_list</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">],</span>
+        <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">generate_fake_data</span><span class="p">(</span><span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;gen_dict&#39;</span><span class="p">)</span>
+
+<span class="n">params</span><span class="o">.</span><span class="n">register_problem</span><span class="p">(</span><span class="n">problem_name</span><span class="o">=</span><span class="s1">&#39;toy_cls&#39;</span><span class="p">,</span> <span class="n">problem_type</span><span class="o">=</span><span class="s1">&#39;cls&#39;</span><span class="p">,</span> <span class="n">processing_fn</span><span class="o">=</span><span class="n">toy_cls</span><span class="p">)</span>
+
+<span class="c1"># then you can call the preproc function and take a look at the result</span>
+<span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="n">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">TRAIN</span><span class="p">)))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+<details class="description">
+      <summary data-open="Hide Output" data-close="Show Output"></summary>
+        <summary></summary>
+        
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>2021-06-24 16:09:15.822 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - record_id: 0
+2021-06-24 16:09:15.823 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text: this is a test
+2021-06-24 16:09:15.824 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - array: [0.96637881 0.49298023 0.38897724 0.36710049 0.36735467 0.28640803
+ 0.39647259 0.30369951 0.35238779 0.05860911]
+2021-06-24 16:09:15.825 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - cate: 0
+2021-06-24 16:09:15.825 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - cate_modal_type: category
+2021-06-24 16:09:15.825 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - cate_modal_info: 1
+2021-06-24 16:09:15.826 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - record_id_modal_type: category
+2021-06-24 16:09:15.826 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - text_modal_type: text
+2021-06-24 16:09:15.827 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:514 - array_modal_type: array
+2021-06-24 16:09:15.827 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - record_id: 0
+2021-06-24 16:09:15.827 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_input_ids: [101, 2023, 2003, 1037, 3231, 102]
+2021-06-24 16:09:15.828 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_mask: [1, 1, 1, 1, 1, 1]
+2021-06-24 16:09:15.828 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - text_segment_ids: [0, 0, 0, 0, 0, 0]
+2021-06-24 16:09:15.829 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - toy_cls_label_ids: 0
+2021-06-24 16:09:15.829 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - array_input_ids: [[0.96637881 0.49298023 0.38897724 0.36710049 0.36735467 0.28640803
+  0.39647259 0.30369951 0.35238779 0.05860911]]
+2021-06-24 16:09:15.830 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - array_mask: [1]
+2021-06-24 16:09:15.830 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - array_segment_ids: [0]
+2021-06-24 16:09:15.831 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - cate_input_ids: [0]
+2021-06-24 16:09:15.831 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - cate_mask: [1]
+2021-06-24 16:09:15.832 | DEBUG    | m3tl.bert_preprocessing.create_bert_features:_create_multimodal_bert_features:519 - cate_segment_ids: [0]
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{&#39;array_input_ids&#39;: array([[0.96637881, 0.49298023, 0.38897724, 0.36710049, 0.36735467,
+        0.28640803, 0.39647259, 0.30369951, 0.35238779, 0.05860911]]),
+ &#39;array_mask&#39;: [1],
+ &#39;array_segment_ids&#39;: array([0], dtype=int32),
+ &#39;cate_input_ids&#39;: array([0]),
+ &#39;cate_mask&#39;: [1],
+ &#39;cate_segment_ids&#39;: array([0], dtype=int32),
+ &#39;record_id&#39;: 0,
+ &#39;text_input_ids&#39;: [101, 2023, 2003, 1037, 3231, 102],
+ &#39;text_mask&#39;: [1, 1, 1, 1, 1, 1],
+ &#39;text_segment_ids&#39;: [0, 0, 0, 0, 0, 0],
+ &#39;toy_cls_label_ids&#39;: 0}
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+    </details>
+</div>
+    {% endraw %}
+
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h4 id="Generator-of-tuple">Generator of tuple<a class="anchor-link" href="#Generator-of-tuple"> </a></h4><p>Normal text, label pair</p>
+<h3 id="Pyspark-preprocessing(experimental)">Pyspark preprocessing(experimental)<a class="anchor-link" href="#Pyspark-preprocessing(experimental)"> </a></h3><p>If your data is too huge to process locally, you can also return a pyspark RDD from your preprocessing function.
+{% include important.html content='You have to call <code>m3tl.utils.get_or_make_label_encoder</code> within your preprocessing function when using pyspark preprocessing!!!' %}{% include note.html content='<code>params.pyspark_output_path</code> must be set if pyspark is enabled.' %}{% include note.html content='Local processing and pyspark processing cannot mixed together.' %}
+If two problems chained with <code>&amp;</code> and they only share part of the inputs, returning RDD from preprocessing function is required.</p>
 
 </div>
 </div>
@@ -494,17 +992,8 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="s2">&quot;Simple example to demonstrate singe modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;this is a test&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">for</span> <span class="n">single_input</span><span class="p">,</span> <span class="n">single_target</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span><span class="p">):</span>
-        <span class="k">yield</span> <span class="n">single_input</span><span class="p">,</span> <span class="n">single_target</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.utils</span> <span class="kn">import</span> <span class="n">set_is_pyspark</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
 </pre></div>
 
     </div>
@@ -514,26 +1003,6 @@ toy_seq_tag - (10, 6, 5)
 </div>
     {% endraw %}
 
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>A, B tokens. Same, skipped.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Multi-modal-Input">Multi-modal Input<a class="anchor-link" href="#Multi-modal-Input"> </a></h3><p>The other modal should be passed as an array.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h4 id="Tuple-of-list">Tuple of list<a class="anchor-link" href="#Tuple-of-list"> </a></h4>
-</div>
-</div>
-</div>
     {% raw %}
     
 <div class="cell border-box-sizing code_cell rendered">
@@ -541,67 +1010,54 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="s2">&quot;Simple example to demonstrate multi-modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">))}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">))}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    
-    <span class="k">return</span> <span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">set_is_pyspark</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="nd">@preprocessing_fn</span>
+<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Params</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">generate_fake_data</span><span class="p">(</span><span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;rdd&#39;</span><span class="p">)</span>
+
+<span class="n">params</span><span class="o">.</span><span class="n">register_problem</span><span class="p">(</span><span class="n">problem_name</span><span class="o">=</span><span class="s1">&#39;toy_cls&#39;</span><span class="p">,</span> <span class="n">problem_type</span><span class="o">=</span><span class="s1">&#39;cls&#39;</span><span class="p">,</span> <span class="n">processing_fn</span><span class="o">=</span><span class="n">toy_cls</span><span class="p">)</span>
+
+<span class="c1"># set pyspark output path</span>
+<span class="n">params</span><span class="o">.</span><span class="n">pyspark_output_path</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+
+<span class="c1"># then you can call the preproc function and take a look at the result</span>
+<span class="n">toy_cls_rdd</span> <span class="o">=</span> <span class="n">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">TRAIN</span><span class="p">)</span>
+<span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">toy_cls_rdd</span><span class="o">.</span><span class="n">collect</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
 </pre></div>
 
     </div>
 </div>
 </div>
 
-</div>
-    {% endraw %}
+<div class="output_wrapper">
+<div class="output">
 
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h4 id="Generator-of-tuple">Generator of tuple<a class="anchor-link" href="#Generator-of-tuple"> </a></h4>
-</div>
-</div>
-</div>
-    {% raw %}
-    
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
+<div class="output_area">
 
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nd">@preprocessing_fn</span>
-<span class="k">def</span> <span class="nf">toy_cls</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">BaseParams</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-    <span class="s2">&quot;Simple example to demonstrate multi-modal tuple of list return&quot;</span>
-    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">TRAIN</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">))}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">toy_input</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">16</span><span class="p">))}</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-        <span class="n">toy_target</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;=</span><span class="mi">5</span> <span class="k">else</span> <span class="s1">&#39;b&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)]</span>
-    
-    <span class="k">for</span> <span class="n">single_input</span><span class="p">,</span> <span class="n">single_target</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">toy_input</span><span class="p">,</span> <span class="n">toy_target</span><span class="p">):</span>
-        <span class="k">yield</span> <span class="n">single_input</span><span class="p">,</span> <span class="n">single_target</span>
-</pre></div>
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>{&#39;array_input_ids&#39;: array([[0.00258592, 0.20750642, 0.25051955, 0.85366103, 0.93457556,
+        0.05154129, 0.48336023, 0.36393742, 0.40964549, 0.77414554]]),
+ &#39;array_mask&#39;: [1],
+ &#39;array_segment_ids&#39;: array([0], dtype=int32),
+ &#39;cate_input_ids&#39;: array([0]),
+ &#39;cate_mask&#39;: [1],
+ &#39;cate_segment_ids&#39;: array([0], dtype=int32),
+ &#39;record_id&#39;: 0,
+ &#39;text_input_ids&#39;: [101, 2023, 2003, 1037, 3231, 102],
+ &#39;text_mask&#39;: [1, 1, 1, 1, 1, 1],
+ &#39;text_segment_ids&#39;: [0, 0, 0, 0, 0, 0],
+ &#39;toy_cls_label_ids&#39;: 0}
+</pre>
+</div>
+</div>
 
-    </div>
 </div>
 </div>
 
 </div>
     {% endraw %}
 
-<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<p>Note: A, B token of multi-modal input is not working yet!</p>
-
-</div>
-</div>
-</div>
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h3 id="What-Happened?">What Happened?<a class="anchor-link" href="#What-Happened?"> </a></h3><p>The inputs returned by preprocessing function will be tokenized using transformers tokenizer which is configurable like we showed before and the labels will be encoded(or tokenized if the target is text) as scalar or numpy array. The encoded inputs and target then will be serialized and written as TFRecord. Please note that the TFRecord will NOT be overwritten even if you run the code again. So if you want to change the data in TFRecord, you need to manually remove the directory of TFRecord. The default directory is <code>./tmp/{problem_name}</code>.</p>
@@ -618,7 +1074,7 @@ toy_seq_tag - (10, 6, 5)
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">bert_multitask_learning.input_fn</span> <span class="kn">import</span> <span class="n">train_eval_input_fn</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.input_fn</span> <span class="kn">import</span> <span class="n">train_eval_input_fn</span>
 
 <span class="n">dataset</span> <span class="o">=</span> <span class="n">train_eval_input_fn</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
 </pre></div>
@@ -627,14 +1083,33 @@ toy_seq_tag - (10, 6, 5)
 </div>
 </div>
 
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Below is the TFRecord directory tree.</p>
+
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
 <div class="output_wrapper">
 <div class="output">
 
 <div class="output_area">
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>INFO:tensorflow:sampling weights: 
-INFO:tensorflow:toy_cls_toy_seq_tag: 1.0
+<pre>tmp/
+    toy_cls_toy_seq_tag/
+        eval_00000.tfrecord
+        train_feature_desc.json
+        problem_info.txt
+        eval_feature_desc.json
+        train_00000.tfrecord
 </pre>
 </div>
 </div>
@@ -678,21 +1153,21 @@ INFO:tensorflow:toy_cls_toy_seq_tag: 1.0
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>{
-    &#34;input_ids&#34;: &#34;int64&#34;,
-    &#34;input_ids_shape_value&#34;: [
+    &#34;text_input_ids&#34;: &#34;int64&#34;,
+    &#34;text_input_ids_shape_value&#34;: [
         null
     ],
-    &#34;input_ids_shape&#34;: &#34;int64&#34;,
-    &#34;input_mask&#34;: &#34;int64&#34;,
-    &#34;input_mask_shape_value&#34;: [
+    &#34;text_input_ids_shape&#34;: &#34;int64&#34;,
+    &#34;text_mask&#34;: &#34;int64&#34;,
+    &#34;text_mask_shape_value&#34;: [
         null
     ],
-    &#34;input_mask_shape&#34;: &#34;int64&#34;,
-    &#34;segment_ids&#34;: &#34;int64&#34;,
-    &#34;segment_ids_shape_value&#34;: [
+    &#34;text_mask_shape&#34;: &#34;int64&#34;,
+    &#34;text_segment_ids&#34;: &#34;int64&#34;,
+    &#34;text_segment_ids_shape_value&#34;: [
         null
     ],
-    &#34;segment_ids_shape&#34;: &#34;int64&#34;,
+    &#34;text_segment_ids_shape&#34;: &#34;int64&#34;,
     &#34;toy_cls_label_ids&#34;: &#34;int64&#34;,
     &#34;toy_cls_label_ids_shape&#34;: &#34;int64&#34;,
     &#34;toy_cls_label_ids_shape_value&#34;: [],

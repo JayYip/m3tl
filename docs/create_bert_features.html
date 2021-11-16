@@ -29,6 +29,19 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 </div>
     {% endraw %}
 
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Imports">Imports<a class="anchor-link" href="#Imports"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
     {% raw %}
     
 <div class="cell border-box-sizing code_cell rendered">
@@ -40,7 +53,7 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="seq_tag_label_handling" class="doc_header"><code>seq_tag_label_handling</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L20" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>seq_tag_label_handling</code>(<strong><code>tokenized_dict</code></strong>, <strong><code>target</code></strong>, <strong><code>pad_token</code></strong>)</p>
+<h4 id="convert_labels_to_ids" class="doc_header"><code>convert_labels_to_ids</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L27" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>convert_labels_to_ids</code>(<strong><code>target</code></strong>:<code>dict</code>, <strong><code>problem</code></strong>:<code>str</code>, <strong><code>problem_type</code></strong>:<code>str</code>, <strong><code>label_encoder</code></strong>, <strong><code>tokenizer</code></strong>=<em><code>None</code></em>, <strong><code>decoding_length</code></strong>:<code>int</code>=<em><code>None</code></em>, <strong><code>custom_label_handling_fn</code></strong>:<code>Callable</code>=<em><code>None</code></em>, <strong><code>tokenized_inputs</code></strong>:<code>dict</code>=<em><code>None</code></em>, <strong>**<code>kwargs</code></strong>)</p>
 </blockquote>
 
 </div>
@@ -64,79 +77,7 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="pad_wrapper" class="doc_header"><code>pad_wrapper</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L39" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>pad_wrapper</code>(<strong><code>inp</code></strong>, <strong><code>target_len</code></strong>=<em><code>90</code></em>)</p>
-</blockquote>
-
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-    {% endraw %}
-
-    {% raw %}
-    
-<div class="cell border-box-sizing code_cell rendered">
-
-<div class="output_wrapper">
-<div class="output">
-
-<div class="output_area">
-
-
-<div class="output_markdown rendered_html output_subarea ">
-<h4 id="convert_labels_to_ids" class="doc_header"><code>convert_labels_to_ids</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L46" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>convert_labels_to_ids</code>(<strong><code>target</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>tokenizer</code></strong>=<em><code>None</code></em>, <strong><code>decoding_length</code></strong>=<em><code>None</code></em>, <strong><code>custom_label_handling_fn</code></strong>=<em><code>None</code></em>)</p>
-</blockquote>
-
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-    {% endraw %}
-
-    {% raw %}
-    
-<div class="cell border-box-sizing code_cell rendered">
-
-<div class="output_wrapper">
-<div class="output">
-
-<div class="output_area">
-
-
-<div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_bert_features" class="doc_header"><code>create_bert_features</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L184" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_bert_features</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
-</blockquote>
-
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-    {% endraw %}
-
-    {% raw %}
-    
-<div class="cell border-box-sizing code_cell rendered">
-
-<div class="output_wrapper">
-<div class="output">
-
-<div class="output_area">
-
-
-<div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_bert_pretraining" class="doc_header"><code>create_bert_pretraining</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L212" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_bert_pretraining</code>(<strong><code>problem</code></strong>, <strong><code>inputs_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>)</p>
+<h4 id="create_bert_pretraining" class="doc_header"><code>create_bert_pretraining</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L57" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_bert_pretraining</code>(<strong><code>problem</code></strong>, <strong><code>inputs_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>)</p>
 </blockquote>
 <p>Slight modification of original code</p>
 <p>Raises:
@@ -163,7 +104,44 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="mask_inputs_for_mask_lm" class="doc_header"><code>mask_inputs_for_mask_lm</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L301" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>mask_inputs_for_mask_lm</code>(<strong><code>inp_text</code></strong>:<code>str</code>, <strong><code>tokenizer</code></strong>:<code>PreTrainedTokenizer</code>, <strong><code>mask_prob</code></strong>=<em><code>0.1</code></em>, <strong><code>max_length</code></strong>=<em><code>128</code></em>, <strong><code>max_predictions_per_seq</code></strong>=<em><code>20</code></em>)</p>
+<h4 id="mask_inputs_for_mask_lm" class="doc_header"><code>mask_inputs_for_mask_lm</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L147" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>mask_inputs_for_mask_lm</code>(<strong><code>inp_text</code></strong>:<code>str</code>, <strong><code>tokenizer</code></strong>:<code>PreTrainedTokenizer</code>, <strong><code>mask_prob</code></strong>=<em><code>0.1</code></em>, <strong><code>max_length</code></strong>=<em><code>128</code></em>, <strong><code>max_predictions_per_seq</code></strong>=<em><code>20</code></em>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Shortcut-functions">Shortcut functions<a class="anchor-link" href="#Shortcut-functions"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="collect_modal_name" class="doc_header"><code>collect_modal_name</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L199" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>collect_modal_name</code>(<strong><code>inputs</code></strong>:<code>dict</code>)</p>
 </blockquote>
 
 </div>
@@ -187,7 +165,7 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_multimodal_bert_features" class="doc_header"><code>create_multimodal_bert_features</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L499" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_multimodal_bert_features</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
+<h4 id="infer_modal" class="doc_header"><code>infer_modal</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L203" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>infer_modal</code>(<strong><code>inputs</code></strong>:<code>dict</code>)</p>
 </blockquote>
 
 </div>
@@ -211,7 +189,121 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_bert_features_generator" class="doc_header"><code>create_bert_features_generator</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L521" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_bert_features_generator</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
+<h4 id="unify_inputs" class="doc_header"><code>unify_inputs</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L228" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>unify_inputs</code>(<strong><code>inputs</code></strong>:<code>Union</code>[<code>Dict</code>[<code>KT</code>, <code>VT</code>], <code>str</code>])</p>
+</blockquote>
+<p>unify various input format to single one as following:
+{
+    'title': 'this is test',
+    'image': np.array([1,2,3]),
+    'class': 'a',
+    'title_modal_type': 'text',
+    'image_modal_type': 'array',
+    'class_modal_type': 'category',
+    'class_modal_info': 10
+}</p>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">unify_inputs</span><span class="p">(</span><span class="s1">&#39;this is a test&#39;</span><span class="p">)</span>
+
+<span class="c1"># test legacy multimodal input</span>
+<span class="n">unify_inputs</span><span class="p">({</span><span class="s1">&#39;text&#39;</span><span class="p">:</span> <span class="s1">&#39;this is a test&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]),</span> <span class="s1">&#39;class&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>{&#39;text&#39;: &#39;this is a test&#39;,
+ &#39;image&#39;: array([1, 2, 3]),
+ &#39;class&#39;: 0,
+ &#39;text_modal_type&#39;: &#39;text&#39;,
+ &#39;image_modal_type&#39;: &#39;array&#39;,
+ &#39;class_modal_type&#39;: &#39;category&#39;}</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Modal-handling-functions">Modal handling functions<a class="anchor-link" href="#Modal-handling-functions"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h2 id="NextExampleException" class="doc_header"><code>class</code> <code>NextExampleException</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L253" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>NextExampleException</code>() :: <code>Exception</code></p>
+</blockquote>
+<p>Common base class for all non-exit exceptions.</p>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="text_modal_input_handling" class="doc_header"><code>text_modal_input_handling</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L257" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>text_modal_input_handling</code>(<strong><code>problem</code></strong>:<code>str</code>, <strong><code>modal_name</code></strong>:<code>str</code>, <strong><code>modal_inputs</code></strong>:<code>dict</code>, <strong><code>target</code></strong>:<code>dict</code>=<em><code>None</code></em>, <strong><code>params</code></strong>:<a href="/m3tl/0_base_params.html#BaseParams"><code>BaseParams</code></a>=<em><code>None</code></em>, <strong><code>tokenizer</code></strong>:<code>PreTrainedTokenizer</code>=<em><code>None</code></em>)</p>
 </blockquote>
 
 </div>
@@ -235,7 +327,251 @@ nb_path: "source_nbs/04_create_bert_features.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h4 id="create_multimodal_bert_features_generator" class="doc_header"><code>create_multimodal_bert_features_generator</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/bert_preprocessing/create_bert_features.py#L542" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_multimodal_bert_features_generator</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
+<h4 id="array_modal_input_handling" class="doc_header"><code>array_modal_input_handling</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L315" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>array_modal_input_handling</code>(<strong><code>problem</code></strong>:<code>str</code>, <strong><code>modal_name</code></strong>:<code>str</code>, <strong><code>modal_inputs</code></strong>:<code>dict</code>, <strong><code>target</code></strong>:<code>dict</code>=<em><code>None</code></em>, <strong><code>params</code></strong>:<a href="/m3tl/0_base_params.html#BaseParams"><code>BaseParams</code></a>=<em><code>None</code></em>, <strong><code>tokenizer</code></strong>:<code>PreTrainedTokenizer</code>=<em><code>None</code></em>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="category_modal_input_handling" class="doc_header"><code>category_modal_input_handling</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L339" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>category_modal_input_handling</code>(<strong><code>problem</code></strong>:<code>str</code>, <strong><code>modal_name</code></strong>:<code>str</code>, <strong><code>modal_inputs</code></strong>:<code>dict</code>, <strong><code>target</code></strong>:<code>dict</code>=<em><code>None</code></em>, <strong><code>params</code></strong>:<a href="/m3tl/0_base_params.html#BaseParams"><code>BaseParams</code></a>=<em><code>None</code></em>, <strong><code>tokenizer</code></strong>:<code>PreTrainedTokenizer</code>=<em><code>None</code></em>, <strong><code>raw_inputs</code></strong>:<code>dict</code>=<em><code>None</code></em>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.test_base</span> <span class="kn">import</span> <span class="n">TestBase</span>
+<span class="kn">from</span> <span class="nn">m3tl.utils</span> <span class="kn">import</span> <span class="n">load_transformer_tokenizer</span>
+<span class="kn">from</span> <span class="nn">m3tl.predefined_problems</span> <span class="kn">import</span> <span class="n">generate_fake_data</span>
+<span class="n">tb</span> <span class="o">=</span> <span class="n">TestBase</span><span class="p">()</span>
+<span class="n">params</span> <span class="o">=</span> <span class="n">tb</span><span class="o">.</span><span class="n">params</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>WARNING:root:bert_config not exists. will load model from huggingface checkpoint.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Adding new problem weibo_fake_ner, problem type: seq_tag
+Adding new problem weibo_fake_multi_cls, problem type: multi_cls
+Adding new problem weibo_fake_cls, problem type: cls
+Adding new problem weibo_masklm, problem type: masklm
+Adding new problem weibo_fake_regression, problem type: regression
+Adding new problem weibo_fake_vector_fit, problem type: vector_fit
+Adding new problem weibo_premask_mlm, problem type: premask_mlm
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">problem</span> <span class="o">=</span> <span class="s1">&#39;weibo_fake_ner&#39;</span>
+<span class="n">modal_name</span> <span class="o">=</span> <span class="s1">&#39;desc&#39;</span>
+<span class="n">modal_inputs</span> <span class="o">=</span> <span class="s1">&#39;this is a test&#39;</span>
+<span class="n">target</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">load_transformer_tokenizer</span><span class="p">(</span>
+    <span class="n">tokenizer_name</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">transformer_tokenizer_name</span><span class="p">,</span> <span class="n">load_module_name</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">transformer_tokenizer_loading</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">text_modal_input_handling</span><span class="p">(</span>
+    <span class="n">problem</span><span class="o">=</span><span class="n">problem</span><span class="p">,</span> <span class="n">modal_name</span><span class="o">=</span><span class="n">modal_name</span><span class="p">,</span> <span class="n">modal_inputs</span><span class="o">=</span><span class="n">modal_inputs</span><span class="p">,</span> <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">))</span>
+<span class="n">fake_data</span> <span class="o">=</span> <span class="n">generate_fake_data</span><span class="p">(</span><span class="s1">&#39;dict&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">category_modal_input_handling</span><span class="p">(</span>
+    <span class="n">problem</span><span class="o">=</span><span class="n">problem</span><span class="p">,</span> <span class="n">modal_name</span><span class="o">=</span><span class="s1">&#39;inputs_cate&#39;</span><span class="p">,</span> <span class="n">modal_inputs</span><span class="o">=</span><span class="n">fake_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;inputs_cate&#39;</span><span class="p">],</span> <span class="n">tokenizer</span><span class="o">=</span><span class="n">tokenizer</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span> <span class="n">raw_inputs</span><span class="o">=</span><span class="n">fake_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>({&#39;desc_input_ids&#39;: [101, 8554, 8310, 143, 10060, 102], &#39;desc_mask&#39;: [1, 1, 1, 1, 1, 1], &#39;desc_segment_ids&#39;: [0, 0, 0, 0, 0, 0]}, {&#39;overflowing_tokens&#39;: [], &#39;num_truncated_tokens&#39;: -250, &#39;input_ids&#39;: [101, 8554, 8310, 143, 10060, 102], &#39;token_type_ids&#39;: [0, 0, 0, 0, 0, 0], &#39;special_tokens_mask&#39;: [1, 0, 0, 0, 0, 1], &#39;attention_mask&#39;: [1, 1, 1, 1, 1, 1]})
+{&#39;inputs_cate_input_ids&#39;: array([0]), &#39;inputs_cate_mask&#39;: [1], &#39;inputs_cate_segment_ids&#39;: array([0], dtype=int32)}
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Create-bert-multimodal-features">Create bert multimodal features<a class="anchor-link" href="#Create-bert-multimodal-features"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="separate_inputs_labels" class="doc_header"><code>separate_inputs_labels</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L379" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>separate_inputs_labels</code>(<strong><code>inp</code></strong>:<code>dict</code>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="remove_dict_prefix" class="doc_header"><code>remove_dict_prefix</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L394" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>remove_dict_prefix</code>(<strong><code>inp</code></strong>:<code>dict</code>, <strong><code>key</code></strong>=<em><code>'inputs_'</code></em>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Wrapper-functions">Wrapper functions<a class="anchor-link" href="#Wrapper-functions"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="create_multimodal_bert_features" class="doc_header"><code>create_multimodal_bert_features</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L524" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_multimodal_bert_features</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
+</blockquote>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+
+<div class="output_markdown rendered_html output_subarea ">
+<h4 id="create_multimodal_bert_features_generator" class="doc_header"><code>create_multimodal_bert_features_generator</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/bert_preprocessing/create_bert_features.py#L552" class="source_link" style="float:right">[source]</a></h4><blockquote><p><code>create_multimodal_bert_features_generator</code>(<strong><code>problem</code></strong>, <strong><code>example_list</code></strong>, <strong><code>label_encoder</code></strong>, <strong><code>params</code></strong>, <strong><code>tokenizer</code></strong>, <strong><code>mode</code></strong>, <strong><code>problem_type</code></strong>, <strong><code>is_seq</code></strong>)</p>
 </blockquote>
 
 </div>

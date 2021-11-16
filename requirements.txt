@@ -6,5 +6,7 @@ pandas
 setuptools
 nltk
 scikit_learn
-transformers
+transformers<4.7
 tensorflow-addons
+loguru
+fastcore

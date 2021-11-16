@@ -20,10 +20,10 @@ with codecs.open('requirements.txt', 'r', 'utf8') as reader:
 
 
 setup(
-    name='bert_multitask_learning',
+    name='m3tl',
     version=cfg['version'],
     packages=find_packages(),
-    url='https://github.com/JayYip/bert-multitask-learning',
+    url='https://github.com/JayYip/m3tl',
     license='MIT',
     author='Jay Yip',
     author_email='junpang.yip@gmail.com',

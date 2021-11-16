@@ -1,8 +1,33 @@
 {
-  "bert-multitask-learning": {
+  "m3tl": {
     "Overview": "/",
     "Tutorial": "tutorial.html",
+    "": {
+      "Problem Types": {
+        "Classification": "1_problem_type_cls.html",
+        "Multi-Label Classification": "2_problem_type_multi_cls.html",
+        "Sequence Labeling": "3_problem_type_seq_tag.html",
+        "Masked Language Model": "4_problem_type_masklm.html",
+        "NSP+MLM(Deprecated)": "6_problem_type_pretrain.html",
+        "Regression": "7_problem_type_regression.html",
+        "Vector Fitting": "8_problem_type_vector_fit.html",
+        "Pre-masked Masked Language Model": "9_problem_type_premask_mlm.html",
+        "Contrastive Learning": "10_problem_type_contrast_learning.html"
+      },
+      "MTL Models": {
+        "MTLBase": "15-00_mtl_model_base.html",
+        "MMoE": "15-01_mtl_model_mmoe.html"
+      },
+      "Loss Combination Strategy": {
+        "LossCombinationStrategyBase": "16-00_loss_combination_strategy.html"
+      },
+      "Embedding Layers": {
+        "EmbeddingLayerBase": "18-00_embedding_layer.html"
+      }
+    },
     "Params": "params.html",
+    "Run Bert Multitask Learning": "run_bert_multitask.html",
+    "Multitask Learning Model": "model_fn.html",
     "Utils": "utils.html",
     "Special Tokens": "special_tokens.html",
     "Bert Utils": "bert_utils.html",
@@ -13,8 +38,6 @@
     "Pre-defined Problems": "predefined_problems_test.html",
     "Body Modeling": "modeling.html",
     "Top Models": "top.html",
-    "Multitask Learning Model": "model_fn.html",
-    "Run Bert Multitask Learning": "run_bert_multitask.html",
     "Test Base": "test_base.html"
   }
 }

@@ -12,9 +12,67 @@ entries:
     - output: web,pdf
       title: Tutorial
       url: tutorial.html
+      subfolders:
+      - output: web
+        subfolderitems:
+        - output: web,pdf
+          title: Classification
+          url: 1_problem_type_cls.html
+        - output: web,pdf
+          title: Multi-Label Classification
+          url: 2_problem_type_multi_cls.html
+        - output: web,pdf
+          title: Sequence Labeling
+          url: 3_problem_type_seq_tag.html
+        - output: web,pdf
+          title: Masked Language Model
+          url: 4_problem_type_masklm.html
+        - output: web,pdf
+          title: NSP+MLM(Deprecated)
+          url: 6_problem_type_pretrain.html
+        - output: web,pdf
+          title: Regression
+          url: 7_problem_type_regression.html
+        - output: web,pdf
+          title: Vector Fitting
+          url: 8_problem_type_vector_fit.html
+        - output: web,pdf
+          title: Pre-masked Masked Language Model
+          url: 9_problem_type_premask_mlm.html
+        - output: web,pdf
+          title: Contrastive Learning
+          url: 10_problem_type_contrast_learning.html
+        title: Problem Types
+      - output: web
+        subfolderitems:
+        - output: web,pdf
+          title: MTLBase
+          url: 15-00_mtl_model_base.html
+        - output: web,pdf
+          title: MMoE
+          url: 15-01_mtl_model_mmoe.html
+        title: MTL Models
+      - output: web
+        subfolderitems:
+        - output: web,pdf
+          title: LossCombinationStrategyBase
+          url: 16-00_loss_combination_strategy.html
+        title: Loss Combination Strategy
+      - output: web
+        subfolderitems:
+        - output: web,pdf
+          title: EmbeddingLayerBase
+          url: 18-00_embedding_layer.html
+        title: Embedding Layers
     - output: web,pdf
       title: Params
       url: params.html
+    - output: web,pdf
+      title: Run Bert Multitask Learning
+      url: run_bert_multitask.html
+    - output: web,pdf
+      title: Multitask Learning Model
+      url: model_fn.html
     - output: web,pdf
       title: Utils
       url: utils.html
@@ -46,15 +104,9 @@ entries:
       title: Top Models
       url: top.html
     - output: web,pdf
-      title: Multitask Learning Model
-      url: model_fn.html
-    - output: web,pdf
-      title: Run Bert Multitask Learning
-      url: run_bert_multitask.html
-    - output: web,pdf
       title: Test Base
       url: test_base.html
     output: web
-    title: bert-multitask-learning
+    title: m3tl
   output: web
   title: Sidebar

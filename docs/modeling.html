@@ -40,7 +40,7 @@ nb_path: "source_nbs/11_modeling.ipynb"
 
 
 <div class="output_markdown rendered_html output_subarea ">
-<h2 id="MultiModalBertModel" class="doc_header"><code>class</code> <code>MultiModalBertModel</code><a href="https://github.com/JayYip/bert-multitask-learning/tree/master/bert_multitask_learning/modeling.py#L27" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>MultiModalBertModel</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
+<h2 id="MultiModalBertModel" class="doc_header"><code>class</code> <code>MultiModalBertModel</code><a href="https://github.com/JayYip/m3tl/tree/master/m3tl/modeling.py#L19" class="source_link" style="float:right">[source]</a></h2><blockquote><p><code>MultiModalBertModel</code>(<strong>*<code>args</code></strong>, <strong>**<code>kwargs</code></strong>) :: <code>Model</code></p>
 </blockquote>
 <p><code>Model</code> groups layers into an object with training and inference features.</p>
 <p>Arguments:
@@ -121,7 +121,7 @@ to do prediction with <code>model.predict()</code>.</p>
 
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p><a href="/bert-multitask-learning/modeling.html#MultiModalBertModel"><code>MultiModalBertModel</code></a> is transformers model with multi-modal input support. One can use it as a normal keras model.</p>
+<p><a href="/m3tl/modeling.html#MultiModalBertModel"><code>MultiModalBertModel</code></a> is transformers model with multi-modal input support. One can use it as a normal keras model.</p>
 
 </div>
 </div>
@@ -133,14 +133,322 @@ to do prediction with <code>model.predict()</code>.</p>
 
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">bert_multitask_learning</span><span class="o">.</span><span class="n">infer_shape_and_type_from_dict</span><span class="p">(</span><span class="n">one_batch_data</span><span class="p">))</span>
-<span class="n">model</span> <span class="o">=</span> <span class="n">MultiModalBertModel</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">MultiModalBertModel</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
 <span class="n">_</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">one_batch_data</span><span class="p">)</span>
 <span class="k">assert</span> <span class="n">model</span><span class="o">.</span><span class="n">get_pooled_output</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">312</span>
 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">get_sequence_output</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>404 Client Error: Not Found for url: https://huggingface.co/voidful/albert_chinese_tiny/resolve/main/tf_model.h5
+Some weights of the PyTorch model were not used when initializing the TF 2.0 model TFAlbertModel: [&#39;predictions.bias&#39;, &#39;predictions.dense.bias&#39;, &#39;predictions.LayerNorm.bias&#39;, &#39;predictions.LayerNorm.weight&#39;, &#39;predictions.decoder.weight&#39;, &#39;predictions.decoder.bias&#39;, &#39;predictions.dense.weight&#39;]
+- This IS expected if you are initializing TFAlbertModel from a PyTorch model trained on another task or with another architecture (e.g. initializing a TFBertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing TFAlbertModel from a PyTorch model that you expect to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model).
+All the weights of TFAlbertModel were initialized from the PyTorch model.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use TFAlbertModel for predictions without further training.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>INFO:tensorflow:Modal Type id mapping: 
+ {
+    &#34;class&#34;: 0,
+    &#34;image&#34;: 1,
+    &#34;text&#34;: 2
+}
+WARNING:tensorflow:AutoGraph could not transform &lt;bound method Socket.send of &lt;zmq.sugar.socket.Socket object at 0x7f6d1e289980&gt;&gt; and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: module, class, method, function, traceback, frame, or code object was expected, got cython_function_or_method
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+WARNING: AutoGraph could not transform &lt;bound method Socket.send of &lt;zmq.sugar.socket.Socket object at 0x7f6d1e289980&gt;&gt; and will run it as-is.
+Please report this to the TensorFlow team. When filing the bug, set the verbosity to 10 (on Linux, `export AUTOGRAPH_VERBOSITY=10`) and attach the full output.
+Cause: module, class, method, function, traceback, frame, or code object was expected, got cython_function_or_method
+To silence this warning, decorate the function with @tf.autograph.experimental.do_not_convert
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">m3tl.run_bert_multitask</span> <span class="kn">import</span> <span class="n">create_tensorspec_from_shape_type</span>
+<span class="kn">from</span> <span class="nn">m3tl.utils</span> <span class="kn">import</span> <span class="n">infer_shape_and_type_from_dict</span>
+<span class="n">spec_dict</span> <span class="o">=</span> <span class="n">create_tensorspec_from_shape_type</span><span class="p">(</span>
+    <span class="n">infer_shape_and_type_from_dict</span><span class="p">(</span><span class="n">one_batch_data</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">ServingModule</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ServingModule</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="c1"># @tf.function(input_signature=[v for v in spec_dict.values()])</span>
+    <span class="k">def</span> <span class="nf">serve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+
+<span class="c1"># serving_module = ServingModule()</span>
+<span class="c1"># _ = serving_module.serve(one_batch_data)</span>
+<span class="c1"># signatures = dict(</span>
+<span class="c1">#     serving_default=serving_module.serve.get_concrete_function(one_batch_data)</span>
+<span class="c1"># )</span>
+<span class="n">signatures</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">serving_default</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">call</span><span class="o">.</span><span class="n">get_concrete_function</span><span class="p">(</span><span class="n">one_batch_data</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="c1"># tf.saved_model.save(serving_module, os.path.join(params.ckpt_dir, &#39;serving&#39;), signatures=signatures)</span>
+<span class="c1"># model.save(os.path.join(params.ckpt_dir, &#39;serving&#39;), signatures=model.call.get_concrete_function(spec_dict), save_traces=True)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">ckpt_dir</span><span class="p">,</span> <span class="s1">&#39;serving&#39;</span><span class="p">))</span>
+
+<span class="c1"># model.save(params.ckpt_dir, signatures=model.call.get_concrete_function(one_batch_data))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+The parameters `output_attentions`, `output_hidden_states` and `use_cache` cannot be updated when calling a model.They have to be set to True/False in the config object (i.e.: `config=XConfig.from_pretrained(&#39;name&#39;, output_attentions=True)`).
+The parameter `return_dict` cannot be set in graph mode and will always be set to `True`.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126a4ed0&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c12685d90&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126a4ed0&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c12685d90&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>WARNING:absl:Found untraced functions such as embeddings_layer_call_fn, embeddings_layer_call_and_return_conditional_losses, encoder_layer_call_fn, encoder_layer_call_and_return_conditional_losses, pooler_layer_call_fn while saving (showing 5 of 115). These functions will not be directly callable after loading.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126a4ed0&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c12685d90&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126a4ed0&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c12685d90&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3310&gt;, True), {}).
+INFO:tensorflow:Unsupported signature for serialization: ((TensorSpec(shape=(None, 26), dtype=tf.int64, name=&#39;input_ids&#39;), None, None, None, &lt;tensorflow.python.framework.func_graph.UnknownArgument object at 0x7f6c126e3790&gt;, False), {}).
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>WARNING:absl:Found untraced functions such as embeddings_layer_call_fn, embeddings_layer_call_and_return_conditional_losses, encoder_layer_call_fn, encoder_layer_call_and_return_conditional_losses, pooler_layer_call_fn while saving (showing 5 of 115). These functions will not be directly callable after loading.
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="output_subarea output_text output_error">
+<pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">TypeError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-5-dfeb6144af78&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span>
+<span class="ansi-green-intense-fg ansi-bold">     21</span> <span class="ansi-red-fg"># tf.saved_model.save(serving_module, os.path.join(params.ckpt_dir, &#39;serving&#39;), signatures=signatures)</span>
+<span class="ansi-green-intense-fg ansi-bold">     22</span> <span class="ansi-red-fg"># model.save(os.path.join(params.ckpt_dir, &#39;serving&#39;), signatures=model.call.get_concrete_function(spec_dict), save_traces=True)</span>
+<span class="ansi-green-fg">---&gt; 23</span><span class="ansi-red-fg"> </span>model<span class="ansi-blue-fg">.</span>save<span class="ansi-blue-fg">(</span>os<span class="ansi-blue-fg">.</span>path<span class="ansi-blue-fg">.</span>join<span class="ansi-blue-fg">(</span>params<span class="ansi-blue-fg">.</span>ckpt_dir<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">&#39;serving&#39;</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     24</span> 
+<span class="ansi-green-intense-fg ansi-bold">     25</span> <span class="ansi-red-fg"># model.save(params.ckpt_dir, signatures=model.call.get_concrete_function(one_batch_data))</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/engine/training.py</span> in <span class="ansi-cyan-fg">save</span><span class="ansi-blue-fg">(self, filepath, overwrite, include_optimizer, save_format, signatures, options, save_traces)</span>
+<span class="ansi-green-intense-fg ansi-bold">   2000</span>     <span class="ansi-red-fg"># pylint: enable=line-too-long</span>
+<span class="ansi-green-intense-fg ansi-bold">   2001</span>     save.save_model(self, filepath, overwrite, include_optimizer, save_format,
+<span class="ansi-green-fg">-&gt; 2002</span><span class="ansi-red-fg">                     signatures, options, save_traces)
+</span><span class="ansi-green-intense-fg ansi-bold">   2003</span> 
+<span class="ansi-green-intense-fg ansi-bold">   2004</span>   def save_weights(self,
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/saving/save.py</span> in <span class="ansi-cyan-fg">save_model</span><span class="ansi-blue-fg">(model, filepath, overwrite, include_optimizer, save_format, signatures, options, save_traces)</span>
+<span class="ansi-green-intense-fg ansi-bold">    155</span>   <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    156</span>     saved_model_save.save(model, filepath, overwrite, include_optimizer,
+<span class="ansi-green-fg">--&gt; 157</span><span class="ansi-red-fg">                           signatures, options, save_traces)
+</span><span class="ansi-green-intense-fg ansi-bold">    158</span> 
+<span class="ansi-green-intense-fg ansi-bold">    159</span> 
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/saving/saved_model/save.py</span> in <span class="ansi-cyan-fg">save</span><span class="ansi-blue-fg">(model, filepath, overwrite, include_optimizer, signatures, options, save_traces)</span>
+<span class="ansi-green-intense-fg ansi-bold">     87</span>     <span class="ansi-green-fg">with</span> distribution_strategy_context<span class="ansi-blue-fg">.</span>_get_default_replica_context<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>  <span class="ansi-red-fg"># pylint: disable=protected-access</span>
+<span class="ansi-green-intense-fg ansi-bold">     88</span>       <span class="ansi-green-fg">with</span> utils<span class="ansi-blue-fg">.</span>keras_option_scope<span class="ansi-blue-fg">(</span>save_traces<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 89</span><span class="ansi-red-fg">         </span>save_lib<span class="ansi-blue-fg">.</span>save<span class="ansi-blue-fg">(</span>model<span class="ansi-blue-fg">,</span> filepath<span class="ansi-blue-fg">,</span> signatures<span class="ansi-blue-fg">,</span> options<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     90</span> 
+<span class="ansi-green-intense-fg ansi-bold">     91</span>   <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> include_optimizer<span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/saved_model/save.py</span> in <span class="ansi-cyan-fg">save</span><span class="ansi-blue-fg">(obj, export_dir, signatures, options)</span>
+<span class="ansi-green-intense-fg ansi-bold">   1031</span> 
+<span class="ansi-green-intense-fg ansi-bold">   1032</span>   _, exported_graph, object_saver, asset_info = _build_meta_graph(
+<span class="ansi-green-fg">-&gt; 1033</span><span class="ansi-red-fg">       obj, signatures, options, meta_graph_def)
+</span><span class="ansi-green-intense-fg ansi-bold">   1034</span>   saved_model<span class="ansi-blue-fg">.</span>saved_model_schema_version <span class="ansi-blue-fg">=</span> constants<span class="ansi-blue-fg">.</span>SAVED_MODEL_SCHEMA_VERSION
+<span class="ansi-green-intense-fg ansi-bold">   1035</span> 
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/saved_model/save.py</span> in <span class="ansi-cyan-fg">_build_meta_graph</span><span class="ansi-blue-fg">(obj, signatures, options, meta_graph_def)</span>
+<span class="ansi-green-intense-fg ansi-bold">   1196</span> 
+<span class="ansi-green-intense-fg ansi-bold">   1197</span>   <span class="ansi-green-fg">with</span> save_context<span class="ansi-blue-fg">.</span>save_context<span class="ansi-blue-fg">(</span>options<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">-&gt; 1198</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> _build_meta_graph_impl<span class="ansi-blue-fg">(</span>obj<span class="ansi-blue-fg">,</span> signatures<span class="ansi-blue-fg">,</span> options<span class="ansi-blue-fg">,</span> meta_graph_def<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/saved_model/save.py</span> in <span class="ansi-cyan-fg">_build_meta_graph_impl</span><span class="ansi-blue-fg">(obj, signatures, options, meta_graph_def)</span>
+<span class="ansi-green-intense-fg ansi-bold">   1161</span> 
+<span class="ansi-green-intense-fg ansi-bold">   1162</span>   object_graph_proto = _serialize_object_graph(saveable_view,
+<span class="ansi-green-fg">-&gt; 1163</span><span class="ansi-red-fg">                                                asset_info.asset_index)
+</span><span class="ansi-green-intense-fg ansi-bold">   1164</span>   meta_graph_def<span class="ansi-blue-fg">.</span>object_graph_def<span class="ansi-blue-fg">.</span>CopyFrom<span class="ansi-blue-fg">(</span>object_graph_proto<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">   1165</span> 
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/saved_model/save.py</span> in <span class="ansi-cyan-fg">_serialize_object_graph</span><span class="ansi-blue-fg">(saveable_view, asset_file_def_index)</span>
+<span class="ansi-green-intense-fg ansi-bold">    753</span>   <span class="ansi-green-fg">for</span> obj<span class="ansi-blue-fg">,</span> obj_proto <span class="ansi-green-fg">in</span> zip<span class="ansi-blue-fg">(</span>saveable_view<span class="ansi-blue-fg">.</span>nodes<span class="ansi-blue-fg">,</span> proto<span class="ansi-blue-fg">.</span>nodes<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    754</span>     _write_object_proto(obj, obj_proto, asset_file_def_index,
+<span class="ansi-green-fg">--&gt; 755</span><span class="ansi-red-fg">                         saveable_view.function_name_map)
+</span><span class="ansi-green-intense-fg ansi-bold">    756</span>   <span class="ansi-green-fg">return</span> proto
+<span class="ansi-green-intense-fg ansi-bold">    757</span> 
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/saved_model/save.py</span> in <span class="ansi-cyan-fg">_write_object_proto</span><span class="ansi-blue-fg">(obj, proto, asset_file_def_index, function_name_map)</span>
+<span class="ansi-green-intense-fg ansi-bold">    798</span>           version=versions_pb2.VersionDef(
+<span class="ansi-green-intense-fg ansi-bold">    799</span>               producer=1, min_consumer=1, bad_consumers=[]),
+<span class="ansi-green-fg">--&gt; 800</span><span class="ansi-red-fg">           metadata=obj._tracking_metadata)
+</span><span class="ansi-green-intense-fg ansi-bold">    801</span>       <span class="ansi-red-fg"># pylint:enable=protected-access</span>
+<span class="ansi-green-intense-fg ansi-bold">    802</span>     proto<span class="ansi-blue-fg">.</span>user_object<span class="ansi-blue-fg">.</span>CopyFrom<span class="ansi-blue-fg">(</span>registered_type_proto<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/engine/base_layer.py</span> in <span class="ansi-cyan-fg">_tracking_metadata</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-intense-fg ansi-bold">   3077</span>   <span class="ansi-blue-fg">@</span>property
+<span class="ansi-green-intense-fg ansi-bold">   3078</span>   <span class="ansi-green-fg">def</span> _tracking_metadata<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">-&gt; 3079</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> self<span class="ansi-blue-fg">.</span>_trackable_saved_model_saver<span class="ansi-blue-fg">.</span>tracking_metadata
+<span class="ansi-green-intense-fg ansi-bold">   3080</span> 
+<span class="ansi-green-intense-fg ansi-bold">   3081</span>   <span class="ansi-green-fg">def</span> _list_extra_dependencies_for_serialization<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> serialization_cache<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/saving/saved_model/base_serialization.py</span> in <span class="ansi-cyan-fg">tracking_metadata</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-intense-fg ansi-bold">     53</span>     <span class="ansi-red-fg"># TODO(kathywu): check that serialized JSON can be loaded (e.g., if an</span>
+<span class="ansi-green-intense-fg ansi-bold">     54</span>     <span class="ansi-red-fg"># object is in the python property)</span>
+<span class="ansi-green-fg">---&gt; 55</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> json_utils<span class="ansi-blue-fg">.</span>Encoder<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>encode<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>python_properties<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     56</span> 
+<span class="ansi-green-intense-fg ansi-bold">     57</span>   <span class="ansi-green-fg">def</span> list_extra_dependencies_for_serialization<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> serialization_cache<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/saving/saved_model/json_utils.py</span> in <span class="ansi-cyan-fg">encode</span><span class="ansi-blue-fg">(self, obj)</span>
+<span class="ansi-green-intense-fg ansi-bold">     51</span> 
+<span class="ansi-green-intense-fg ansi-bold">     52</span>   <span class="ansi-green-fg">def</span> encode<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> obj<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 53</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> super<span class="ansi-blue-fg">(</span>Encoder<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>encode<span class="ansi-blue-fg">(</span>_encode_tuple<span class="ansi-blue-fg">(</span>obj<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     54</span> 
+<span class="ansi-green-intense-fg ansi-bold">     55</span> 
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/json/encoder.py</span> in <span class="ansi-cyan-fg">encode</span><span class="ansi-blue-fg">(self, o)</span>
+<span class="ansi-green-intense-fg ansi-bold">    197</span>         <span class="ansi-red-fg"># exceptions aren&#39;t as detailed.  The list call should be roughly</span>
+<span class="ansi-green-intense-fg ansi-bold">    198</span>         <span class="ansi-red-fg"># equivalent to the PySequence_Fast that &#39;&#39;.join() would do.</span>
+<span class="ansi-green-fg">--&gt; 199</span><span class="ansi-red-fg">         </span>chunks <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>iterencode<span class="ansi-blue-fg">(</span>o<span class="ansi-blue-fg">,</span> _one_shot<span class="ansi-blue-fg">=</span><span class="ansi-green-fg">True</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    200</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> isinstance<span class="ansi-blue-fg">(</span>chunks<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">(</span>list<span class="ansi-blue-fg">,</span> tuple<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    201</span>             chunks <span class="ansi-blue-fg">=</span> list<span class="ansi-blue-fg">(</span>chunks<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/json/encoder.py</span> in <span class="ansi-cyan-fg">iterencode</span><span class="ansi-blue-fg">(self, o, _one_shot)</span>
+<span class="ansi-green-intense-fg ansi-bold">    255</span>                 self<span class="ansi-blue-fg">.</span>key_separator<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>item_separator<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>sort_keys<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-intense-fg ansi-bold">    256</span>                 self.skipkeys, _one_shot)
+<span class="ansi-green-fg">--&gt; 257</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> _iterencode<span class="ansi-blue-fg">(</span>o<span class="ansi-blue-fg">,</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    258</span> 
+<span class="ansi-green-intense-fg ansi-bold">    259</span> def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/keras/saving/saved_model/json_utils.py</span> in <span class="ansi-cyan-fg">default</span><span class="ansi-blue-fg">(self, obj)</span>
+<span class="ansi-green-intense-fg ansi-bold">     48</span>       items <span class="ansi-blue-fg">=</span> obj<span class="ansi-blue-fg">.</span>as_list<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">if</span> obj<span class="ansi-blue-fg">.</span>rank <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span> <span class="ansi-green-fg">else</span> <span class="ansi-green-fg">None</span>
+<span class="ansi-green-intense-fg ansi-bold">     49</span>       <span class="ansi-green-fg">return</span> <span class="ansi-blue-fg">{</span><span class="ansi-blue-fg">&#39;class_name&#39;</span><span class="ansi-blue-fg">:</span> <span class="ansi-blue-fg">&#39;TensorShape&#39;</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">&#39;items&#39;</span><span class="ansi-blue-fg">:</span> items<span class="ansi-blue-fg">}</span>
+<span class="ansi-green-fg">---&gt; 50</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> serialization<span class="ansi-blue-fg">.</span>get_json_type<span class="ansi-blue-fg">(</span>obj<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     51</span> 
+<span class="ansi-green-intense-fg ansi-bold">     52</span>   <span class="ansi-green-fg">def</span> encode<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> obj<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/data/anaconda3/lib/python3.7/site-packages/tensorflow/python/util/serialization.py</span> in <span class="ansi-cyan-fg">get_json_type</span><span class="ansi-blue-fg">(obj)</span>
+<span class="ansi-green-intense-fg ansi-bold">     77</span>     <span class="ansi-green-fg">return</span> obj<span class="ansi-blue-fg">.</span>__wrapped__
+<span class="ansi-green-intense-fg ansi-bold">     78</span> 
+<span class="ansi-green-fg">---&gt; 79</span><span class="ansi-red-fg">   </span><span class="ansi-green-fg">raise</span> TypeError<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;Not JSON Serializable:&#39;</span><span class="ansi-blue-fg">,</span> obj<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-red-fg">TypeError</span>: (&#39;Not JSON Serializable:&#39;, &lt;tf.Tensor: shape=(), dtype=int32, numpy=128&gt;)</pre>
+</div>
+</div>
+
 </div>
 </div>
 

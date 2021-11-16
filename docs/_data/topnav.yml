@@ -2,7 +2,7 @@ topnav:
 - title: Topnav
   items:
     - title: github
-      external_url: https://github.com/JayYip/bert-multitask-learning/tree/master/
+      external_url: https://github.com/JayYip/m3tl/tree/master/
 
 #Topnav dropdowns
 topnav_dropdowns:

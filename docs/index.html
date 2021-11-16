@@ -1,6 +1,6 @@
 ---
 
-title: Bert for Multi-task Learning
+title: M3TL
 
 
 keywords: fastai
@@ -31,58 +31,74 @@ nb_path: "source_nbs/index.ipynb"
 
 <div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p><a href="https://img.shields.io/badge/python%20-3.6.0-brightgreen.svg">python</a> <a href="https://www.tensorflow.org/"><img src="https://img.shields.io/badge/tensorflow-1.13.1-green.svg" alt="tensorflow"></a> <a href="https://pypi.python.org/pypi/bert-multitask-learning/"><img src="https://badge.fury.io/py/ansicolortags.svg" alt="PyPI version fury.io"></a> <a href="https://pypi.python.org/pypi/bert-multitask-learning/"><img src="https://img.shields.io/pypi/l/ansicolortags.svg" alt="PyPI license"></a></p>
-<p><a href="#Bert多任务学习">中文文档</a></p>
-<p><strong>Note: Since 0.4.0, tf version &gt;= 2.1 is required.</strong></p>
+<p><strong>M</strong>ulti-<strong>M</strong>odal <strong>M</strong>ulti-<strong>T</strong>ask <strong>L</strong>earning</p>
 <h2 id="Install">Install<a class="anchor-link" href="#Install"> </a></h2>
-<pre><code>pip install bert-multitask-learning</code></pre>
-<h2 id="What-is-it">What is it<a class="anchor-link" href="#What-is-it"> </a></h2><p>This a project that uses transformers(based on huggingface transformers) to do <strong>multi-modal multi-task learning</strong>.</p>
-<h2 id="Why-do-I-need-this">Why do I need this<a class="anchor-link" href="#Why-do-I-need-this"> </a></h2><p>In the original BERT code, neither multi-task learning or multiple GPU training is possible. Plus, the original purpose of this project is NER which dose not have a working script in the original BERT code.</p>
-<p>To sum up, compared to the original bert repo, this repo has the following features:</p>
-<ol>
-<li>Multimodal multi-task learning(major reason of re-writing the majority of code).</li>
-<li>Multiple GPU training</li>
-<li>Support sequence labeling (for example, NER) and Encoder-Decoder Seq2Seq(with transformer decoder).</li>
-</ol>
-<h2 id="What-type-of-problems-are-supported?">What type of problems are supported?<a class="anchor-link" href="#What-type-of-problems-are-supported?"> </a></h2><ul>
-<li>Masked LM and next sentence prediction Pre-train(pretrain)</li>
-<li>Classification(cls)</li>
-<li>Sequence Labeling(seq_tag)</li>
-<li>Multi-Label Classification(multi_cls)</li>
-<li>Multi-modal Mask LM(mask_lm)</li>
-</ul>
-<h2 id="How-to-run-pre-defined-problems">How to run pre-defined problems<a class="anchor-link" href="#How-to-run-pre-defined-problems"> </a></h2><p>There are two types of chaining operations can be used to chain problems.</p>
+<pre><code>MASKED</code></pre>
+<h2 id="What-is-it">What is it<a class="anchor-link" href="#What-is-it"> </a></h2><p>This is a project that uses transformers(based on huggingface transformers) as base model to do <strong>multi-modal multi-task learning</strong>.</p>
+<h2 id="Why-do-I-need-this">Why do I need this<a class="anchor-link" href="#Why-do-I-need-this"> </a></h2><p>Multi-task learning(MTL) is gaining more and more attention, especially in deep learning era. It is widely used in NLP, CV, recommendation, etc. However, MTL usually involves complicated data preprocessing, task managing and task interaction. Other open-source projects, like TencentNLP and PyText, supports MTL but in a naive way and it's not straightforward to implement complicated MTL algorithm. In this project, we try to make writing MTL model as easy as single task learning model and further extend MTL to multi-modal multi-task learning. To do so, we expose following MTL related programable module to user:</p>
 <ul>
-<li><code>&amp;</code>. If two problems have the same inputs, they can be chained using <code>&amp;</code>. Problems chained by <code>&amp;</code> will be trained at the same time.</li>
-<li><code>|</code>. If two problems don't have the same inputs, they need to be chained using <code>|</code>. Problems chained by <code>|</code> will be sampled to train at every instance.</li>
+<li>problem sampling strategy</li>
+<li>loss combination strategy</li>
+<li>gradient surgery</li>
+<li>model after base model(transformers)</li>
 </ul>
-<p>For example, <code>cws|NER|weibo_ner&amp;weibo_cws</code>, one problem will be sampled at each turn, say <code>weibo_ner&amp;weibo_cws</code>, then <code>weibo_ner</code> and <code>weibo_cws</code> will trained for this turn together. Therefore, in a particular batch, some tasks might not be sampled, and their loss could be 0 in this batch.</p>
-<p>Please see the examples in <a href="notebooks/">notebooks</a> for more details about training, evaluation and export models.</p>
-<h1 id="Bert&#22810;&#20219;&#21153;&#23398;&#20064;">Bert&#22810;&#20219;&#21153;&#23398;&#20064;<a class="anchor-link" href="#Bert&#22810;&#20219;&#21153;&#23398;&#20064;"> </a></h1><p><strong>注意：版本0.4.0后要求tf&gt;=2.1</strong></p>
-<h2 id="&#23433;&#35013;">&#23433;&#35013;<a class="anchor-link" href="#&#23433;&#35013;"> </a></h2>
-<pre><code>pip install bert-multitask-learning</code></pre>
-<h2 id="&#36825;&#26159;&#20160;&#20040;">&#36825;&#26159;&#20160;&#20040;<a class="anchor-link" href="#&#36825;&#26159;&#20160;&#20040;"> </a></h2><p>这是利用transformer(基于huggingface transformers)进行<strong>多模态多任务学习</strong>的项目.</p>
-<h2 id="&#25105;&#20026;&#20160;&#20040;&#38656;&#35201;&#36825;&#20010;&#39033;&#30446;">&#25105;&#20026;&#20160;&#20040;&#38656;&#35201;&#36825;&#20010;&#39033;&#30446;<a class="anchor-link" href="#&#25105;&#20026;&#20160;&#20040;&#38656;&#35201;&#36825;&#20010;&#39033;&#30446;"> </a></h2><p>在原始的BERT代码中, 是没有办法直接用多GPU进行多任务学习的. 另外, BERT并没有给出序列标注和Seq2seq的训练代码.</p>
-<p>因此, 和原来的BERT相比, 这个项目具有以下特点:</p>
-<ol>
-<li>多任务学习</li>
-<li>多GPU训练</li>
-<li>序列标注以及Encoder-decoder seq2seq的支持(用transformer decoder)</li>
-</ol>
-<h2 id="&#30446;&#21069;&#25903;&#25345;&#30340;&#20219;&#21153;&#31867;&#22411;">&#30446;&#21069;&#25903;&#25345;&#30340;&#20219;&#21153;&#31867;&#22411;<a class="anchor-link" href="#&#30446;&#21069;&#25903;&#25345;&#30340;&#20219;&#21153;&#31867;&#22411;"> </a></h2><ul>
-<li>Masked LM和next sentence prediction预训练(pretrain)</li>
-<li>单标签分类(cls)</li>
-<li>序列标注(seq_tag)</li>
-<li>多标签分类(multi_cls)</li>
-<li>多模态Mask LM(mask_lm)</li>
-</ul>
-<h2 id="&#22914;&#20309;&#36816;&#34892;&#39044;&#23450;&#20041;&#20219;&#21153;">&#22914;&#20309;&#36816;&#34892;&#39044;&#23450;&#20041;&#20219;&#21153;<a class="anchor-link" href="#&#22914;&#20309;&#36816;&#34892;&#39044;&#23450;&#20041;&#20219;&#21153;"> </a></h2><p>可以用两种方法来将多个任务连接起来.</p>
+<p>Apart from programable modules, we also provide various built-in SOTA MTL algorithms.</p>
+<p>In a word, you can use this project to:</p>
 <ul>
-<li><code>&amp;</code>. 如果两个任务有相同的输入, 不同标签的话, 那么他们<strong>可以</strong>用<code>&amp;</code>来连接. 被<code>&amp;</code>连接起来的任务会被同时训练.</li>
-<li><code>|</code>. 如果两个任务为不同的输入, 那么他们<strong>必须</strong>用<code>|</code>来连接. 被<code>|</code>连接起来的任务会被随机抽取来训练.</li>
+<li>implement complicated MTL algorithm</li>
+<li>do SOTA MTL without diving into details</li>
+<li>do multi-modal learning</li>
 </ul>
-<p>例如, 我们定义任务<code>cws|NER|weibo_ner&amp;weibo_cws</code>, 那么在生成每一条数据时, 一个任务块会被随机抽取出来, 例如在这一次抽样中, <code>weibo_ner&amp;weibo_cws</code>被选中. 那么这次<code>weibo_ner</code>和<code>weibo_cws</code>会被同时训练. 因此, 在一个batch中, 有可能某些任务没有被抽中, loss为0.</p>
-<p>训练, eval和导出模型请见<a href="notebooks/">notebooks</a></p>
+<p>And since we use transformers as base model, you get all the benefits that you can get from transformers!</p>
+<h2 id="What-type-of-problems-are-supported?">What type of problems are supported?<a class="anchor-link" href="#What-type-of-problems-are-supported?"> </a></h2>
+</div>
+</div>
+</div>
+    {% raw %}
+    
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">params</span> <span class="o">=</span> <span class="n">Params</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">problem_type</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">list_available_problem_types</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;`</span><span class="si">{problem_type}</span><span class="s1">`: </span><span class="si">{desc}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">desc</span><span class="o">=</span><span class="n">params</span><span class="o">.</span><span class="n">problem_type_desc</span><span class="p">[</span><span class="n">problem_type</span><span class="p">],</span> <span class="n">problem_type</span><span class="o">=</span><span class="n">problem_type</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+<div class="output_area">
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>`cls`: Classification
+`multi_cls`: Multi-Label Classification
+`seq_tag`: Sequence Labeling
+`masklm`: Masked Language Model
+`pretrain`: NSP+MLM(Deprecated)
+`regression`: Regression
+`vector_fit`: Vector Fitting
+`premask_mlm`: Pre-masked Masked Language Model
+`contrastive_learning`: Contrastive Learning
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+    {% endraw %}
+
+<div class="cell border-box-sizing text_cell rendered"><div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Get-Started">Get Started<a class="anchor-link" href="#Get-Started"> </a></h2><p>Please see tutorials.</p>
 
 </div>
 </div>
