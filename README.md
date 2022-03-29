@@ -7,7 +7,7 @@
 ## Install
 
 ```
-MASKED
+pip install m3tl
 ```
 
 ## What is it
