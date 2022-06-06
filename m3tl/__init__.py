@@ -1,4 +1,9 @@
-__version__ = "0.3.2"
+# -*- coding: utf-8 -*-
+# @Author: Ye Junpeng
+# @Date:   2022-03-29 15:08:18
+# @Last Modified by:   Ye Junpeng
+# @Last Modified time: 2022-06-06 14:34:31
+__version__ = "0.7.0"
 from .read_write_tfrecord import *
 from .input_fn import *
 from .model_fn import *
