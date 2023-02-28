@@ -348,6 +348,23 @@ def make_feature_desc(feature_desc_dict: dict):
     return feature_desc
 
 
+@tf.function
+def _reshape_tensor(tensor: tf.Tensor, shape_tensor: tf.Tensor, shape_tensor_in_dict: tf.Tensor):
+    """
+    avoid empty tensor reshape error
+
+    we need to fill tensor with zeros to make sure
+    that loss multiplier aligns with features correctly
+    """
+    if tf.equal(tf.size(tensor), 0):
+        # scalar
+        if tf.equal(tf.size(shape_tensor), 0):
+            return tf.zeros(shape=shape_tensor_in_dict, dtype=tensor.dtype)
+        else:
+            return tf.zeros(shape=shape_tensor, dtype=tensor.dtype)
+
+    return tf.reshape(tensor, shape=shape_tensor)
+
 def reshape_tensors_in_dataset(example, feature_desc_dict: dict):
     """Reshape serialized tensor back to its original shape
 
@@ -361,22 +378,6 @@ def reshape_tensors_in_dataset(example, feature_desc_dict: dict):
     for feature_key in example:
         example[feature_key] = tf.sparse.to_dense(example[feature_key])
 
-    @tf.function
-    def _reshape_tensor(tensor: tf.Tensor, shape_tensor: tf.Tensor, shape_tensor_in_dict: tf.Tensor):
-        """
-        avoid empty tensor reshape error
-
-        we need to fill tensor with zeros to make sure
-        that loss multiplier aligns with features correctly
-        """
-        if tf.equal(tf.size(tensor), 0):
-            # scalar
-            if tf.equal(tf.size(shape_tensor), 0):
-                return tf.zeros(shape=shape_tensor_in_dict, dtype=tensor.dtype)
-            else:
-                return tf.zeros(shape=shape_tensor, dtype=tensor.dtype)
-
-        return tf.reshape(tensor, shape=shape_tensor)
 
     for feature_key in example:
         if '_shape' in feature_key:
